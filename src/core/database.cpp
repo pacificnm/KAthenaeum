@@ -53,6 +53,16 @@ const QList<QStringList> migrations = {
         // one active download per file, even if two clicks race
         QStringLiteral("CREATE UNIQUE INDEX downloads_active ON downloads (filename) WHERE status IN ('queued', 'downloading', 'verifying')"),
     },
+    {
+        // "Recently read" on a library's home; goes with its library
+        QStringLiteral("CREATE TABLE reading_history ("
+                       " library_id INTEGER NOT NULL REFERENCES libraries (id) ON DELETE CASCADE,"
+                       " path TEXT NOT NULL,"
+                       " title TEXT NOT NULL,"
+                       " read_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " PRIMARY KEY (library_id, path))"),
+        QStringLiteral("CREATE INDEX reading_history_recent ON reading_history (library_id, read_at DESC)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

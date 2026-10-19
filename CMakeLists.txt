@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-project(kathenaeum VERSION 0.1.0 LANGUAGES CXX)
+project(kathenaeum VERSION 0.2.0 LANGUAGES CXX)
 
 set(QT_MIN_VERSION "6.8.0")
 set(KF_MIN_VERSION "6.13.0")
@@ -33,6 +33,7 @@ find_package(KF6KirigamiAddons 1.7.0 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZIM REQUIRED IMPORTED_TARGET libzim>=9.0)
+pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
 
 add_subdirectory(src)
 if(BUILD_TESTING)

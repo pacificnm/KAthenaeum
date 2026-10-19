@@ -7,6 +7,7 @@
 #include <QStandardPaths>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQuickWebEngineProfile>
 #include <QtWebEngineQuick>
 
 #include <KAboutData>
@@ -18,6 +19,7 @@
 
 #include "appstate.h"
 #include "librarymanager.h"
+#include "zimschemehandler.h"
 #include "core/database.h"
 #include "kathenaeum-version.h"
 
@@ -43,6 +45,7 @@ public:
 int main(int argc, char *argv[])
 {
     KIconTheme::initTheme();
+    ZimSchemeHandler::registerScheme();  // before any web engine profile exists
     QtWebEngineQuick::initialize();  // must run before the application object exists
     QApplication app(argc, argv);    // QApplication, not QGuiApplication: the desktop style needs widgets
 
@@ -75,6 +78,12 @@ int main(int argc, char *argv[])
     LibraryManager *libraries = LibraryManager::createInstance(&app);
     if (dbError.isEmpty())
         libraries->initialize();
+
+    // Articles come from zim:// only. Nothing the reader shows needs a disk cache or cookies.
+    QQuickWebEngineProfile *profile = QQuickWebEngineProfile::defaultProfile();
+    profile->setHttpCacheType(QQuickWebEngineProfile::MemoryHttpCache);
+    profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::NoPersistentCookies);
+    profile->installUrlSchemeHandler("zim", new ZimSchemeHandler(&app));
 
     CachingNetworkFactory networkFactory;  // declared first: the engine uses it until the engine is destroyed
     QQmlApplicationEngine engine;

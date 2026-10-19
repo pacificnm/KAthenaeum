@@ -9,6 +9,7 @@ Kirigami.ScrollablePage {
     id: page
 
     signal openLibraryManager()
+    signal openLibrary(var libraryId)
 
     title: i18n("Libraries")
 
@@ -20,9 +21,8 @@ Kirigami.ScrollablePage {
             id: row
             required property var model
             width: ListView.view.width
-            down: false
             highlighted: false
-            // opening a library (home page, A to Z) is the next feature
+            onClicked: page.openLibrary(row.model.libraryId)
 
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing

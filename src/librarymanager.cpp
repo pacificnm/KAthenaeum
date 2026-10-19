@@ -6,6 +6,8 @@
 #include "core/library.h"
 #include "core/settings.h"
 #include "core/zimarchive.h"
+#include "core/zimreader.h"
+#include "articlestore.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -208,6 +210,8 @@ void LibraryManager::addFile(const QUrl &file)
 void LibraryManager::removeLibrary(qint64 id, bool deleteFile)
 {
     const auto lib = Library::byId(id);
+    ZimReader::close(id);  // let go of the file before it is deleted
+    ArticleStore::clear();
     QString error;
     if (!Library::remove(id, deleteFile, &error)) {
         Q_EMIT message(i18n("Cannot remove the library: %1", error), true);

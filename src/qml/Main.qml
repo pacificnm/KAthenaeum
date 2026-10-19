@@ -19,6 +19,19 @@ Kirigami.ApplicationWindow {
         pageStack.clear();
         pageStack.push(component);
     }
+    // Reading goes deeper one page at a time: Libraries > Chemistry > A to Z > Water
+    function openLibrary(libraryId) {
+        pageStack.push(libraryPage, { libraryId: libraryId });
+    }
+    function openTitles(libraryId, label, key, isPrefix) {
+        pageStack.push(titlesPage, { libraryId: libraryId, label: label, key: key, isPrefix: isPrefix });
+    }
+    function openArticle(libraryId, path) {
+        pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path) });
+    }
+
+    pageStack.columnView.columnResizeMode: Kirigami.ColumnView.SingleColumn
+    pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.Breadcrumb
 
     globalDrawer: Kirigami.GlobalDrawer {
         isMenu: false
@@ -47,7 +60,27 @@ Kirigami.ApplicationWindow {
         }
     }
 
-    Component { id: librariesPage; LibrariesPage { onOpenLibraryManager: root.show(libraryManagerPage) } }
+    Component {
+        id: librariesPage
+        LibrariesPage {
+            onOpenLibraryManager: root.show(libraryManagerPage)
+            onOpenLibrary: libraryId => root.openLibrary(libraryId)
+        }
+    }
+    Component {
+        id: libraryPage
+        LibraryPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+            onOpenTitles: (libraryId, label, key, isPrefix) => root.openTitles(libraryId, label, key, isPrefix)
+        }
+    }
+    Component {
+        id: titlesPage
+        TitlesPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+        }
+    }
+    Component { id: articlePage; ArticlePage {} }
     Component { id: askPage; AskPage {} }
     Component { id: chatsPage; ChatsPage {} }
     Component { id: projectsPage; ProjectsPage {} }

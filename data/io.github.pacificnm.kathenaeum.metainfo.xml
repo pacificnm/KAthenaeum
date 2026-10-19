@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.2.0" date="2026-10-19">
+      <description>
+        <p>Library Manager: browse the Kiwix catalog, download and verify libraries, manage installed ones. Reading: library home, A to Z, and articles with their pictures.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-19">
       <description>
         <p>Project skeleton.</p>
