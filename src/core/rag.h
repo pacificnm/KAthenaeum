@@ -68,16 +68,21 @@ struct Citation {
 // The question as searched: a short follow-up ("and its boiling point?") carries no topic, so it borrows the previous one
 QString retrievalQuery(const QString &question, const QStringList &earlierQuestions);
 
-// Each article's best passages by word overlap (always its introduction), taken round-robin up to MaxEmbed
+// Each article's best passages by word overlap (always its introduction), taken round-robin up to MaxEmbed. A chat
+// about one article uses the same six: ranking all of a long article's passages by meaning was measured (Ray Charles,
+// 11 questions, 2026-10-19) and helped one question while adding 1.1 s to every one.
 QList<Candidate> pickPassages(const QString &query, const QList<ZimSearch::Article> &articles);
 
 // The best `n` of the pool: word overlap and, when there are vectors, similarity to the question, fused by rank (RRF)
 QList<Candidate> rank(QList<Candidate> pool, const Vector &question, int n = Passages);
 
-// Up to MaxSources articles with their best passages, numbered, within ContextChars
-Context buildContext(const QList<Candidate> &ranked);
+// Up to MaxSources articles with their best passages, numbered, within ContextChars. `bySection`: the sources are
+// sections of one article instead (a chat about that article), so a citation names "Career", not the article again.
+Context buildContext(const QList<Candidate> &ranked, bool bySection = false);
 
 QString systemPrompt();
+// For a chat about one article: answer from it alone, and say so when it does not cover the question
+QString articleSystemPrompt(const QString &title);
 // `earlierQuestions` (oldest first; the last MaxEarlierQuestions are used) say what "it" or "he" refers to in a
 // follow-up. Earlier answers are deliberately not replayed as chat turns, as Athenaeum did: given its own previous
 // answer, qwen3.5:2b copied it word for word instead of answering the new question (2 of 4 follow-ups; 0 of 4 with

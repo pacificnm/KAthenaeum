@@ -19,8 +19,12 @@ Kirigami.ApplicationWindow {
         pageStack.clear();
         pageStack.push(component, properties ?? {});
     }
-    function openChat(chatId) {
-        show(askPage, { chatId: chatId });
+    // a chat about one article opens with its article, the panel beside it
+    function openChat(chatId, articleLibraryId, articlePath) {
+        if (articleLibraryId > 0)
+            show(articlePage, { url: LibraryBrowser.articleUrl(articleLibraryId, articlePath), openChatId: chatId });
+        else
+            show(askPage, { chatId: chatId });
     }
     // Reading goes deeper one page at a time: Libraries > Chemistry > A to Z > Water
     function openLibrary(libraryId) {
@@ -94,7 +98,12 @@ Kirigami.ApplicationWindow {
             onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
         }
     }
-    Component { id: articlePage; ArticlePage {} }
+    Component {
+        id: articlePage
+        ArticlePage {
+            onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
+        }
+    }
     Component {
         id: askPage
         AskPage {
@@ -105,7 +114,7 @@ Kirigami.ApplicationWindow {
     Component {
         id: chatsPage
         ChatsPage {
-            onOpenChat: chatId => root.openChat(chatId)
+            onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath)
         }
     }
     Component { id: projectsPage; ProjectsPage {} }

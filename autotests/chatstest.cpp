@@ -94,6 +94,25 @@ private Q_SLOTS:
         QCOMPARE(Chats::addMessage(question(999, QStringLiteral("q"))), 0);
     }
 
+    void aChatCanBeAboutOneArticle()
+    {
+        const qint64 general = Chats::create(QStringLiteral("General"));
+        const qint64 water = Chats::create(QStringLiteral("Why is it polar?"), 3, QStringLiteral("Water"), QStringLiteral("Water"));
+        const qint64 water2 = Chats::create(QStringLiteral("Boiling point?"), 3, QStringLiteral("Water"), QStringLiteral("Water"));
+        Chats::create(QStringLiteral("Other library"), 4, QStringLiteral("Water"), QStringLiteral("Water"));
+        QTest::qWait(5);
+        QVERIFY(Chats::addMessage(question(water, QStringLiteral("again"))));
+        const auto about = Chats::aboutArticle(3, QStringLiteral("Water"));
+        QCOMPARE(about.size(), 2);
+        QCOMPARE(about[0].id, water);
+        QCOMPARE(about[1].id, water2);
+        QCOMPARE(about[0].articleLibraryId, 3);
+        QCOMPARE(about[0].articleTitle, QStringLiteral("Water"));
+        const auto g = Chats::byId(general);
+        QCOMPARE(g->articleLibraryId, 0);
+        QVERIFY(g->articlePath.isEmpty());
+    }
+
     void renaming()
     {
         const qint64 id = Chats::create(QString(500, QLatin1Char('x')));

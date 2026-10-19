@@ -6,7 +6,7 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, and Ask (answers with citations, follow-up questions, saved chats). Not built yet: Ask about this article, research projects, highlights and notes. See [CLAUDE.md](CLAUDE.md) for the design.
+> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats) and Ask about this article. Not built yet: research projects, highlights and notes. See [CLAUDE.md](CLAUDE.md) for the design.
 
 ## Features
 
@@ -16,7 +16,7 @@ There is nothing to build before you can use a library: it is searchable and rea
 - **Browse** each library from its home page: find an article by title, A to Z, Random article, recently read, and Wikipedia's own overview articles ("Outline of …", "List of …", "Timeline of …"). All read straight from the ZIM, nothing to build.
 - **Chat history**: every chat is saved with its sources and citations, and can be reopened, renamed or deleted.
 - **Research projects**: collect articles, selected passages and chats, chat about just that material, and write Markdown documents with AI-drafted summaries. Export to `.md`.
-- **Ask about this article**: a chat panel beside every article.
+- **Ask about this article**: a chat panel beside every article that answers from that article alone, citing its sections (a click scrolls there). Select text and right-click to ask about it. These chats are saved with their article.
 - **Highlights and notes**: saved passages are highlighted in their article with your notes.
 - **Library manager**: browse the Kiwix catalog (also offline, from a saved copy), download with progress, cancel and resume, verify every download, spot newer versions, add a ZIM file you already have, see each library's details, choose the download folder, remove safely.
 - **Models**: see whether Ollama is running and has the models, switch the answer or embedding model without restarting, and get told (with the fix) when Ollama is set to unload one model to load the other.
@@ -60,7 +60,7 @@ cmake --build build --target package   # make a .deb in build/
 
 Some tests read a real library when one is given, real downloads from kiwix.org run only when asked, and so does a check against your local Ollama: `KATHENAEUM_TEST_ZIM=/path/to/wikipedia_en_….zim KATHENAEUM_NETWORK_TESTS=1 KATHENAEUM_OLLAMA_TESTS=1 ctest --test-dir build`.
 
-To measure Ask on your own libraries and models: `./build/bin/askbench [--answer MODEL] [--embed MODEL] library.zim… < questions.txt` (one question per line; a line starting with `+` is a follow-up). It prints the time of each step, the sources, and each answer with its citations and flags.
+To measure Ask on your own libraries and models: `./build/bin/askbench [--answer MODEL] [--embed MODEL] [--article PATH] library.zim… < questions.txt` (one question per line; a line starting with `+` is a follow-up). It prints the time of each step, the sources, and each answer with its citations and flags.
 
 ## Relationship to Athenaeum
 

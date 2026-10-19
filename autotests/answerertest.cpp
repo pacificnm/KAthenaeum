@@ -126,7 +126,8 @@ class AnswererTest : public QObject
     };
 
     // Asks and waits for finished(); `whileRunning` is called once the answer has started streaming
-    Run ask(Fake &fake, const QString &question, const QStringList &earlier = {}, const std::function<void(Answerer &)> &whileRunning = {})
+    Run ask(Fake &fake, const QString &question, const QStringList &earlier = {}, const std::function<void(Answerer &)> &whileRunning = {},
+            const ArticleScope &article = {})
     {
         OllamaClient client;
         client.setBaseUrl(fake.url());
@@ -147,7 +148,7 @@ class AnswererTest : public QObject
             run.result = r;
             run.done = true;
         });
-        answerer.start({question, earlier, {m_id}, QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")});
+        answerer.start({question, earlier, {m_id}, QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text"), article});
         [&] { QTRY_VERIFY_WITH_TIMEOUT(run.done, 20000); }();
         return run;
     }
@@ -261,6 +262,49 @@ private Q_SLOTS:
         QCOMPARE(run.result.status, QStringLiteral("done"));
         QCOMPARE(run.result.answer, Answerer::noSourcesAnswer());
         QVERIFY(run.sources.isEmpty());
+        QVERIFY(fake.paths.isEmpty());
+    }
+
+    // ---- a chat about one article ----
+
+    void aChatAboutAnArticleAnswersFromItsSectionsAlone()
+    {
+        Fake fake;
+        // "sunlight" is in both articles; only Photosynthesis may be used
+        const Run run = ask(fake, QStringLiteral("what absorbs sunlight"), {}, {}, {m_id, QStringLiteral("Photosynthesis"), QStringLiteral("Photosynthesis")});
+        QCOMPARE(run.result.status, QStringLiteral("done"));
+        QVERIFY(run.sources.size() >= 2);  // its introduction and its Chlorophyll section, each a source of its own
+        QStringList sections;
+        for (const Rag::Source &s : run.sources) {
+            QCOMPARE(s.path, QStringLiteral("Photosynthesis"));
+            sections << s.section;
+        }
+        QVERIFY(sections.contains(QStringLiteral("Chlorophyll")));
+        QVERIFY(sections.contains(QString()));
+        const QJsonArray messages = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray();
+        QVERIFY(messages.first().toObject().value(QLatin1String("content")).toString().contains(QLatin1String("reading the article \"Photosynthesis\"")));
+        const QString prompt = messages.last().toObject().value(QLatin1String("content")).toString();
+        QVERIFY(prompt.contains(QLatin1String("Photosynthesis - Introduction\n")));
+        QVERIFY(prompt.contains(QLatin1String("Photosynthesis - Chlorophyll\n")));
+        QVERIFY(!prompt.contains(QLatin1String("Leaf")));
+        QCOMPARE(run.result.citations.size(), 1);
+    }
+
+    void aPageWithoutArticleTextAsksNoModel()
+    {
+        Fake fake;
+        const Run run = ask(fake, QStringLiteral("what is this"), {}, {}, {m_id, QStringLiteral("Index"), QStringLiteral("Index")});
+        QCOMPARE(run.result.status, QStringLiteral("done"));
+        QCOMPARE(run.result.answer, Answerer::noTextAnswer());
+        QVERIFY(fake.paths.isEmpty());
+    }
+
+    void anArticleThatIsGoneIsAnError()
+    {
+        Fake fake;
+        const Run run = ask(fake, QStringLiteral("what is this"), {}, {}, {m_id, QStringLiteral("No_such_page"), QStringLiteral("No such page")});
+        QCOMPARE(run.result.status, QStringLiteral("error"));
+        QVERIFY(run.result.error.contains(QLatin1String("No such page")));
         QVERIFY(fake.paths.isEmpty());
     }
 

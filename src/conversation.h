@@ -6,8 +6,7 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
-class Answerer;
-struct AnswerResult;
+#include "core/answerer.h"
 
 // One chat on the Ask page: its messages, and the question being answered now. Questions and answers are saved as they
 // finish; leaving the page (or quitting) during an answer saves what was written as stopped.
@@ -18,6 +17,11 @@ class Conversation : public QAbstractListModel
     Q_PROPERTY(qint64 chatId READ chatId WRITE setChatId NOTIFY chatIdChanged)
     Q_PROPERTY(QString title READ title NOTIFY chatIdChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+    // A chat about one article answers from it alone. Set before the first question (the article panel does); a saved
+    // chat brings its own.
+    Q_PROPERTY(qint64 articleLibraryId READ articleLibraryId WRITE setArticleLibraryId NOTIFY articleChanged)
+    Q_PROPERTY(QString articlePath READ articlePath WRITE setArticlePath NOTIFY articleChanged)
+    Q_PROPERTY(QString articleTitle READ articleTitle WRITE setArticleTitle NOTIFY articleChanged)
 
 public:
     enum Role {
@@ -44,6 +48,12 @@ public:
     void setChatId(qint64 id);
     QString title() const { return m_title; }
     bool busy() const;
+    qint64 articleLibraryId() const { return m_article.libraryId; }
+    void setArticleLibraryId(qint64 id);
+    QString articlePath() const { return m_article.path; }
+    void setArticlePath(const QString &path);
+    QString articleTitle() const { return m_article.title; }
+    void setArticleTitle(const QString &title);
 
     Q_INVOKABLE void ask(const QString &question);
     Q_INVOKABLE void stop();
@@ -55,6 +65,7 @@ public:
 Q_SIGNALS:
     void chatIdChanged();
     void busyChanged();
+    void articleChanged();
     // A chat was created or a message saved: the Chats list is out of date
     void saved();
 
@@ -81,6 +92,7 @@ private:
 
     Answerer *m_answerer;
     qint64 m_chatId = 0;
+    ArticleScope m_article;
     QString m_title;
     QList<Message> m_messages;
     int m_answering = -1;  // the row being answered

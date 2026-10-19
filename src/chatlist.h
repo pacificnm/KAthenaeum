@@ -12,9 +12,12 @@ class ChatList : public QAbstractListModel
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // Only the chats about this article (both set), or every chat
+    Q_PROPERTY(qint64 articleLibraryId MEMBER m_libraryId NOTIFY filterChanged)
+    Q_PROPERTY(QString articlePath MEMBER m_path NOTIFY filterChanged)
 
 public:
-    enum Role { ChatIdRole = Qt::UserRole + 1, TitleRole, UpdatedRole, QuestionsRole };
+    enum Role { ChatIdRole = Qt::UserRole + 1, TitleRole, UpdatedRole, QuestionsRole, ArticleLibraryIdRole, ArticlePathRole, ArticleTitleRole };
     Q_ENUM(Role)
 
     explicit ChatList(QObject *parent = nullptr);
@@ -29,7 +32,10 @@ public:
 
 Q_SIGNALS:
     void countChanged();
+    void filterChanged();
 
 private:
     QList<ChatRecord> m_chats;
+    qint64 m_libraryId = 0;
+    QString m_path;
 };

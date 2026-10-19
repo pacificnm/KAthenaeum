@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "answerer.h"
 
+#include "extract.h"
 #include "ollama.h"
+#include "zimreader.h"
 
 #include <QFutureWatcher>
 #include <QJsonArray>
@@ -23,6 +25,11 @@ QString Answerer::noSourcesAnswer()
     return QStringLiteral("I couldn't find anything relevant to that in the library.");
 }
 
+QString Answerer::noTextAnswer()
+{
+    return QStringLiteral("This page has no article text I can answer from.");
+}
+
 void Answerer::start(const AnswerRequest &request)
 {
     if (m_running)
@@ -39,7 +46,6 @@ void Answerer::start(const AnswerRequest &request)
     m_query = Rag::retrievalQuery(m_request.question, request.earlierQuestions);
 
     Q_EMIT phaseChanged(Finding, 0);
-    ZimSearch::prepare(request.libraryIds);  // opens the archives here: the worker cannot read the database
     auto *watcher = new QFutureWatcher<QList<Rag::Candidate>>(this);
     connect(watcher, &QFutureWatcher<QList<Rag::Candidate>>::finished, this, [this, watcher, generation] {
         watcher->deleteLater();
@@ -48,6 +54,25 @@ void Answerer::start(const AnswerRequest &request)
         m_result.stats.findMs = int(m_clock.elapsed());
         rankAndAsk(watcher->result());
     });
+    if (request.article.isSet()) {
+        // one article: read here (the archive may need opening, which reads the database), cut up in the worker
+        const auto content = ZimReader::content(request.article.libraryId, request.article.path);
+        if (!content) {
+            watcher->deleteLater();
+            finish(QStringLiteral("error"), QStringLiteral("“%1” cannot be read: its library may have been removed.").arg(request.article.title));
+            return;
+        }
+        watcher->setFuture(QtConcurrent::run([query = m_query, article = request.article, data = content->data, path = content->path] {
+            ZimSearch::Article a;
+            a.found.libraryId = article.libraryId;
+            a.found.path = path;
+            a.found.title = article.title;
+            a.passages = Extract::extract(data).passages;
+            return Rag::pickPassages(query, {a});
+        }));
+        return;
+    }
+    ZimSearch::prepare(request.libraryIds);  // opens the archives here: the worker cannot read the database
     watcher->setFuture(QtConcurrent::run([query = m_query, ids = request.libraryIds] {
         return Rag::pickPassages(query, ZimSearch::readArticles(query, ids, Rag::Articles));
     }));
@@ -57,7 +82,7 @@ void Answerer::rankAndAsk(QList<Rag::Candidate> pool)
 {
     if (pool.isEmpty()) {
         Q_EMIT sourcesReady({}, false, {});
-        m_result.answer = noSourcesAnswer();
+        m_result.answer = m_request.article.isSet() ? noTextAnswer() : noSourcesAnswer();
         Q_EMIT textAdded(m_result.answer);
         finish(QStringLiteral("done"));
         return;
@@ -84,7 +109,7 @@ void Answerer::rankAndAsk(QList<Rag::Candidate> pool)
         }
         const QList<Rag::Candidate> ranked = Rag::rank(pool, question);
         m_result.stats.passages = int(ranked.size());
-        m_context = Rag::buildContext(ranked);
+        m_context = Rag::buildContext(ranked, m_request.article.isSet());
         Q_EMIT sourcesReady(m_context.sources, m_degraded, note);
         ask();
     });
@@ -104,7 +129,8 @@ void Answerer::ask()
             finish(QStringLiteral("error"), error);
             return;
         }
-        QJsonArray messages{QJsonObject{{QStringLiteral("role"), QStringLiteral("system")}, {QStringLiteral("content"), Rag::systemPrompt()}}};
+        const QString system = m_request.article.isSet() ? Rag::articleSystemPrompt(m_request.article.title) : Rag::systemPrompt();
+        QJsonArray messages{QJsonObject{{QStringLiteral("role"), QStringLiteral("system")}, {QStringLiteral("content"), system}}};
         messages.append(QJsonObject{{QStringLiteral("role"), QStringLiteral("user")},
                                     {QStringLiteral("content"), Rag::userMessage(m_context, m_request.question, m_request.earlierQuestions)}});
         QJsonObject body{{QStringLiteral("model"), model},

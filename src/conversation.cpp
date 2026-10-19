@@ -208,6 +208,30 @@ bool Conversation::busy() const
     return m_answerer->running();
 }
 
+void Conversation::setArticleLibraryId(qint64 id)
+{
+    if (id == m_article.libraryId || m_chatId > 0)
+        return;  // a saved chat keeps the article it is about
+    m_article.libraryId = id;
+    Q_EMIT articleChanged();
+}
+
+void Conversation::setArticlePath(const QString &path)
+{
+    if (path == m_article.path || m_chatId > 0)
+        return;
+    m_article.path = path;
+    Q_EMIT articleChanged();
+}
+
+void Conversation::setArticleTitle(const QString &title)
+{
+    if (title == m_article.title || m_chatId > 0)
+        return;
+    m_article.title = title;
+    Q_EMIT articleChanged();
+}
+
 void Conversation::setChatId(qint64 id)
 {
     if (id == m_chatId)
@@ -225,8 +249,13 @@ void Conversation::load()
     m_answering = -1;
     m_title.clear();
     if (m_chatId > 0) {
-        if (const auto chat = Chats::byId(m_chatId))
+        if (const auto chat = Chats::byId(m_chatId)) {
             m_title = chat->title;
+            if (chat->articleLibraryId > 0) {
+                m_article = {chat->articleLibraryId, chat->articlePath, chat->articleTitle};
+                Q_EMIT articleChanged();
+            }
+        }
         for (const MessageRecord &r : Chats::messages(m_chatId)) {
             Message m;
             m.id = r.id;
@@ -264,7 +293,7 @@ void Conversation::ask(const QString &question)
             earlier << m.content;
 
     if (m_chatId <= 0) {
-        m_chatId = Chats::create(q);
+        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title);
         m_title = q.simplified().left(200);
         Q_EMIT chatIdChanged();
     }
@@ -288,8 +317,15 @@ void Conversation::ask(const QString &question)
 
     QList<qint64> libraries;
     for (const LibraryRecord &r : Library::all())
-        if (r.fileExists())
+        if (r.fileExists() && (!m_article.isSet() || r.id == m_article.libraryId))
             libraries << r.id;
+    if (libraries.isEmpty() && m_article.isSet()) {
+        AnswerResult gone;
+        gone.status = QStringLiteral("error");
+        gone.error = i18n("“%1” cannot be read: its library is no longer installed.", m_article.title);
+        finished(gone);
+        return;
+    }
     if (libraries.isEmpty()) {
         AnswerResult none;
         none.status = QStringLiteral("error");
@@ -298,7 +334,7 @@ void Conversation::ask(const QString &question)
         return;
     }
     ModelSettings *models = ModelSettings::instance();
-    m_answerer->start({q, earlier, libraries, models->answerModel(), models->embeddingModel()});
+    m_answerer->start({q, earlier, libraries, models->answerModel(), models->embeddingModel(), m_article});
     Q_EMIT busyChanged();
 }
 

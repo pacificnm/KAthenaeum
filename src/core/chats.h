@@ -13,6 +13,10 @@ struct ChatRecord {
     QString title;  // the first question
     QDateTime updatedAt;
     int questions = 0;
+    // the article the chat is about; articleLibraryId 0 = the whole collection
+    qint64 articleLibraryId = 0;
+    QString articlePath;
+    QString articleTitle;
 };
 
 struct MessageRecord {
@@ -30,9 +34,10 @@ struct MessageRecord {
 // Saved conversations (tables `chats` and `messages`, schema v4)
 namespace Chats
 {
-// The new chat's id, or 0 on failure. The title is cut to 200 characters.
-qint64 create(const QString &title);
+// The new chat's id, or 0 on failure. The title is cut to 200 characters. A chat about one article names it.
+qint64 create(const QString &title, qint64 articleLibraryId = 0, const QString &articlePath = {}, const QString &articleTitle = {});
 QList<ChatRecord> all();  // most recently used first
+QList<ChatRecord> aboutArticle(qint64 libraryId, const QString &path);  // most recently used first
 std::optional<ChatRecord> byId(qint64 id);
 bool rename(qint64 id, const QString &title);
 bool remove(qint64 id);  // and its messages

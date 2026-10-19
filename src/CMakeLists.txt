@@ -49,6 +49,7 @@ qt_add_qml_module(kathenaeum
         qml/Main.qml
         qml/LibrariesPage.qml
         qml/AskPage.qml
+        qml/ChatView.qml
         qml/ChatsPage.qml
         qml/ProjectsPage.qml
         qml/LibraryManagerPage.qml

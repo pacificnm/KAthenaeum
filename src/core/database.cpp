@@ -84,6 +84,14 @@ const QList<QStringList> migrations = {
                        " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
         QStringLiteral("CREATE INDEX messages_chat ON messages (chat_id, id)"),
     },
+    {
+        // "Ask about this article": the article a chat is about (none: library_id NULL). No foreign key: a chat about an
+        // article outlives its library, and says so when reopened.
+        QStringLiteral("ALTER TABLE chats ADD COLUMN library_id INTEGER"),
+        QStringLiteral("ALTER TABLE chats ADD COLUMN article_path TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE chats ADD COLUMN article_title TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("CREATE INDEX chats_article ON chats (library_id, article_path)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

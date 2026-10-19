@@ -258,6 +258,23 @@ private Q_SLOTS:
         QVERIFY(ctx.text.contains(QLatin1String("[3] C - Uses\ntext c")));
     }
 
+    void oneArticleIsCitedBySection()
+    {
+        const auto ctx = Rag::buildContext({candidate(QStringLiteral("Water"), QStringLiteral("intro one")),
+                                            candidate(QStringLiteral("Water"), QStringLiteral("uses one"), QStringLiteral("Uses")),
+                                            candidate(QStringLiteral("Water"), QStringLiteral("intro two")),
+                                            candidate(QStringLiteral("Water"), QStringLiteral("uses two"), QStringLiteral("Uses"))},
+                                           true);
+        QCOMPARE(ctx.sources.size(), 2);
+        QCOMPARE(ctx.sources[0].section, QString());
+        QCOMPARE(ctx.sources[1].section, QStringLiteral("Uses"));
+        QVERIFY(ctx.text.contains(QLatin1String("[1] Water - Introduction\nintro one\nintro two")));
+        QVERIFY(ctx.text.contains(QLatin1String("[2] Water - Uses\nuses one\nuses two")));
+        // grouped by article, the same passages are one source
+        QCOMPARE(Rag::buildContext({candidate(QStringLiteral("Water")), candidate(QStringLiteral("Water"), QStringLiteral("x"), QStringLiteral("Uses"))}).sources.size(), 1);
+        QVERIFY(Rag::articleSystemPrompt(QStringLiteral("Water")).contains(QLatin1String("reading the article \"Water\"")));
+    }
+
     void sourcesAndPassagesPerSourceAreCapped()
     {
         QList<Rag::Candidate> chunks;

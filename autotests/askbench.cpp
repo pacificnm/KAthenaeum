@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Measures Ask end to end on real libraries and the local Ollama (not a test; nothing is checked):
-//   askbench [--answer MODEL] [--embed MODEL] [--url URL] file.zim... < questions.txt
+//   askbench [--answer MODEL] [--embed MODEL] [--url URL] [--article PATH] file.zim... < questions.txt
+// --article asks about that one article of the first library, as the article chat panel does.
 // One question per line. A line starting with "+" is a follow-up to the previous question. Prints, per question, the
 // time of each step, the sources, and the answer with its citations ([n], and [?reason] for a flagged sentence).
 #include <QCommandLineParser>
@@ -23,6 +24,7 @@ int main(int argc, char **argv)
     p.addOption({QStringLiteral("answer"), QStringLiteral("Answer model"), QStringLiteral("model"), QStringLiteral("qwen3.5:2b")});
     p.addOption({QStringLiteral("embed"), QStringLiteral("Embedding model"), QStringLiteral("model"), QStringLiteral("nomic-embed-text")});
     p.addOption({QStringLiteral("url"), QStringLiteral("Ollama"), QStringLiteral("url"), QStringLiteral("http://localhost:11434")});
+    p.addOption({QStringLiteral("article"), QStringLiteral("Ask about this article of the first library"), QStringLiteral("path")});
     p.addPositionalArgument(QStringLiteral("zim"), QStringLiteral("Libraries to ask"));
     p.addHelpOption();
     p.process(app);
@@ -63,7 +65,10 @@ int main(int argc, char **argv)
         else
             earlier.clear();
         out << "\n=== " << q << Qt::endl;
-        answerer.start({q, earlier, ids, p.value(QStringLiteral("answer")), p.value(QStringLiteral("embed"))});
+        ArticleScope article;
+        if (p.isSet(QStringLiteral("article")))
+            article = {ids.first(), p.value(QStringLiteral("article")), p.value(QStringLiteral("article")).replace(QLatin1Char('_'), QLatin1Char(' '))};
+        answerer.start({q, earlier, ids, p.value(QStringLiteral("answer")), p.value(QStringLiteral("embed")), article});
         earlier << q;
     };
     QObject::connect(&answerer, &Answerer::sourcesReady, [&](const QList<Rag::Source> &sources, bool degraded, const QString &note) {

@@ -10,7 +10,7 @@ import KAthenaeum
 Kirigami.ScrollablePage {
     id: page
 
-    signal openChat(var chatId)
+    signal openChat(var chatId, var articleLibraryId, string articlePath)
 
     title: i18n("Chats")
 
@@ -39,14 +39,17 @@ Kirigami.ScrollablePage {
             required property string title
             required property var updated
             required property int questions
+            required property var articleLibraryId
+            required property string articlePath
+            required property string articleTitle
 
             width: ListView.view.width
-            onClicked: page.openChat(chatId)
+            onClicked: page.openChat(chatId, articleLibraryId, articlePath)
 
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
                 Kirigami.Icon {
-                    source: "dialog-messages"
+                    source: row.articleLibraryId > 0 ? "document-preview" : "dialog-messages"
                     Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                     Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                 }
@@ -60,7 +63,8 @@ Kirigami.ScrollablePage {
                     }
                     QQC2.Label {
                         Layout.fillWidth: true
-                        text: i18np("%1 question", "%1 questions", row.questions) + " · " + Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))
+                        text: (row.articleLibraryId > 0 ? i18n("About “%1”", row.articleTitle) + " · " : "")
+                              + i18np("%1 question", "%1 questions", row.questions) + " · " + Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))
                         color: Kirigami.Theme.disabledTextColor
                         font: Kirigami.Theme.smallFont
                         elide: Text.ElideRight

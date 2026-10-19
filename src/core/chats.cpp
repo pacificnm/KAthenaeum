@@ -18,17 +18,22 @@ QDateTime timestamp(const QVariant &v)
 
 ChatRecord chat(const QSqlQuery &q)
 {
-    return {q.value(0).toLongLong(), q.value(1).toString(), timestamp(q.value(2)), q.value(3).toInt()};
+    return {q.value(0).toLongLong(), q.value(1).toString(), timestamp(q.value(2)), q.value(3).toInt(),
+            q.value(4).toLongLong(), q.value(5).toString(), q.value(6).toString()};
 }
 
-const char *ChatSelect = "SELECT c.id, c.title, c.updated_at, (SELECT count(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user') FROM chats c";
+const char *ChatSelect = "SELECT c.id, c.title, c.updated_at, (SELECT count(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user'), "
+                         "coalesce(c.library_id, 0), c.article_path, c.article_title FROM chats c";
 }
 
-qint64 Chats::create(const QString &title)
+qint64 Chats::create(const QString &title, qint64 articleLibraryId, const QString &articlePath, const QString &articleTitle)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO chats (title) VALUES (?)"));
+    q.prepare(QStringLiteral("INSERT INTO chats (title, library_id, article_path, article_title) VALUES (?, ?, ?, ?)"));
     q.addBindValue(Database::text(title.simplified().left(200)));
+    q.addBindValue(articleLibraryId > 0 ? QVariant(articleLibraryId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(Database::text(articleLibraryId > 0 ? articlePath : QString()));
+    q.addBindValue(Database::text(articleLibraryId > 0 ? articleTitle : QString()));
     return q.exec() ? q.lastInsertId().toLongLong() : 0;
 }
 
@@ -37,6 +42,19 @@ QList<ChatRecord> Chats::all()
     QList<ChatRecord> out;
     QSqlQuery q;
     if (q.exec(QLatin1String(ChatSelect) + QStringLiteral(" ORDER BY c.updated_at DESC, c.id DESC")))
+        while (q.next())
+            out.append(chat(q));
+    return out;
+}
+
+QList<ChatRecord> Chats::aboutArticle(qint64 libraryId, const QString &path)
+{
+    QList<ChatRecord> out;
+    QSqlQuery q;
+    q.prepare(QLatin1String(ChatSelect) + QStringLiteral(" WHERE c.library_id = ? AND c.article_path = ? ORDER BY c.updated_at DESC, c.id DESC"));
+    q.addBindValue(libraryId);
+    q.addBindValue(path);
+    if (q.exec())
         while (q.next())
             out.append(chat(q));
     return out;

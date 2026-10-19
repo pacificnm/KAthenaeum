@@ -10,12 +10,21 @@
 class OllamaClient;
 class QNetworkReply;
 
+// The article a chat is about; libraryId 0 = the whole collection
+struct ArticleScope {
+    qint64 libraryId = 0;
+    QString path;
+    QString title;
+    bool isSet() const { return libraryId > 0 && !path.isEmpty(); }
+};
+
 struct AnswerRequest {
     QString question;
     QStringList earlierQuestions;  // earlier questions of the chat, oldest first (for follow-ups)
     QList<qint64> libraryIds;
     QString answerModel;
     QString embeddingModel;
+    ArticleScope article;  // when set, answer from this article alone (libraryIds is then ignored)
 };
 
 struct AnswerStats {
@@ -60,6 +69,7 @@ public:
     bool running() const { return m_running; }
 
     static QString noSourcesAnswer();
+    static QString noTextAnswer();  // an article with no prose to answer from
 
 Q_SIGNALS:
     void phaseChanged(Answerer::Phase phase, int count);

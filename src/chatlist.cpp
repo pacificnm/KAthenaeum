@@ -4,6 +4,7 @@
 ChatList::ChatList(QObject *parent)
     : QAbstractListModel(parent)
 {
+    connect(this, &ChatList::filterChanged, this, &ChatList::refresh);
     refresh();
 }
 
@@ -14,7 +15,13 @@ int ChatList::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> ChatList::roleNames() const
 {
-    return {{ChatIdRole, "chatId"}, {TitleRole, "title"}, {UpdatedRole, "updated"}, {QuestionsRole, "questions"}};
+    return {{ChatIdRole, "chatId"},
+            {TitleRole, "title"},
+            {UpdatedRole, "updated"},
+            {QuestionsRole, "questions"},
+            {ArticleLibraryIdRole, "articleLibraryId"},
+            {ArticlePathRole, "articlePath"},
+            {ArticleTitleRole, "articleTitle"}};
 }
 
 QVariant ChatList::data(const QModelIndex &index, int role) const
@@ -31,6 +38,12 @@ QVariant ChatList::data(const QModelIndex &index, int role) const
         return c.updatedAt.toLocalTime();
     case QuestionsRole:
         return c.questions;
+    case ArticleLibraryIdRole:
+        return c.articleLibraryId;
+    case ArticlePathRole:
+        return c.articlePath;
+    case ArticleTitleRole:
+        return c.articleTitle;
     }
     return {};
 }
@@ -38,7 +51,7 @@ QVariant ChatList::data(const QModelIndex &index, int role) const
 void ChatList::refresh()
 {
     beginResetModel();
-    m_chats = Chats::all();
+    m_chats = m_libraryId > 0 && !m_path.isEmpty() ? Chats::aboutArticle(m_libraryId, m_path) : Chats::all();
     endResetModel();
     Q_EMIT countChanged();
 }
