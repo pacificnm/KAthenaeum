@@ -325,11 +325,6 @@ void ZimSearch::prepare(const QList<qint64> &libraryIds)
 
 namespace
 {
-struct Candidate {
-    ZimSearch::Found found;
-    QList<Passage> passages;
-};
-
 // Do the query's words appear in the article's title or introduction? Prefix-tolerant, so "polar" meets "polarity"
 double aboutness(const QStringList &stems, const QString &title, const QString &intro)
 {
@@ -348,7 +343,7 @@ double aboutness(const QStringList &stems, const QString &title, const QString &
     return double(n) / double(stems.size());
 }
 
-QList<Candidate> candidates(const QString &query, const QList<qint64> &libraryIds, int limit)
+QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
     QList<ZimSearch::Found> found;
     for (qint64 id : libraryIds)
@@ -357,7 +352,7 @@ QList<Candidate> candidates(const QString &query, const QList<qint64> &libraryId
     for (const QString &t : ZimSearch::terms(query))
         stems << ZimSearch::stem(t);
 
-    QList<Candidate> out;
+    QList<ZimSearch::Article> out;
     for (ZimSearch::Found &f : found) {
         const auto archive = ZimArchives::opened(f.libraryId);
         QByteArray raw;
@@ -378,7 +373,7 @@ QList<Candidate> candidates(const QString &query, const QList<qint64> &libraryId
         f.score *= ZimSearch::AboutnessFloor + (f.named ? 1.0 : aboutness(stems, f.title, passages.first().text));
         out.append({f, std::move(passages)});
     }
-    std::stable_sort(out.begin(), out.end(), [](const Candidate &a, const Candidate &b) {
+    std::stable_sort(out.begin(), out.end(), [](const ZimSearch::Article &a, const ZimSearch::Article &b) {
         return a.found.score > b.found.score;
     });
     return out.mid(0, limit);
@@ -388,9 +383,14 @@ QList<Candidate> candidates(const QString &query, const QList<qint64> &libraryId
 QList<ZimSearch::Found> ZimSearch::findArticles(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
     QList<Found> out;
-    for (const Candidate &c : candidates(query, libraryIds, limit))
+    for (const Article &c : candidates(query, libraryIds, limit))
         out.append(c.found);
     return out;
+}
+
+QList<ZimSearch::Article> ZimSearch::readArticles(const QString &query, const QList<qint64> &libraryIds, int limit)
+{
+    return candidates(query, libraryIds, limit);
 }
 
 QList<ZimSearch::Hit> ZimSearch::search(const QString &query, const QList<qint64> &libraryIds, int limit)
@@ -399,7 +399,7 @@ QList<ZimSearch::Hit> ZimSearch::search(const QString &query, const QList<qint64
     for (const QString &t : terms(query))
         stems << stem(t);
     QList<Hit> out;
-    for (const Candidate &c : candidates(query, libraryIds, limit)) {
+    for (const Article &c : candidates(query, libraryIds, limit)) {
         // the passage among the first dozen that has most of the query's words; the earliest one on a tie
         int best = 0;
         double bestOverlap = -1;

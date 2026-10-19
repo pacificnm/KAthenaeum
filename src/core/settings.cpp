@@ -36,3 +36,18 @@ bool AppSettings::setLibraryFolder(const QString &folder)
 {
     return setValue(QStringLiteral("library.folder"), QDir::cleanPath(folder));
 }
+
+QString AppSettings::ollamaUrl()
+{
+    return value(QStringLiteral("ollama.url"), QStringLiteral("http://localhost:11434"));
+}
+
+QString AppSettings::answerModel()
+{
+    return value(QStringLiteral("models.answer"), QStringLiteral("qwen3.5:2b"));
+}
+
+QString AppSettings::embeddingModel()
+{
+    return value(QStringLiteral("models.embedding"), QStringLiteral("nomic-embed-text"));
+}

@@ -13,4 +13,9 @@ bool setValue(const QString &key, const QString &value);
 QString libraryFolder();
 QString defaultLibraryFolder();
 bool setLibraryFolder(const QString &folder);
+
+// Ollama and the two models Ask uses (see CLAUDE.md, "Models")
+QString ollamaUrl();       // default http://localhost:11434
+QString answerModel();     // default qwen3.5:2b
+QString embeddingModel();  // default nomic-embed-text
 }

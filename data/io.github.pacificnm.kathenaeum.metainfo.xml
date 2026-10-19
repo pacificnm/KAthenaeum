@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.0" date="2026-10-19">
+      <description>
+        <p>Ask: answers from your libraries written by a local model, with every sentence linked to its source and unsupported sentences flagged. Follow-up questions, saved chats, and model settings.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-19">
       <description>
         <p>Search: titles as you type, then the text of every article in every library, with the matching passage shown.</p>

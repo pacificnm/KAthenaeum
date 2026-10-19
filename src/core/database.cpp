@@ -63,6 +63,27 @@ const QList<QStringList> migrations = {
                        " PRIMARY KEY (library_id, path))"),
         QStringLiteral("CREATE INDEX reading_history_recent ON reading_history (library_id, read_at DESC)"),
     },
+    {
+        // Ask: conversations and their messages. An assistant message keeps the sources it was shown and the citations
+        // computed for it (JSON), so a saved chat reads exactly as it did. status: done | stopped | error
+        QStringLiteral("CREATE TABLE chats ("
+                       " id INTEGER PRIMARY KEY,"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX chats_recent ON chats (updated_at DESC)"),
+        QStringLiteral("CREATE TABLE messages ("
+                       " id INTEGER PRIMARY KEY,"
+                       " chat_id INTEGER NOT NULL REFERENCES chats (id) ON DELETE CASCADE,"
+                       " role TEXT NOT NULL,"
+                       " content TEXT NOT NULL DEFAULT '',"
+                       " status TEXT NOT NULL DEFAULT 'done',"
+                       " sources TEXT NOT NULL DEFAULT '[]',"
+                       " citations TEXT NOT NULL DEFAULT '[]',"
+                       " meta TEXT NOT NULL DEFAULT '{}',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX messages_chat ON messages (chat_id, id)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

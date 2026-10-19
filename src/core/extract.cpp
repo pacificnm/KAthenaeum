@@ -56,6 +56,21 @@ QList<xmlNodePtr> nodes(htmlDocPtr doc, const char *expr)
     return out;
 }
 
+QList<xmlNodePtr> nodes(htmlDocPtr doc, xmlNodePtr context, const char *expr)
+{
+    QList<xmlNodePtr> out;
+    xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
+    ctx->node = context;
+    xmlXPathObjectPtr obj = xmlXPathEvalExpression(reinterpret_cast<const xmlChar *>(expr), ctx);
+    if (obj && obj->nodesetval)
+        for (int i = 0; i < obj->nodesetval->nodeNr; ++i)
+            out.append(obj->nodesetval->nodeTab[i]);
+    if (obj)
+        xmlXPathFreeObject(obj);
+    xmlXPathFreeContext(ctx);
+    return out;
+}
+
 bool test(htmlDocPtr doc, xmlNodePtr node, const char *expr)
 {
     xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
@@ -89,6 +104,106 @@ bool isInside(xmlNodePtr n, const QSet<xmlNodePtr> &set)
         if (set.contains(p))
             return true;
     return false;
+}
+
+// ---- infobox facts ----
+// Not in Athenaeum. A mini library holds only each article's introduction and infobox, and the infobox is where the hard
+// facts are (boiling point, density, born, instruments): dropped with the other tables, "What is the boiling point of
+// ethanol?" was refused with the Ethanol article in the prompt. Its label/value rows become one "Key facts" passage.
+const char *InfoboxRowsXPath = "(//div[contains(@class,'mw-parser-output')]//table[contains(@class,'infobox')])[1]//tr";
+
+QString attr(xmlNodePtr n, const char *name)
+{
+    xmlChar *v = xmlGetProp(n, reinterpret_cast<const xmlChar *>(name));
+    const QString s = v ? QString::fromUtf8(reinterpret_cast<const char *>(v)) : QString();
+    xmlFree(v);
+    return s;
+}
+
+bool hidden(xmlNodePtr n)
+{
+    const QString name = tag(n);
+    if (name == QLatin1String("style") || name == QLatin1String("script"))
+        return true;
+    if (name == QLatin1String("sup") && (attr(n, "class").contains(QLatin1String("reference")) || attr(n, "class").contains(QLatin1String("noprint"))))
+        return true;  // footnote markers ([a], [1]), not exponents
+    if (attr(n, "style").remove(QLatin1Char(' ')).contains(QLatin1String("display:none")))
+        return true;
+    // a link out of the encyclopedia: database identifiers (CAS Number, PubChem) and websites
+    return name == QLatin1String("a") && attr(n, "rel").contains(QLatin1String("mw:ExtLink"));
+}
+
+void cellText(xmlNodePtr n, QString &out)
+{
+    for (xmlNodePtr c = n->children; c; c = c->next) {
+        if (c->type == XML_TEXT_NODE) {
+            out += QString::fromUtf8(reinterpret_cast<const char *>(c->content));
+            continue;
+        }
+        if (c->type != XML_ELEMENT_NODE || hidden(c))
+            continue;
+        const QString name = tag(c);
+        if (name == QLatin1String("sup")) {
+            // g/cm^3, 10^-3: an exponent read as plain digits is a different number. A superscript that is only a link
+            // out or the audio icon leaves nothing.
+            QString inner;
+            cellText(c, inner);
+            inner = inner.remove(QChar(0x24D8)).trimmed();  // ⓘ
+            if (!inner.isEmpty())
+                out += QLatin1Char('^') + inner;
+            continue;
+        }
+        if (name == QLatin1String("br"))
+            out += QLatin1Char(' ');
+        else if (name == QLatin1String("li") && !out.trimmed().isEmpty())
+            out += QStringLiteral(", ");  // "Vocals, piano", not "Vocals piano"
+        cellText(c, out);
+        if (name == QLatin1String("div") || name == QLatin1String("p"))
+            out += QLatin1Char(' ');
+    }
+}
+
+// "Label: value" lines, grouped into passages of at most MaxChars
+QStringList infoboxFacts(htmlDocPtr doc)
+{
+    QStringList lines;
+    for (xmlNodePtr row : nodes(doc, InfoboxRowsXPath)) {
+        QList<xmlNodePtr> cells;
+        for (xmlNodePtr c = row->children; c; c = c->next)
+            if (c->type == XML_ELEMENT_NODE && (tag(c) == QLatin1String("th") || tag(c) == QLatin1String("td")))
+                cells << c;
+        if (cells.size() != 2)
+            continue;  // a heading, an image, a caption: not a label and a value
+        if (!nodes(doc, cells[0], ".//img|.//*[@typeof='mw:File']").isEmpty())
+            continue;  // pictures side by side with their captions
+        QString label, value;
+        cellText(cells[0], label);
+        cellText(cells[1], value);
+        label = label.remove(QChar(0x200B)).simplified();
+        value = value.remove(QChar(0x200B)).simplified();
+        static const QRegularExpression spaceComma(QStringLiteral("\\s+,"));
+        label.replace(spaceComma, QStringLiteral(","));
+        value.replace(spaceComma, QStringLiteral(","));
+        while (value.startsWith(QLatin1Char(',')))
+            value = value.mid(1).trimmed();
+        if (label.isEmpty() || label.size() > 60 || value.isEmpty() || value == QLatin1String("Y"))
+            continue;
+        lines << QString(label + QStringLiteral(": ") + value).left(Extract::MaxChars);
+    }
+    QStringList out;
+    QString cur;
+    for (const QString &l : std::as_const(lines)) {
+        if (!cur.isEmpty() && cur.size() + 1 + l.size() > Extract::MaxChars) {
+            out << cur;
+            cur.clear();
+        }
+        cur = cur.isEmpty() ? l : cur + QLatin1Char('\n') + l;
+    }
+    if (!cur.isEmpty() && cur.size() < Extract::MinChars && !out.isEmpty())
+        out.last() += QLatin1Char('\n') + cur;  // a scrap is not worth a passage of its own
+    else if (!cur.isEmpty())
+        out << cur;
+    return out;
 }
 
 // A passage under MinChars is joined to its neighbour instead of being thrown away, so a short section (or an article
@@ -163,6 +278,8 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     for (xmlNodePtr br : nodes(d.doc, "//br"))
         xmlAddNextSibling(br, xmlNewText(reinterpret_cast<const xmlChar *>(" ")));
 
+    const QStringList facts = infoboxFacts(d.doc);  // before the tables are dropped
+
     {
         // Decide before freeing (see ArticleRenderer): drop only the outermost matches. Never the root element: real pages
         // have <html class="... skin-thumbsize-clientpref-standard ...">, which the 'thumb' rule matches; dropping it threw
@@ -224,5 +341,11 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     if (!cur.isEmpty())
         chunks.append({curSection, cur});
     out.passages = mergeSmall(chunks);
+    if (!facts.isEmpty()) {
+        // after the introduction, which stays first (it defines the topic, and Ask always keeps passage 0)
+        qsizetype at = !out.passages.isEmpty() && out.passages.first().section.isEmpty() ? 1 : 0;
+        for (const QString &piece : facts)
+            out.passages.insert(at++, {QStringLiteral("Key facts"), piece});
+    }
     return out;
 }

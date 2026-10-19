@@ -1,0 +1,254 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ollama.h"
+
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QPointer>
+
+namespace
+{
+constexpr int ShortTimeout = 10'000;
+constexpr int EmbedTimeout = 120'000;  // a model loads from disk on first use
+constexpr int ChatTimeout = 300'000;   // without a byte: loading the model and reading the prompt come first
+
+bool cancelled(QNetworkReply *reply)
+{
+    return reply->error() == QNetworkReply::OperationCanceledError;
+}
+
+int status(QNetworkReply *reply)
+{
+    return reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+}
+}
+
+Ollama::ChatLine Ollama::parseChatLine(const QByteArray &line)
+{
+    ChatLine out;
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(line, &err);
+    if (!doc.isObject()) {
+        out.error = QStringLiteral("Unreadable reply from Ollama: %1").arg(QString::fromUtf8(line.left(200)));
+        return out;
+    }
+    out.json = doc.object();
+    out.error = out.json.value(QLatin1String("error")).toString();
+    out.text = out.json.value(QLatin1String("message")).toObject().value(QLatin1String("content")).toString();
+    out.done = out.json.value(QLatin1String("done")).toBool();
+    return out;
+}
+
+std::optional<QList<Vector>> Ollama::parseEmbeddings(const QByteArray &body, QString *error)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(body);
+    const QJsonValue list = doc.object().value(QLatin1String("embeddings"));
+    if (!list.isArray()) {
+        if (error)
+            *error = doc.object().value(QLatin1String("error")).toString(QStringLiteral("Unreadable reply from Ollama"));
+        return std::nullopt;
+    }
+    QList<Vector> out;
+    for (const QJsonValue &row : list.toArray()) {
+        Vector v;
+        const QJsonArray a = row.toArray();
+        v.reserve(a.size());
+        for (const QJsonValue &x : a)
+            v.append(float(x.toDouble()));
+        out.append(v);
+    }
+    return out;
+}
+
+QString Ollama::errorMessage(QNetworkReply::NetworkError error, int httpStatus, const QByteArray &body, const QString &baseUrl,
+                             const QString &model)
+{
+    const QString said = QJsonDocument::fromJson(body).object().value(QLatin1String("error")).toString();
+    if (httpStatus == 404 && !model.isEmpty() && (said.contains(QLatin1String("not found")) || said.isEmpty()))
+        return QStringLiteral("The model “%1” is not installed in Ollama. Install it with: ollama pull %1").arg(model);
+    if (!said.isEmpty())
+        return QStringLiteral("Ollama: %1").arg(said);
+    switch (error) {
+    case QNetworkReply::ConnectionRefusedError:
+    case QNetworkReply::HostNotFoundError:
+    case QNetworkReply::RemoteHostClosedError:
+        return QStringLiteral("Could not reach Ollama at %1. Is it running? (systemctl status ollama)").arg(baseUrl);
+    case QNetworkReply::OperationCanceledError:
+    case QNetworkReply::TimeoutError:
+        return QStringLiteral("Ollama at %1 did not answer in time.").arg(baseUrl);
+    default:
+        break;
+    }
+    if (httpStatus >= 400)
+        return QStringLiteral("Ollama returned HTTP %1.").arg(httpStatus);
+    return QStringLiteral("Could not talk to Ollama at %1.").arg(baseUrl);
+}
+
+OllamaClient::OllamaClient(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void OllamaClient::setBaseUrl(const QString &url)
+{
+    QString u = url.trimmed();
+    while (u.endsWith(QLatin1Char('/')))
+        u.chop(1);
+    if (u != m_baseUrl)
+        m_capabilities.clear();
+    m_baseUrl = u;
+}
+
+QNetworkRequest OllamaClient::request(const QString &path, int timeoutMs) const
+{
+    QNetworkRequest r(QUrl(m_baseUrl + path));
+    r.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    r.setTransferTimeout(timeoutMs);
+    return r;
+}
+
+QNetworkReply *OllamaClient::post(const QString &path, const QJsonObject &body, int timeoutMs)
+{
+    return m_nam.post(request(path, timeoutMs), QJsonDocument(body).toJson(QJsonDocument::Compact));
+}
+
+QNetworkReply *OllamaClient::embed(const QString &model, const QStringList &input, QObject *context, EmbedDone done)
+{
+    QNetworkReply *reply = post(QStringLiteral("/api/embed"), {{QStringLiteral("model"), model}, {QStringLiteral("input"), QJsonArray::fromStringList(input)}},
+                                EmbedTimeout);
+    const QString base = m_baseUrl;
+    connect(reply, &QNetworkReply::finished, context, [reply, done, base, model, n = input.size()] {
+        reply->deleteLater();
+        if (cancelled(reply) && reply->property("aborted").toBool())
+            return;
+        const QByteArray body = reply->readAll();
+        if (reply->error() != QNetworkReply::NoError) {
+            done({}, Ollama::errorMessage(reply->error(), status(reply), body, base, model));
+            return;
+        }
+        QString error;
+        const auto vectors = Ollama::parseEmbeddings(body, &error);
+        if (!vectors || vectors->size() != n)
+            done({}, vectors ? QStringLiteral("Ollama returned %1 embeddings for %2 texts").arg(vectors->size()).arg(n) : error);
+        else
+            done(*vectors, {});
+    });
+    return reply;
+}
+
+QNetworkReply *OllamaClient::chat(const QJsonObject &body, QObject *context, ChatText text, ChatDone done)
+{
+    QJsonObject b = body;
+    b.insert(QStringLiteral("stream"), true);
+    QNetworkReply *reply = post(QStringLiteral("/api/chat"), b, ChatTimeout);
+    auto buffer = std::make_shared<QByteArray>();
+    auto last = std::make_shared<QJsonObject>();
+    auto failed = std::make_shared<QString>();
+    // Lines are handled as they arrive; an HTTP error's body is only read at the end
+    auto drain = [reply, buffer, last, failed, text](bool all) {
+        if (status(reply) != 200 || !failed->isEmpty())
+            return;
+        *buffer += reply->readAll();
+        qsizetype nl;
+        while ((nl = buffer->indexOf('\n')) >= 0 || (all && !buffer->trimmed().isEmpty())) {
+            const QByteArray line = nl >= 0 ? buffer->left(nl) : *buffer;
+            buffer->remove(0, nl >= 0 ? nl + 1 : buffer->size());
+            if (line.trimmed().isEmpty())
+                continue;
+            const Ollama::ChatLine l = Ollama::parseChatLine(line);
+            if (!l.error.isEmpty()) {
+                *failed = l.error;
+                return;
+            }
+            if (!l.text.isEmpty())
+                text(l.text);
+            if (l.done)
+                *last = l.json;
+        }
+    };
+    connect(reply, &QNetworkReply::readyRead, context, [drain] {
+        drain(false);
+    });
+    const QString base = m_baseUrl;
+    const QString model = body.value(QLatin1String("model")).toString();
+    connect(reply, &QNetworkReply::finished, context, [reply, drain, last, failed, done, base, model] {
+        reply->deleteLater();
+        if (cancelled(reply) && reply->property("aborted").toBool())
+            return;
+        if (reply->error() != QNetworkReply::NoError || status(reply) != 200) {
+            done({}, Ollama::errorMessage(reply->error(), status(reply), reply->readAll(), base, model));
+            return;
+        }
+        drain(true);
+        if (!failed->isEmpty())
+            done({}, QStringLiteral("Ollama: %1").arg(*failed));
+        else if (last->isEmpty())
+            done({}, QStringLiteral("Ollama ended the answer without finishing it."));
+        else
+            done(*last, {});
+    });
+    return reply;
+}
+
+void OllamaClient::capabilities(const QString &model, QObject *context, Capabilities done)
+{
+    if (const auto it = m_capabilities.constFind(model); it != m_capabilities.cend()) {
+        done(*it, {});
+        return;
+    }
+    QNetworkReply *reply = post(QStringLiteral("/api/show"), {{QStringLiteral("model"), model}}, ShortTimeout);
+    const QString base = m_baseUrl;
+    QPointer<OllamaClient> self(this);
+    connect(reply, &QNetworkReply::finished, context, [self, reply, done, base, model] {
+        reply->deleteLater();
+        const QByteArray body = reply->readAll();
+        if (reply->error() != QNetworkReply::NoError) {
+            done({}, Ollama::errorMessage(reply->error(), status(reply), body, base, model));
+            return;
+        }
+        QStringList caps;
+        for (const QJsonValue &c : QJsonDocument::fromJson(body).object().value(QLatin1String("capabilities")).toArray())
+            caps << c.toString();
+        if (self)
+            self->m_capabilities.insert(model, caps);
+        done(caps, {});
+    });
+}
+
+QNetworkReply *OllamaClient::names(const QString &path, const QString &listKey, QObject *context, Names done)
+{
+    QNetworkReply *reply = m_nam.get(request(path, ShortTimeout));
+    const QString base = m_baseUrl;
+    connect(reply, &QNetworkReply::finished, context, [reply, done, base, listKey] {
+        reply->deleteLater();
+        if (cancelled(reply) && reply->property("aborted").toBool())
+            return;
+        const QByteArray body = reply->readAll();
+        if (reply->error() != QNetworkReply::NoError) {
+            done({}, Ollama::errorMessage(reply->error(), status(reply), body, base));
+            return;
+        }
+        QStringList out;
+        for (const QJsonValue &m : QJsonDocument::fromJson(body).object().value(listKey).toArray())
+            out << m.toObject().value(QLatin1String("name")).toString();
+        done(out, {});
+    });
+    return reply;
+}
+
+void OllamaClient::cancel(QNetworkReply *reply)
+{
+    if (!reply)
+        return;
+    reply->setProperty("aborted", true);
+    reply->abort();
+}
+
+QNetworkReply *OllamaClient::installed(QObject *context, Names done)
+{
+    return names(QStringLiteral("/api/tags"), QStringLiteral("models"), context, done);
+}
+
+QNetworkReply *OllamaClient::loaded(QObject *context, Names done)
+{
+    return names(QStringLiteral("/api/ps"), QStringLiteral("models"), context, done);
+}

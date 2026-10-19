@@ -60,6 +60,9 @@ private Q_SLOTS:
             articles += int(ZimReader::titles(m_id, letter, 0, 1000000).entries.size());
         QCOMPARE(total, articles);
         QVERIFY(total > 0);
+        // the ZIM's own front page (mainPage -> index, a list of titles) is not an article
+        QVERIFY(ZimReader::hasEntry(m_id, QStringLiteral("index")));
+        QVERIFY(!seen.contains(QStringLiteral("index")));
     }
 
     void randomArticlesAreArticles()

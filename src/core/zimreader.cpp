@@ -63,9 +63,21 @@ QString str(const std::string &s)
     return QString::fromStdString(s);
 }
 
-bool isArticle(const zim::Entry &e)
+bool isMainPage(const zim::Archive &z, const zim::Entry &e)
+{
+    try {
+        return z.hasMainEntry() && z.getMainEntry().getItem(true).getPath() == e.getPath();
+    } catch (const std::exception &) {
+        return false;
+    }
+}
+
+bool isArticle(const zim::Archive &z, const zim::Entry &e)
 {
     if (e.isRedirect() || str(e.getTitle()).endsWith(QLatin1String("(disambiguation)")))
+        return false;
+    // the ZIM's own front page (on Wikipedia selections, a custom alphabetical list of titles), not an article
+    if (isMainPage(z, e))
         return false;
     // mwoffliner's HTML redirect pages (a few hundred bytes forwarding to a section of another article) are not
     // articles either: the article they lead to is listed under its own title. Only small pages need a look.
@@ -191,7 +203,7 @@ ZimReader::TitlePage pageOf(const zim::Archive &z, const QList<std::pair<quint32
                 return page;
             }
             const zim::Entry e = z.getEntryByTitle(begin + quint32(pos - base));
-            if (isArticle(e))
+            if (isArticle(z, e))
                 page.entries.append({str(e.getPath()), str(e.getTitle())});
         }
         base += size;
@@ -234,7 +246,7 @@ std::optional<ZimEntry> ZimReader::randomArticle(qint64 libraryId)
         // them, which would favour articles with many other names
         for (int attempt = 0; attempt < 200; ++attempt) {
             const zim::Entry e = z->getRandomEntry();
-            if (isArticle(e))
+            if (isArticle(*z, e))
                 return ZimEntry{str(e.getPath()), str(e.getTitle())};
         }
     } catch (const std::exception &) {
@@ -252,7 +264,7 @@ QList<ZimEntry> ZimReader::withPrefix(qint64 libraryId, const QString &prefix, i
         for (const zim::Entry &e : z->findByTitle(prefix.toStdString())) {
             if (out.size() == limit)
                 break;
-            if (isArticle(e))
+            if (isArticle(*z, e))
                 out.append({str(e.getPath()), str(e.getTitle())});
         }
     } catch (const std::exception &) {

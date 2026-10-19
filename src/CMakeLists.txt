@@ -2,13 +2,18 @@
 
 # Everything that is not UI, so tests can link it without QML.
 add_library(kathenaeum_core STATIC
+    core/answerer.cpp core/answerer.h
     core/articlerenderer.cpp core/articlerenderer.h
     core/catalog.cpp core/catalog.h
+    core/chats.cpp core/chats.h
     core/database.cpp core/database.h
     core/downloads.cpp core/downloads.h
+    core/embedding.cpp core/embedding.h
     core/extract.cpp core/extract.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h
+    core/ollama.cpp core/ollama.h
+    core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
     core/zimarchive.cpp core/zimarchive.h
     core/zimarchives_p.h
@@ -23,9 +28,12 @@ add_executable(kathenaeum
     main.cpp
     appstate.cpp appstate.h
     articlestore.cpp articlestore.h
+    chatlist.cpp chatlist.h
+    conversation.cpp conversation.h
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
     librarymodels.cpp librarymodels.h
+    modelsettings.cpp modelsettings.h
     searchcontroller.cpp searchcontroller.h
     zimschemehandler.cpp zimschemehandler.h
 )

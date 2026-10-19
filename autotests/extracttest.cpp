@@ -185,11 +185,61 @@ private Q_SLOTS:
         for (int i = 0; i < 25; ++i) {
             const auto entry = ZimReader::randomArticle(*id);
             const auto content = ZimReader::content(*id, entry->path);
-            withPassages += !Extract::extract(content->data).passages.isEmpty();
+            const bool any = !Extract::extract(content->data).passages.isEmpty();
+            if (!any)
+                qWarning("No passages: %s", qPrintable(entry->path));
+            withPassages += any;
         }
         QCOMPARE(withPassages, 25);
         ZimReader::close(*id);
         Database::close();
+    }
+
+    // ---- infobox facts (KAthenaeum's addition: a mini library is introductions and infoboxes) ----
+
+    void infoboxRowsBecomeKeyFactsAfterTheIntroduction()
+    {
+        const auto a = Extract::extract(page(QStringLiteral(
+            "<table class='infobox ib-chembox'><tbody>"
+            "<tr><th colspan='2'>Ethanol</th></tr>"                                                // a heading: one cell
+            "<tr><td><span typeof='mw:File'><img src='x'/></span></td><td>Skeletal formula</td></tr>"  // pictures and captions
+            "<tr><td>CAS Number</td><td><a rel='mw:ExtLink nofollow' href='https://x'>64-17-5</a><sup><span style='display:none'>Y</span></sup></td></tr>"
+            "<tr><td>Density</td><td>0.78945 g/cm<sup>3</sup> (at 20 °C)</td></tr>"                 // td/td, as in chemboxes
+            "<tr><th>Boiling point</th><td>78.23 °C<sup class='reference'>[4]</sup></td></tr>"      // th/td, as in most infoboxes
+            "<tr><th>Instruments</th><td><div class='plainlist'><ul><li>Vocals</li><li>piano</li></ul></div></td></tr>"
+            "<tr><th>Born</th><td>Ray Charles Robinson<br/><span style='display: none'>(1930-09-23)</span>September 23, 1930</td></tr>"
+            "<tr><th>Spouses</th><td>Eileen Williams\u200b (m. 1951)</td></tr>"
+            "</tbody></table>"
+            "<p>Ethanol is an organic compound with the chemical formula CH3CH2OH, found in drinks.</p>"
+            "<h2>Uses</h2><p>Ethanol is used as a solvent, as a fuel and in medicine in many countries.</p>")));
+        QCOMPARE(sections(a), (QStringList{QString(), QStringLiteral("Key facts"), QStringLiteral("Uses")}));
+        QCOMPARE(a.passages[1].text, QStringLiteral("Density: 0.78945 g/cm^3 (at 20 °C)\n"
+                                                    "Boiling point: 78.23 °C\n"
+                                                    "Instruments: Vocals, piano\n"
+                                                    "Born: Ray Charles Robinson September 23, 1930\n"
+                                                    "Spouses: Eileen Williams (m. 1951)"));
+    }
+
+    void aPageWithoutAnInfoboxHasNoKeyFacts()
+    {
+        const auto a = Extract::extract(page(QStringLiteral("<p>Plain article text that is long enough to be a passage.</p>"
+                                                            "<table><tr><th>Year</th><td>1990</td></tr></table>")));
+        QCOMPARE(sections(a), QStringList{QString()});
+    }
+
+    void manyFactsAreSplitOnLinesNotMidFact()
+    {
+        QString rows;
+        for (int i = 0; i < 80; ++i)
+            rows += QStringLiteral("<tr><th>Property %1</th><td>value number %1 with some units attached</td></tr>").arg(i);
+        const auto a = Extract::extract(page(QStringLiteral("<table class='infobox'>%1</table><p>An introduction long enough to keep.</p>").arg(rows)));
+        QVERIFY(a.passages.size() > 2);
+        for (const Passage &p : a.passages.mid(1)) {
+            QCOMPARE(p.section, QStringLiteral("Key facts"));
+            QVERIFY(p.text.size() <= Extract::MaxChars);
+            for (const QString &line : p.text.split(QLatin1Char('\n')))
+                QVERIFY2(line.startsWith(QLatin1String("Property ")), qPrintable(line));
+        }
     }
 
     void unparseableInputReturnsNothing()

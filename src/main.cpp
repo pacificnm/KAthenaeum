@@ -20,6 +20,7 @@
 #include "appstate.h"
 #include "core/extract.h"
 #include "librarymanager.h"
+#include "modelsettings.h"
 #include "zimschemehandler.h"
 #include "core/database.h"
 #include "kathenaeum-version.h"
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     Database::open(dbPath, &dbError);
     AppState::instance()->setDatabase(dbPath, dbError);
     LibraryManager *libraries = LibraryManager::createInstance(&app);
+    ModelSettings::createInstance(&app)->refresh();  // is Ollama there, with the models? (one quick local request)
     if (dbError.isEmpty())
         libraries->initialize();
 

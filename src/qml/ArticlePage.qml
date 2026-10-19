@@ -11,6 +11,9 @@ Kirigami.Page {
     id: page
 
     required property url url
+    // A section to show once the article has loaded and is in place. Loading "page#section" directly did not always
+    // scroll there (a citation opened Ray (film) at the top instead of at Plot, seen 2026-10-19).
+    property string fragment
     property var info: ({})
 
     title: info.title ?? i18n("Loading…")
@@ -55,6 +58,11 @@ Kirigami.Page {
         settings.localContentCanAccessRemoteUrls: false
         settings.localContentCanAccessFileUrls: false
 
+        onLoadingChanged: loadingInfo => {
+            if (loadingInfo.status === WebEngineView.LoadSucceededStatus && page.fragment !== "")
+                fragmentTimer.start();
+        }
+
         onUrlChanged: {
             if (LibraryBrowser.isArticleUrl(url))
                 page.info = LibraryBrowser.articleInfo(url);
@@ -79,6 +87,18 @@ Kirigami.Page {
                 view.url = request.requestedUrl;
             else
                 openOutside(request.requestedUrl);
+        }
+    }
+
+    // Jumping as soon as the page has loaded did not scroll either: the page is still sliding in and the view has not
+    // been laid out. A moment later it works.
+    Timer {
+        id: fragmentTimer
+        interval: Kirigami.Units.longDuration * 2
+        onTriggered: {
+            const id = page.fragment;
+            page.fragment = "";
+            page.jumpTo(id);
         }
     }
 

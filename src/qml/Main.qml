@@ -15,9 +15,12 @@ Kirigami.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 40
 
     // One place that switches the main page, so the drawer and other pages share it
-    function show(component) {
+    function show(component, properties) {
         pageStack.clear();
-        pageStack.push(component);
+        pageStack.push(component, properties ?? {});
+    }
+    function openChat(chatId) {
+        show(askPage, { chatId: chatId });
     }
     // Reading goes deeper one page at a time: Libraries > Chemistry > A to Z > Water
     function openLibrary(libraryId) {
@@ -29,8 +32,8 @@ Kirigami.ApplicationWindow {
     function openSearch(query, libraryId) {
         pageStack.push(searchPage, { initialQuery: query, libraryId: libraryId });
     }
-    function openArticle(libraryId, path) {
-        pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path) });
+    function openArticle(libraryId, path, fragment) {
+        pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), fragment: fragment ?? "" });
     }
 
     pageStack.columnView.columnResizeMode: Kirigami.ColumnView.SingleColumn
@@ -92,8 +95,19 @@ Kirigami.ApplicationWindow {
         }
     }
     Component { id: articlePage; ArticlePage {} }
-    Component { id: askPage; AskPage {} }
-    Component { id: chatsPage; ChatsPage {} }
+    Component {
+        id: askPage
+        AskPage {
+            onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
+            onOpenSettings: root.show(settingsPage)
+        }
+    }
+    Component {
+        id: chatsPage
+        ChatsPage {
+            onOpenChat: chatId => root.openChat(chatId)
+        }
+    }
     Component { id: projectsPage; ProjectsPage {} }
     Component { id: libraryManagerPage; LibraryManagerPage {} }
     Component { id: settingsPage; SettingsPage {} }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "extract.h"
+
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -56,6 +58,12 @@ struct Hit {
     bool titleMatch = false;
 };
 
+// An article found for a query, with its prose passages (read once: search snippets and Ask both use them)
+struct Article {
+    Found found;
+    QList<Passage> passages;
+};
+
 // Opens the libraries' archives (reads the database, so on the UI thread) before a search runs on a worker thread
 void prepare(const QList<qint64> &libraryIds);
 
@@ -63,6 +71,8 @@ void prepare(const QList<qint64> &libraryIds);
 // re-ranked by whether the article is about the query (its title and introduction name the query's words). Articles
 // with no readable prose are left out.
 QList<Found> findArticles(const QString &query, const QList<qint64> &libraryIds, int limit);
+// The same, with each article's passages
+QList<Article> readArticles(const QString &query, const QList<qint64> &libraryIds, int limit);
 
 // The same, with the best-matching passage of each article as a snippet; articles that cannot be read are left out
 QList<Hit> search(const QString &query, const QList<qint64> &libraryIds, int limit);
