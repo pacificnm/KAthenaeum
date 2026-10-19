@@ -256,8 +256,10 @@ Kirigami.Page {
         id: excerptPicker
         title: i18n("Save Passage to Project")
         onChosen: (projectId, projectTitle, note) => {
-            if (projects.addExcerpt(projectId, excerptPicker.preview, page.info.libraryId, page.info.path, page.info.title, "", note))
+            if (projects.addExcerpt(projectId, excerptPicker.preview, page.info.libraryId, page.info.path, page.info.title, "", note)) {
                 applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+                view.reload();  // shows it marked (the picker has closed, so no selection is lost: Athenaeum's lesson)
+            }
         }
     }
 

@@ -3,6 +3,8 @@
 
 #include "core/zimreader.h"
 
+#include "core/projects.h"
+
 #include <QCache>
 #include <QColor>
 
@@ -46,6 +48,7 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 .article a:visited { color: var(--link-visited); }
 .article a.wl-ext::after { content: '\2197'; font-size: 0.7em; margin-left: 2px; opacity: 0.6; }
 .article .wl-missing { color: inherit; }
+.article mark.excerpt-hl { background: var(--accent-soft); color: inherit; border-bottom: 2px solid var(--link); border-radius: 2px; cursor: help; }
 .article ul, .article ol { padding-left: 1.5em; margin: 0.8em 0; }
 .article li { margin: 0.25em 0; }
 .article .plainlist ul, .article .plainlist ol, .article ul.plainlist { list-style: none; padding-left: 0; }
@@ -112,9 +115,13 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
     const auto content = ZimReader::content(libraryId, path);
     if (!content || !content->mimetype.startsWith(QLatin1String("text/html")))
         return std::nullopt;
-    auto rendered = ArticleRenderer::render(content->data, content->path, QStringLiteral("zim://lib%1/").arg(libraryId), [libraryId](const QString &p) {
-        return ZimReader::hasEntry(libraryId, p);
-    });
+    // saved excerpts are marked in the page (cleared from the cache whenever a project changes)
+    auto rendered = ArticleRenderer::render(
+        content->data, content->path, QStringLiteral("zim://lib%1/").arg(libraryId),
+        [libraryId](const QString &p) {
+            return ZimReader::hasEntry(libraryId, p);
+        },
+        nullptr, Projects::highlightsFor(libraryId, content->path));
     if (!rendered)
         return std::nullopt;
     auto *a = new Article{libraryId, content->path, std::move(*rendered)};

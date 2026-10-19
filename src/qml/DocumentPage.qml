@@ -136,7 +136,8 @@ Kirigami.Page {
                     id: preview
                     width: previewView.availableWidth
                     padding: Kirigami.Units.largeSpacing * 2
-                    text: "# " + doc.title + "\n\n" + doc.content
+                    // project.articles makes the binding wait for the project's sources (a method call alone is not watched)
+                    text: "# " + doc.title + "\n\n" + (project.articles.length >= 0 && project.exists ? project.preview(doc.content) : doc.content)
                     textFormat: TextEdit.MarkdownText
                     wrapMode: TextEdit.Wrap
                     readOnly: true

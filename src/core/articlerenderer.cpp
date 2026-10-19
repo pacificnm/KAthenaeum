@@ -167,8 +167,85 @@ QString ArticleRenderer::encodePath(const QString &path)
     return QString::fromLatin1(QUrl::toPercentEncoding(path, "/()_-.,!~*'"));
 }
 
+namespace
+{
+void textNodes(xmlNodePtr n, QList<xmlNodePtr> &out)
+{
+    for (xmlNodePtr c = n->children; c; c = c->next) {
+        if (c->type == XML_TEXT_NODE)
+            out << c;
+        else if (c->type == XML_ELEMENT_NODE)
+            textNodes(c, out);
+    }
+}
+
+QString contentOf(xmlNodePtr n)
+{
+    return n->content ? QString::fromUtf8(reinterpret_cast<const char *>(n->content)) : QString();
+}
+
+// Wraps [from, to) of a text node in <mark>. The node keeps the text before it. libxml2 merges a text node added next to
+// another text node into that node (xmlAddPrevSibling put the "before" part into the original node, which was then
+// freed: the text after every mark vanished), so only the mark, an element, is added next to the original.
+void wrap(xmlNodePtr node, qsizetype from, qsizetype to, const QString &label)
+{
+    const QString text = contentOf(node);
+    const QByteArray before = text.left(from).toUtf8();
+    xmlNodeSetContentLen(node, reinterpret_cast<const xmlChar *>(before.constData()), int(before.size()));
+    xmlNodePtr mark = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("mark"));
+    xmlNewProp(mark, reinterpret_cast<const xmlChar *>("class"), reinterpret_cast<const xmlChar *>("excerpt-hl"));
+    if (!label.isEmpty())
+        xmlNewProp(mark, reinterpret_cast<const xmlChar *>("title"), reinterpret_cast<const xmlChar *>(label.toUtf8().constData()));
+    xmlAddChild(mark, xmlNewText(reinterpret_cast<const xmlChar *>(text.mid(from, to - from).toUtf8().constData())));
+    xmlAddNextSibling(node, mark);
+    if (to < text.size())  // may merge into a text node after the mark: the same text, in the same place
+        xmlAddNextSibling(mark, xmlNewText(reinterpret_cast<const xmlChar *>(text.mid(to).toUtf8().constData())));
+}
+
+// One highlight: find it in the text (whitespace and case ignored) and mark every text node it covers
+bool highlight(xmlNodePtr root, const Highlight &h)
+{
+    QString needle;
+    for (const QChar c : h.text)
+        if (!c.isSpace())
+            needle += c.toLower();
+    if (needle.size() < 8)
+        return false;  // too short to place reliably
+    QList<xmlNodePtr> nodes;
+    textNodes(root, nodes);
+    QString hay;
+    QList<std::pair<int, int>> where;  // for each character of `hay`: (node, offset in it)
+    QList<QString> texts;
+    for (int i = 0; i < nodes.size(); ++i) {
+        texts << contentOf(nodes.at(i));
+        const QString &t = texts.last();
+        for (int k = 0; k < t.size(); ++k)
+            if (!t.at(k).isSpace()) {
+                hay += t.at(k).toLower();
+                where.append({i, k});
+            }
+    }
+    const qsizetype at = hay.indexOf(needle);
+    if (at < 0)
+        return false;
+    const auto [firstNode, firstOffset] = where.at(at);
+    const auto [lastNode, lastOffset] = where.at(at + needle.size() - 1);
+    // decide every range first, then change nodes from the last back: each node is replaced on its own
+    QList<std::tuple<xmlNodePtr, qsizetype, qsizetype>> ranges;
+    for (int i = firstNode; i <= lastNode; ++i) {
+        const qsizetype from = i == firstNode ? firstOffset : 0;
+        const qsizetype to = i == lastNode ? lastOffset + 1 : texts.at(i).size();
+        if (!QStringView(texts.at(i)).mid(from, to - from).trimmed().isEmpty())
+            ranges.append({nodes.at(i), from, to});
+    }
+    for (auto it = ranges.crbegin(); it != ranges.crend(); ++it)
+        wrap(std::get<0>(*it), std::get<1>(*it), std::get<2>(*it), h.label);
+    return true;
+}
+}
+
 std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, const QString &path, const QString &urlPrefix,
-                                                       const HasEntry &hasEntry, QString *error)
+                                                       const HasEntry &hasEntry, QString *error, const QList<Highlight> &highlights)
 {
     auto fail = [error](const QString &why) -> std::optional<RenderedArticle> {
         if (error)
@@ -302,6 +379,9 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         if (!id.isEmpty() && !text.isEmpty())
             out.toc.append({id, text, name(h) == QLatin1String("h2") ? 2 : 3});
     }
+
+    for (const Highlight &h : highlights)
+        out.highlighted += highlight(root, h);
 
     xmlBufferPtr buffer = xmlBufferCreate();
     for (xmlNodePtr c = root->children; c; c = c->next)

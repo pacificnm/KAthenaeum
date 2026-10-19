@@ -7,6 +7,7 @@ ecm_add_tests(
     databasetest.cpp
     extracttest.cpp
     downloadstest.cpp
+    draftstest.cpp
     librarytest.cpp
     ollamatest.cpp
     projectstest.cpp

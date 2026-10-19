@@ -8,6 +8,9 @@
 #include <QTimer>
 
 #include "core/answerer.h"
+#include "core/chats.h"
+#include "core/drafts.h"
+#include "core/projects.h"
 #include "core/database.h"
 #include "core/library.h"
 #include "core/ollama.h"
@@ -158,6 +161,39 @@ class AnswererTest : public QObject
         [&] { QTRY_VERIFY_WITH_TIMEOUT(run.done, 20000); }();
         return run;
     }
+
+public:
+    struct Draft {
+        QString status, title, markdown, error;
+        QStringList labels;
+        QString streamed;
+        bool done = false;
+    };
+
+    Draft draft(Fake &fake, const std::function<void(Drafter &)> &start, bool stopWhenStreaming = false)
+    {
+        OllamaClient client;
+        client.setBaseUrl(fake.url());
+        Drafter drafter(&client);
+        Draft d;
+        connect(&drafter, &Drafter::progress, this, [&](int, int, const QString &label) { d.labels << label; });
+        connect(&drafter, &Drafter::textAdded, this, [&](const QString &t) { d.streamed += t; });
+        connect(&drafter, &Drafter::finished, this, [&](const QString &status, const QString &title, const QString &md, const QString &error) {
+            d.status = status;
+            d.title = title;
+            d.markdown = md;
+            d.error = error;
+            d.done = true;
+        });
+        start(drafter);
+        if (stopWhenStreaming)
+            [&] { QTRY_VERIFY_WITH_TIMEOUT(fake.paths.contains(QStringLiteral("/api/chat")), 20000); }();
+        if (stopWhenStreaming)
+            drafter.stop();
+        [&] { QTRY_VERIFY_WITH_TIMEOUT(d.done, 20000); }();
+        return d;
+    }
+
 
 private Q_SLOTS:
     void initTestCase()
@@ -381,6 +417,82 @@ private Q_SLOTS:
         empty.title = QStringLiteral("Empty");
         const Run run = ask(fake, QStringLiteral("how do plants use sunlight"), {}, {}, {}, empty);
         QCOMPARE(run.result.answer, Answerer::noProjectSourcesAnswer());
+        QVERIFY(fake.paths.isEmpty());
+    }
+
+    // ---- AI drafts ----
+
+    void aProjectSummaryReadsEachArticleThenWritesACitedOverview()
+    {
+        const qint64 p = Projects::create(QStringLiteral("Plants"), QStringLiteral("How do plants use light?"));
+        Projects::addArticle(p, {m_id, QStringLiteral("Photosynthesis"), QStringLiteral("Photosynthesis")}, QStringLiteral("start here"));
+        Projects::addArticle(p, {m_id, QStringLiteral("Leaf"), QStringLiteral("Leaf")});
+        Projects::addClip(p, QStringLiteral("Chlorophyll absorbs sunlight."), {{m_id, QStringLiteral("Photosynthesis"), QStringLiteral("Photosynthesis")}});
+        Fake fake;
+        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        QCOMPARE(d.status, QStringLiteral("done"));
+        QCOMPARE(d.title, QStringLiteral("Summary: Plants"));
+        QCOMPARE(d.labels, (QStringList{QStringLiteral("Reading the articles"), QStringLiteral("Summarizing “Photosynthesis”"),
+                                        QStringLiteral("Summarizing “Leaf”"), QStringLiteral("Writing the overview")}));
+        // one model call per article, one for the overview, then one embedding call for the overview's numbers
+        QCOMPARE(fake.paths, (QStringList{QStringLiteral("/api/show"), QStringLiteral("/api/chat"), QStringLiteral("/api/chat"), QStringLiteral("/api/chat"),
+                                          QStringLiteral("/api/embed")}));
+        QCOMPARE(fake.last(QStringLiteral("/api/chat")).value(QLatin1String("think")).toBool(true), false);
+        const QString overviewPrompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject()
+                                           .value(QLatin1String("content")).toString();
+        QVERIFY(overviewPrompt.contains(QLatin1String("The research question is: How do plants use light?")));
+        QVERIFY(overviewPrompt.contains(QLatin1String("Saved excerpt (Photosynthesis): Chlorophyll absorbs sunlight.")));
+        QVERIFY2(d.markdown.contains(QLatin1String("## Overview\n\nPhotosynthesis turns sunlight into sugar in green plants. [1]")), qPrintable(d.markdown));
+        QVERIFY(d.markdown.contains(QLatin1String("### 1. [Photosynthesis](zim://lib")));
+        QVERIFY(d.markdown.contains(QLatin1String("> **Your note:** start here")));
+        QVERIFY(d.markdown.contains(QLatin1String("## References")));
+    }
+
+    void chatNotesStreamAndListTheSourcesDiscussed()
+    {
+        const qint64 chat = Chats::create(QStringLiteral("Light"));
+        MessageRecord q;
+        q.chatId = chat;
+        q.role = QStringLiteral("user");
+        q.content = QStringLiteral("What absorbs light?");
+        Chats::addMessage(q);
+        MessageRecord a;
+        a.chatId = chat;
+        a.role = QStringLiteral("assistant");
+        a.content = QStringLiteral("Chlorophyll [1].");
+        a.sources = QStringLiteral("[{\"n\":1,\"libraryId\":%1,\"path\":\"Photosynthesis\",\"title\":\"Photosynthesis\"},"
+                                   "{\"n\":2,\"kind\":\"clip\",\"libraryId\":%1,\"path\":\"Leaf\",\"title\":\"Saved excerpt\"}]").arg(m_id).toUtf8();
+        Chats::addMessage(a);
+        Fake fake;
+        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeChat(chat, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        QCOMPARE(d.status, QStringLiteral("done"));
+        QCOMPARE(d.title, QStringLiteral("Chat summary: Light"));
+        QCOMPARE(d.streamed, QStringLiteral("Photosynthesis turns sunlight into sugar in green plants."));
+        QCOMPARE(d.markdown, QStringLiteral("Photosynthesis turns sunlight into sugar in green plants.\n\n## Sources discussed\n\n"
+                                            "- [Photosynthesis](zim://lib%1/Photosynthesis)\n").arg(m_id));  // the excerpt is not listed
+        const QString prompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject()
+                                   .value(QLatin1String("content")).toString();
+        QVERIFY(prompt.contains(QLatin1String("Q: What absorbs light?\nA: Chlorophyll.")));
+    }
+
+    void aStoppedDraftKeepsNothing()
+    {
+        const qint64 p = Projects::create(QStringLiteral("Stop"));
+        Projects::addArticle(p, {m_id, QStringLiteral("Leaf"), QStringLiteral("Leaf")});
+        Fake fake;
+        fake.hangOn = QStringLiteral("/api/chat");
+        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); }, true);
+        QCOMPARE(d.status, QStringLiteral("stopped"));
+        QVERIFY(d.markdown.isEmpty());
+    }
+
+    void anEmptyProjectHasNothingToSummarize()
+    {
+        const qint64 p = Projects::create(QStringLiteral("Empty"));
+        Fake fake;
+        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        QCOMPARE(d.status, QStringLiteral("error"));
+        QVERIFY(d.error.contains(QLatin1String("Add some articles")));
         QVERIFY(fake.paths.isEmpty());
     }
 

@@ -8,6 +8,7 @@ add_library(kathenaeum_core STATIC
     core/chats.cpp core/chats.h
     core/database.cpp core/database.h
     core/downloads.cpp core/downloads.h
+    core/drafts.cpp core/drafts.h
     core/embedding.cpp core/embedding.h
     core/extract.cpp core/extract.h
     core/history.cpp core/history.h
@@ -32,6 +33,7 @@ add_executable(kathenaeum
     chatlist.cpp chatlist.h
     conversation.cpp conversation.h
     documentmodel.cpp documentmodel.h
+    draftcontroller.cpp draftcontroller.h
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
     librarymodels.cpp librarymodels.h

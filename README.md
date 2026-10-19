@@ -6,7 +6,7 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats), Ask about this article, and research projects (sources, notes, a project chat, documents). Not built yet: AI drafts in projects, and saved passages highlighted in their articles. See [CLAUDE.md](CLAUDE.md) for the design.
+> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats), Ask about this article, and research projects (sources, notes, a project chat, documents, AI drafts, highlights). See [CLAUDE.md](CLAUDE.md) for the design.
 
 ## Features
 
@@ -15,9 +15,9 @@ There is nothing to build before you can use a library: it is searchable and rea
 - **Ask** questions in plain language. Answers stream in, each sentence carries a citation computed by the app (not trusted to the model) that opens the article at the cited section, and sentences the sources do not support, or figures none of them contain, are flagged for checking. Facts from articles' infoboxes (boiling points, dates of birth) are read too. Ask follow-up questions ("and its density?"), or stop an answer at any time. A question the libraries cannot answer gets "I could not find it", not an answer from the model's memory.
 - **Browse** each library from its home page: find an article by title, A to Z, Random article, recently read, and Wikipedia's own overview articles ("Outline of …", "List of …", "Timeline of …"). All read straight from the ZIM, nothing to build.
 - **Chat history**: every chat is saved with its sources and citations, and can be reopened, renamed or deleted.
-- **Research projects**: collect articles, passages you select in them, answers and chats, each with your notes. A project's own chat answers from just that material (or the whole library too, kept apart), with the project's goal in mind. Write Markdown documents that cite the project's sources, and export a document or the whole project to `.md`. (AI-drafted summaries: coming.)
+- **Research projects**: collect articles, passages you select in them, answers and chats, each with your notes. A project's own chat answers from just that material (or the whole library too, kept apart), with the project's goal in mind. Write Markdown documents that cite the project's sources, and export a document or the whole project to `.md`. Let the AI draft a summary of the project's articles, or notes from a chat, as a document to edit.
 - **Ask about this article**: a chat panel beside every article that answers from that article alone, citing its sections (a click scrolls there). Select text and right-click to ask about it. These chats are saved with their article.
-- **Highlights and notes**: saved passages are highlighted in their article with your notes.
+- **Highlights and notes**: passages you save are highlighted in their article, with your notes on hover.
 - **Library manager**: browse the Kiwix catalog (also offline, from a saved copy), download with progress, cancel and resume, verify every download, spot newer versions, add a ZIM file you already have, see each library's details, choose the download folder, remove safely.
 - **Models**: see whether Ollama is running and has the models, switch the answer or embedding model without restarting, and get told (with the fix) when Ollama is set to unload one model to load the other.
 

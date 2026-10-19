@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "core/projects.h"
+
 #include <QObject>
 #include <QUrl>
 #include <QVariantList>
@@ -49,6 +51,8 @@ public:
     // The whole project as one Markdown file; an error message, or empty on success
     Q_INVOKABLE QString exportTo(const QUrl &file) const;
     Q_INVOKABLE QString exportName() const;  // "water.md"
+    // A document's Markdown for its preview, with the notes of the sources it cites
+    Q_INVOKABLE QString preview(const QString &markdown) const;
 
     Q_INVOKABLE void refresh();
 
@@ -64,6 +68,7 @@ private:
     QVariantList m_excerpts;
     QVariantList m_chats;
     QVariantList m_documents;
+    QList<ProjectItem> m_items;
 };
 
 // Writes text to a local file atomically; an error message, or empty on success

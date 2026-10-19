@@ -130,6 +130,7 @@ QVariantMap LibraryBrowser::articleInfo(const QUrl &url) const
     for (const TocEntry &t : article->rendered.toc)
         toc.append(QVariantMap{{QStringLiteral("id"), t.id}, {QStringLiteral("text"), t.text}, {QStringLiteral("level"), t.level}});
     out.insert(QStringLiteral("toc"), toc);
+    out.insert(QStringLiteral("excerpts"), article->rendered.highlighted);
     History::record(libraryId, article->path, article->rendered.title);
     return out;
 }

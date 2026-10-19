@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "articlerenderer.h"
 #include "embedding.h"
 
 #include <QDateTime>
@@ -71,6 +72,9 @@ bool setNote(qint64 projectId, qint64 itemId, const QString &note);
 bool removeItem(qint64 projectId, qint64 itemId);
 bool setEmbedding(qint64 itemId, const Vector &v, const QString &model);
 QList<ProjectItem> items(qint64 projectId, const QString &kind = {});  // newest first
+// The excerpts saved from this article, in any project, as highlights for its page: the same passage saved in several
+// projects is one highlight naming them all, with their notes
+QList<Highlight> highlightsFor(qint64 libraryId, const QString &path);
 // A library was removed: its articles leave every project (saved excerpts stay: they hold their own text)
 void forgetLibrary(qint64 libraryId);
 
@@ -89,6 +93,10 @@ QString quote(const ProjectItem &clip);
 // A document as it leaves the app: links to articles become plain text, and a References list names those articles and
 // their libraries (outside the app, zim:// links lead nowhere)
 QString exportMarkdown(const QString &markdown);
+// A document as its preview shows it: the stored Markdown is not changed, but a link to one of the project's articles
+// that has a note gets it after the link, and a quotation of a saved excerpt that has a note gets it under the quotation
+// (the "— source" line is set aside when comparing; a long quote may be lightly trimmed)
+QString previewMarkdown(const QString &markdown, const QList<ProjectItem> &items);
 // The whole project as one Markdown file: goal, documents, sources with notes, saved excerpts
 QString exportProject(qint64 projectId);
 // A file name from a title: "Why is water polar?" -> "why-is-water-polar"

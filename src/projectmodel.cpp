@@ -41,6 +41,7 @@ void ProjectModel::refresh()
     m_excerpts.clear();
     m_chats.clear();
     m_documents.clear();
+    m_items.clear();
     const auto p = m_id > 0 ? Projects::byId(m_id) : std::nullopt;
     m_exists = bool(p);
     m_title = p ? p->title : QString();
@@ -52,7 +53,8 @@ void ProjectModel::refresh()
                 libraries.insert(id, Library::byId(id));
             return libraries.value(id);
         };
-        for (const ProjectItem &i : Projects::items(m_id)) {
+        m_items = Projects::items(m_id);
+        for (const ProjectItem &i : std::as_const(m_items)) {
             const auto lib = i.article.libraryId > 0 ? library(i.article.libraryId) : std::nullopt;
             const bool available = lib && lib->fileExists();
             if (i.kind == QLatin1String("article"))
@@ -158,6 +160,11 @@ QString ProjectModel::quote(qint64 itemId) const
 QString ProjectModel::exportTo(const QUrl &file) const
 {
     return writeTextFile(file, Projects::exportProject(m_id));
+}
+
+QString ProjectModel::preview(const QString &markdown) const
+{
+    return Projects::previewMarkdown(markdown, m_items);
 }
 
 QString ProjectModel::exportName() const

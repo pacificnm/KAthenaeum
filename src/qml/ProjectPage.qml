@@ -15,6 +15,7 @@ Kirigami.Page {
     property alias project: project
     property alias conversation: conversation
     property alias tab: tabs.currentIndex
+    property alias drafting: drafting
 
     signal openArticle(var libraryId, string path, string fragment)
     signal openChat(var chatId, var articleLibraryId, string articlePath)
@@ -64,6 +65,12 @@ Kirigami.Page {
 
     ProjectList {
         id: projects
+    }
+
+    Drafting {
+        id: drafting
+        onDocumentReady: documentId => page.openDocument(documentId)
+        onFailed: message => applicationWindow().showPassiveNotification(message, "long")
     }
 
     ColumnLayout {
@@ -273,6 +280,12 @@ Kirigami.Page {
                             text: i18n("Documents")
                         }
                         QQC2.Button {
+                            text: i18n("Draft with AI")
+                            icon.name: "tools-wizard"
+                            enabled: !drafting.running && (project.articles.length + project.excerpts.length + project.chats.length > 0)
+                            onClicked: draftMenu.popup()
+                        }
+                        QQC2.Button {
                             text: i18n("New Document")
                             icon.name: "document-new"
                             onClicked: {
@@ -282,10 +295,57 @@ Kirigami.Page {
                             }
                         }
                     }
+                    // an AI draft in progress
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        visible: drafting.running
+                        RowLayout {
+                            QQC2.BusyIndicator {
+                                running: drafting.running
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+                                Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+                            }
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                text: drafting.total > 1 ? i18n("%1 (%2 of %3)", drafting.label, drafting.step, drafting.total) : drafting.label
+                                elide: Text.ElideRight
+                            }
+                            QQC2.Button {
+                                text: i18n("Stop")
+                                icon.name: "process-stop"
+                                onClicked: drafting.stop()
+                            }
+                        }
+                        QQC2.ProgressBar {
+                            Layout.fillWidth: true
+                            visible: drafting.total > 1
+                            from: 0
+                            to: drafting.total
+                            value: drafting.step
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            visible: drafting.streamed !== ""
+                            text: drafting.streamed
+                            textFormat: Text.MarkdownText
+                            wrapMode: Text.Wrap
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            text: i18n("A small local model writes the draft. It becomes a document you can edit; check it against the sources.")
+                            color: Kirigami.Theme.disabledTextColor
+                            font: Kirigami.Theme.smallFont
+                            wrapMode: Text.Wrap
+                        }
+                    }
+
                     Kirigami.PlaceholderMessage {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.gridUnit * 2
-                        visible: project.documents.length === 0
+                        visible: project.documents.length === 0 && !drafting.running
                         icon.name: "document-new"
                         text: i18n("No documents yet")
                         explanation: i18n("Write notes, an outline or a report in Markdown, citing the project's articles and excerpts.")
@@ -310,6 +370,33 @@ Kirigami.Page {
                     }
                 }
             }
+        }
+    }
+
+    QQC2.Menu {
+        id: draftMenu
+        QQC2.MenuItem {
+            text: i18n("Summary of the Project")
+            icon.name: "view-list-text"
+            enabled: project.articles.length + project.excerpts.length > 0
+            onTriggered: drafting.summarizeProject(project.projectId)
+        }
+        QQC2.MenuSeparator { visible: project.chats.length > 0 }
+        QQC2.MenuItem {
+            enabled: false
+            visible: project.chats.length > 0
+            text: i18n("Notes from a chat:")
+        }
+        Instantiator {
+            model: project.chats
+            delegate: QQC2.MenuItem {
+                required property var modelData
+                text: modelData.title
+                icon.name: "dialog-messages"
+                onTriggered: drafting.summarizeChat(project.projectId, modelData.chatId)
+            }
+            onObjectAdded: (index, object) => draftMenu.addItem(object)
+            onObjectRemoved: (index, object) => draftMenu.removeItem(object)
         }
     }
 

@@ -20,7 +20,9 @@
 #include "appstate.h"
 #include "core/extract.h"
 #include "librarymanager.h"
+#include "articlestore.h"
 #include "modelsettings.h"
+#include "projectlist.h"
 #include "zimschemehandler.h"
 #include "core/database.h"
 #include "kathenaeum-version.h"
@@ -79,7 +81,11 @@ int main(int argc, char *argv[])
     Database::open(dbPath, &dbError);
     AppState::instance()->setDatabase(dbPath, dbError);
     LibraryManager *libraries = LibraryManager::createInstance(&app);
-    ModelSettings::createInstance(&app)->refresh();  // is Ollama there, with the models? (one quick local request)
+    ModelSettings::createInstance(&app)->refresh();
+    // an article caches its rendered page with its saved excerpts marked: a project change may change those
+    QObject::connect(ProjectsNotifier::instance(), &ProjectsNotifier::changed, &app, [] {
+        ArticleStore::clear();
+    });  // is Ollama there, with the models? (one quick local request)
     if (dbError.isEmpty())
         libraries->initialize();
 

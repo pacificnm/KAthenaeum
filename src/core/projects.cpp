@@ -286,6 +286,35 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
     return out;
 }
 
+QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT i.text, p.title, i.note FROM project_items i JOIN projects p ON p.id = i.project_id "
+                             "WHERE i.kind = 'clip' AND i.library_id = ? AND i.path = ? ORDER BY i.created_at, i.id"));
+    q.addBindValue(libraryId);
+    q.addBindValue(path);
+    QStringList order;
+    QHash<QString, QStringList> lines;
+    QHash<QString, QString> texts;
+    if (q.exec()) {
+        while (q.next()) {
+            const QString text = q.value(0).toString();
+            const QString key = text.simplified().toLower();
+            if (!lines.contains(key)) {
+                order << key;
+                texts.insert(key, text);
+            }
+            const QString note = q.value(2).toString();
+            lines[key] << (note.isEmpty() ? QStringLiteral("Saved in “%1”").arg(q.value(1).toString())
+                                          : QStringLiteral("Saved in “%1”: %2").arg(q.value(1).toString(), note));
+        }
+    }
+    QList<Highlight> out;
+    for (const QString &k : std::as_const(order))
+        out.append({texts.value(k), lines.value(k).join(QLatin1Char('\n'))});
+    return out;
+}
+
 void Projects::forgetLibrary(qint64 libraryId)
 {
     QSqlQuery q;
@@ -412,6 +441,71 @@ QString Projects::exportMarkdown(const QString &markdown)
     // an existing References section (the user's own) is kept; ours goes after it
     out = out.trimmed() + QStringLiteral("\n\n## References\n\n") + references.join(QLatin1Char('\n')) + QLatin1Char('\n');
     return out;
+}
+
+namespace
+{
+QString squeezed(const QString &s)
+{
+    QString out;
+    for (const QChar c : s)
+        if (!c.isSpace())
+            out += c.toLower();
+    return out;
+}
+}
+
+QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectItem> &items)
+{
+    // links to the project's articles: the note after the link
+    QHash<QString, QString> articleNotes;
+    QList<std::pair<QString, QString>> clipNotes;  // (squeezed text, note)
+    for (const ProjectItem &i : items) {
+        if (i.note.isEmpty())
+            continue;
+        if (i.kind == QLatin1String("article"))
+            articleNotes.insert(QString::number(i.article.libraryId) + QLatin1Char('/') + i.article.path, i.note);
+        else if (i.kind == QLatin1String("clip"))
+            clipNotes.append({squeezed(i.text), i.note});
+    }
+    QString linked;
+    qsizetype last = 0;
+    auto it = zimLink().globalMatch(markdown);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        linked += markdown.mid(last, m.capturedEnd() - last);
+        last = m.capturedEnd();
+        const QString note = articleNotes.value(m.captured(2) + QLatin1Char('/') + QUrl::fromPercentEncoding(m.captured(3).toUtf8()));
+        if (!note.isEmpty() && !markdown.contains(note))  // a summary draft already writes the note out
+            linked += QStringLiteral(" *(note: %1)*").arg(note.simplified());
+    }
+    linked += markdown.mid(last);
+
+    // quotations of saved excerpts: the note under the quotation
+    const QStringList lines = linked.split(QLatin1Char('\n'));
+    QStringList out;
+    for (int i = 0; i < lines.size();) {
+        if (!lines.at(i).startsWith(QLatin1Char('>'))) {
+            out << lines.at(i++);
+            continue;
+        }
+        QString quoted;
+        while (i < lines.size() && lines.at(i).startsWith(QLatin1Char('>'))) {
+            const QString body = lines.at(i).mid(1).trimmed();
+            if (!body.startsWith(QStringLiteral("— ")) && !body.startsWith(QLatin1String("-- ")))
+                quoted += body + QLatin1Char(' ');
+            out << lines.at(i++);
+        }
+        const QString q = squeezed(quoted);
+        for (const auto &[text, note] : std::as_const(clipNotes)) {
+            const bool same = q == text || (q.size() >= 30 && (text.contains(q) || q.contains(text)));
+            if (same && !markdown.contains(note)) {
+                out << QString() << QStringLiteral("*Your note: %1*").arg(note.simplified());
+                break;
+            }
+        }
+    }
+    return out.join(QLatin1Char('\n'));
 }
 
 QString Projects::exportProject(qint64 projectId)

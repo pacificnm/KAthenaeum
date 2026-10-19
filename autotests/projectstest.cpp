@@ -148,6 +148,23 @@ private Q_SLOTS:
         QCOMPARE(Projects::items(p, QStringLiteral("clip")).size(), 1);
     }
 
+    void anArticleIsMarkedWithEveryExcerptSavedFromIt()
+    {
+        const qint64 a = Projects::create(QStringLiteral("Alpha"));
+        const qint64 b = Projects::create(QStringLiteral("Beta"));
+        const ArticleRef water{1, QStringLiteral("Water"), QStringLiteral("Water")};
+        Projects::addClip(a, QStringLiteral("Water is polar."), {water}, {}, QStringLiteral("key"));
+        Projects::addClip(b, QStringLiteral("water  is polar."), {water});           // the same passage, saved again
+        Projects::addClip(b, QStringLiteral("Ice floats."), {water});
+        Projects::addClip(b, QStringLiteral("Elsewhere."), {{1, QStringLiteral("Ice"), QStringLiteral("Ice")}});
+        const auto h = Projects::highlightsFor(1, QStringLiteral("Water"));
+        QCOMPARE(h.size(), 2);
+        QCOMPARE(h[0].text, QStringLiteral("Water is polar."));
+        QCOMPARE(h[0].label, QStringLiteral("Saved in “Alpha”: key\nSaved in “Beta”"));
+        QCOMPARE(h[1].text, QStringLiteral("Ice floats."));
+        QVERIFY(Projects::highlightsFor(2, QStringLiteral("Water")).isEmpty());
+    }
+
     void documentsAreSavedAndListedNewestFirst()
     {
         const qint64 p = Projects::create(QStringLiteral("P"));
@@ -186,6 +203,34 @@ private Q_SLOTS:
                  QStringLiteral("See the film and Water, again water. A [web link](https://example.org) stays.\n\n"
                                 "## References\n\n- Ray (film). Ray Charles.\n- Water. Chemistry.\n"));
         QCOMPARE(Projects::exportMarkdown(QStringLiteral("No links.")), QStringLiteral("No links."));
+    }
+
+    void thePreviewShowsTheNotesOfCitedSources()
+    {
+        ProjectItem water;
+        water.kind = QStringLiteral("article");
+        water.article = {1, QStringLiteral("Ray_(film)"), QStringLiteral("Ray (film)")};
+        water.note = QStringLiteral("the film");
+        ProjectItem ice;
+        ice.kind = QStringLiteral("article");
+        ice.article = {1, QStringLiteral("Ice"), QStringLiteral("Ice")};  // no note
+        ProjectItem clip;
+        clip.kind = QStringLiteral("clip");
+        clip.text = QStringLiteral("Water, being a polar molecule, undergoes strong hydrogen bonding.");
+        clip.note = QStringLiteral("key point");
+        const QString md = QStringLiteral("See [Ray (film)](zim://lib1/Ray_%28film%29) and [Ice](zim://lib1/Ice).\n\n"
+                                          "> Water, being a polar molecule,\n> undergoes strong hydrogen bonding.\n>\n> — Water\n\nAfter.\n\n"
+                                          "> Some other quotation entirely, not saved anywhere at all.");
+        QCOMPARE(Projects::previewMarkdown(md, {water, ice, clip}),
+                 QStringLiteral("See [Ray (film)](zim://lib1/Ray_%28film%29) *(note: the film)* and [Ice](zim://lib1/Ice).\n\n"
+                                "> Water, being a polar molecule,\n> undergoes strong hydrogen bonding.\n>\n> — Water\n\n*Your note: key point*\n\nAfter.\n\n"
+                                "> Some other quotation entirely, not saved anywhere at all."));
+        // a lightly trimmed quote still counts; a short one does not
+        QVERIFY(Projects::previewMarkdown(QStringLiteral("> being a polar molecule, undergoes strong hydrogen"), {clip}).contains(QLatin1String("Your note")));
+        QVERIFY(!Projects::previewMarkdown(QStringLiteral("> polar molecule"), {clip}).contains(QLatin1String("Your note")));
+        // a note the document already shows (a summary draft writes them out) is not repeated
+        const QString summary = QStringLiteral("### 1. [Ray (film)](zim://lib1/Ray_%28film%29)\n\n> **Your note:** the film");
+        QCOMPARE(Projects::previewMarkdown(summary, {water}), summary);
     }
 
     void aWholeProjectExportsAsOneFile()

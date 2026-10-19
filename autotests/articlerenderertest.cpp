@@ -22,6 +22,13 @@ class ArticleRendererTest : public QObject
         return out ? out->html : QStringLiteral("<<refused>>");
     }
 
+    static RenderedArticle marked(const QString &body, const QList<Highlight> &highlights)
+    {
+        const QByteArray raw = QStringLiteral("<html><head><title>T</title></head><body><div class='mw-parser-output'>%1</div></body></html>").arg(body).toUtf8();
+        const auto out = ArticleRenderer::render(raw, QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return true; }, nullptr, highlights);
+        return out ? *out : RenderedArticle{};
+    }
+
 private Q_SLOTS:
     void scriptsHandlersAndDangerousUrlsAreStripped()
     {
@@ -187,6 +194,65 @@ private Q_SLOTS:
         QCOMPARE(rendered, 25);
         ZimReader::close(*id);
         Database::close();
+    }
+
+    // ---- saved excerpts marked in their article (Athenaeum's highlights.ts, done while rendering here) ----
+
+    void aSavedPassageIsMarkedWithItsNote()
+    {
+        const auto out = marked(QStringLiteral("<p>Water is a polar molecule. It bends light.</p>"),
+                                {{QStringLiteral("Water is a polar molecule."), QStringLiteral("Saved in “Water”: key point")}});
+        QCOMPARE(out.highlighted, 1);
+        QCOMPARE(out.html, QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"Saved in “Water”: key point\">Water is a polar molecule.</mark> It bends light.</p>"));
+    }
+
+    void aPassageAcrossALinkAndParagraphsIsMarkedPieceByPiece()
+    {
+        const auto out = marked(QStringLiteral("<p>Ice is <a href=\"Water\">frozen water</a> that floats.</p><p>It is less dense. More text.</p>"),
+                                {{QStringLiteral("frozen water that floats. It is less dense."), QStringLiteral("n")}});
+        QCOMPARE(out.highlighted, 1);
+        QCOMPARE(out.html.count(QLatin1String("<mark class=\"excerpt-hl\"")), 3);
+        QVERIFY2(out.html.contains(QLatin1String("<a href=\"zim://lib7/Water\"><mark class=\"excerpt-hl\" title=\"n\">frozen water</mark></a>")), qPrintable(out.html));
+        QVERIFY(out.html.contains(QLatin1String("<mark class=\"excerpt-hl\" title=\"n\"> that floats.</mark></p>")));
+        QVERIFY(out.html.contains(QLatin1String("<p><mark class=\"excerpt-hl\" title=\"n\">It is less dense.</mark> More text.</p>")));
+        QVERIFY(out.html.startsWith(QLatin1String("<p>Ice is <a")));  // the text before it is untouched
+    }
+
+    void spacingAndCaseDoNotMatter()
+    {
+        const auto out = marked(QStringLiteral("<p>Water   is a POLAR\nmolecule.</p>"), {{QStringLiteral("water is a polar molecule"), QString()}});
+        QCOMPARE(out.highlighted, 1);
+        QVERIFY(out.html.contains(QLatin1String("<mark class=\"excerpt-hl\">Water   is a POLAR\nmolecule</mark>.")));
+    }
+
+    void aPassageNoLongerInTheTextIsNotShown()
+    {
+        const auto out = marked(QStringLiteral("<p>Water is wet.</p>"), {{QStringLiteral("Something the article never said."), QString()},
+                                                                       {QStringLiteral("wet"), QString()}});  // too short to place
+        QCOMPARE(out.highlighted, 0);
+        QCOMPARE(out.html, QStringLiteral("<p>Water is wet.</p>"));
+    }
+
+    void aNoteCannotBecomeMarkup()
+    {
+        const auto out = marked(QStringLiteral("<p>Water is a polar molecule.</p>"),
+                                {{QStringLiteral("Water is a polar molecule."), QStringLiteral("\"><script>alert(1)</script>")}});
+        QVERIFY(!out.html.contains(QLatin1String("<script")));
+        QVERIFY(out.html.contains(QLatin1String("&lt;script&gt;alert(1)&lt;/script&gt;")));  // shown as text in the tooltip
+        // both kinds of quote: the attribute still cannot be closed early
+        const auto both = marked(QStringLiteral("<p>Water is a polar molecule.</p>"),
+                                 {{QStringLiteral("Water is a polar molecule."), QStringLiteral("it's \"x\"><b onmouseover=y>")}});
+        QVERIFY2(!both.html.contains(QLatin1String("<b")), qPrintable(both.html));
+        QCOMPARE(both.html.count(QLatin1String("<mark")), 1);
+    }
+
+    void twoPassagesInTheSameTextNode()
+    {
+        const auto out = marked(QStringLiteral("<p>Water is a polar molecule. Ice floats on top of water.</p>"),
+                                {{QStringLiteral("Water is a polar molecule."), QStringLiteral("a")}, {QStringLiteral("Ice floats on top of water."), QStringLiteral("b")}});
+        QCOMPARE(out.highlighted, 2);
+        QCOMPARE(out.html, QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"a\">Water is a polar molecule.</mark> "
+                                          "<mark class=\"excerpt-hl\" title=\"b\">Ice floats on top of water.</mark></p>"));
     }
 };
 
