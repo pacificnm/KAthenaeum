@@ -40,7 +40,14 @@ Kirigami.ApplicationWindow {
 
     pageStack.initialPage: librariesPage
 
-    Component { id: librariesPage; LibrariesPage {} }
+    Connections {
+        target: LibraryManager
+        function onMessage(text, isError) {
+            root.showPassiveNotification(text, isError ? "long" : "short");
+        }
+    }
+
+    Component { id: librariesPage; LibrariesPage { onOpenLibraryManager: root.show(libraryManagerPage) } }
     Component { id: askPage; AskPage {} }
     Component { id: chatsPage; ChatsPage {} }
     Component { id: projectsPage; ProjectsPage {} }

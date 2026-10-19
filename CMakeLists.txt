@@ -22,7 +22,7 @@ include(FeatureSummary)
 
 ecm_setup_version(${PROJECT_VERSION} VARIABLE_PREFIX KATHENAEUM VERSION_HEADER ${CMAKE_CURRENT_BINARY_DIR}/src/kathenaeum-version.h)
 
-find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickControls2 Sql Network WebEngineQuick Test)
+find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickControls2 Sql Network Concurrent WebEngineQuick Test)
 qt_policy(SET QTP0001 NEW)  # QML modules live under qrc:/qt/qml/
 qt_policy(SET QTP0004 NEW)  # a qmldir for each QML subfolder
 # Debian ships Qt's private headers in separate -private-dev packages, but Qt's QML targets still list their folders
@@ -56,5 +56,5 @@ set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 # Loaded at run time, so dpkg-shlibdeps cannot see them. Ollama is not in Debian: the app explains how to get it.
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "aria2, libqt6sql6-sqlite, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtwebengine, qml6-module-org-kde-kirigami, qml6-module-org-kde-kirigamiaddons-formcard, qml6-module-org-kde-coreaddons, qml6-module-org-kde-desktop")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "aria2, libqt6sql6-sqlite, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qtwebengine, qml6-module-org-kde-kirigami, qml6-module-org-kde-kirigamiaddons-formcard, qml6-module-org-kde-coreaddons, qml6-module-org-kde-desktop")
 include(CPack)

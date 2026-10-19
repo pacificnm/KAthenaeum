@@ -23,6 +23,36 @@ const QList<QStringList> migrations = {
                        " title TEXT NOT NULL DEFAULT '',"
                        " added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     },
+    {
+        // What the library manager shows, read from the ZIM once when it is added
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN description TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN language TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN creator TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN publisher TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN zim_date TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN flavour TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN scraper TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN uuid TEXT NOT NULL DEFAULT ''"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN article_count INTEGER NOT NULL DEFAULT 0"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN has_fulltext INTEGER NOT NULL DEFAULT 0"),
+        QStringLiteral("ALTER TABLE libraries ADD COLUMN illustration BLOB"),
+        // status: queued | downloading | verifying | complete | failed | cancelled
+        QStringLiteral("CREATE TABLE downloads ("
+                       " id INTEGER PRIMARY KEY,"
+                       " url TEXT NOT NULL,"
+                       " filename TEXT NOT NULL,"
+                       " folder TEXT NOT NULL,"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " total_bytes INTEGER NOT NULL DEFAULT 0,"
+                       " done_bytes INTEGER NOT NULL DEFAULT 0,"
+                       " status TEXT NOT NULL DEFAULT 'queued',"
+                       " error TEXT NOT NULL DEFAULT '',"
+                       " started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                       " finished_at TEXT)"),
+        // one active download per file, even if two clicks race
+        QStringLiteral("CREATE UNIQUE INDEX downloads_active ON downloads (filename) WHERE status IN ('queued', 'downloading', 'verifying')"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

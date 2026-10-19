@@ -21,4 +21,11 @@ int schemaVersion();
 int latestVersion();
 
 void close();
+
+// A null QString binds as SQL NULL, which our NOT NULL text columns refuse (the statement then fails silently unless its
+// result is checked). Wrap every string that may be empty in this before binding it.
+inline QString text(const QString &s)
+{
+    return s.isNull() ? QStringLiteral("") : s;
+}
 }

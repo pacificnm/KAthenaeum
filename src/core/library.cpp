@@ -1,0 +1,171 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "library.h"
+
+#include "database.h"
+#include "zimarchive.h"
+
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QTimeZone>
+
+namespace
+{
+const QString Columns = QStringLiteral(
+    "id, path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid, "
+    "article_count, size_bytes, has_fulltext, added_at");
+
+LibraryRecord fromQuery(const QSqlQuery &q)
+{
+    LibraryRecord r;
+    r.id = q.value(0).toLongLong();
+    r.path = q.value(1).toString();
+    r.name = q.value(2).toString();
+    r.title = q.value(3).toString();
+    r.description = q.value(4).toString();
+    r.language = q.value(5).toString();
+    r.creator = q.value(6).toString();
+    r.publisher = q.value(7).toString();
+    r.date = q.value(8).toString();
+    r.flavour = q.value(9).toString();
+    r.scraper = q.value(10).toString();
+    r.uuid = q.value(11).toString();
+    r.articleCount = q.value(12).toLongLong();
+    r.sizeBytes = q.value(13).toLongLong();
+    r.hasFulltextIndex = q.value(14).toBool();
+    r.addedAt = QDateTime::fromString(q.value(15).toString(), Qt::ISODate);
+    r.addedAt.setTimeZone(QTimeZone::UTC);  // CURRENT_TIMESTAMP is UTC
+    return r;
+}
+}
+
+QString LibraryRecord::filename() const
+{
+    return QFileInfo(path).fileName();
+}
+
+bool LibraryRecord::fileExists() const
+{
+    return QFileInfo(path).isFile();
+}
+
+QList<LibraryRecord> Library::all()
+{
+    QList<LibraryRecord> out;
+    QSqlQuery q(QStringLiteral("SELECT %1 FROM libraries ORDER BY lower(title), path").arg(Columns));
+    while (q.next())
+        out.append(fromQuery(q));
+    return out;
+}
+
+std::optional<LibraryRecord> Library::byId(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT %1 FROM libraries WHERE id = ?").arg(Columns));
+    q.addBindValue(id);
+    if (q.exec() && q.next())
+        return fromQuery(q);
+    return std::nullopt;
+}
+
+QByteArray Library::illustration(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT illustration FROM libraries WHERE id = ?"));
+    q.addBindValue(id);
+    return q.exec() && q.next() ? q.value(0).toByteArray() : QByteArray();
+}
+
+std::optional<qint64> Library::add(const QString &rawPath, QString *error)
+{
+    const QString path = QFileInfo(rawPath).canonicalFilePath();
+    if (path.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("the file does not exist");
+        return std::nullopt;
+    }
+    const auto info = ZimArchive::readInfo(path, error);
+    if (!info)
+        return std::nullopt;
+
+    QSqlQuery q;
+    q.prepare(QStringLiteral(
+        "INSERT INTO libraries (path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid,"
+        " article_count, size_bytes, has_fulltext, illustration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT (path) DO UPDATE SET name = excluded.name, title = excluded.title, description = excluded.description,"
+        " language = excluded.language, creator = excluded.creator, publisher = excluded.publisher, zim_date = excluded.zim_date,"
+        " flavour = excluded.flavour, scraper = excluded.scraper, uuid = excluded.uuid, article_count = excluded.article_count,"
+        " size_bytes = excluded.size_bytes, has_fulltext = excluded.has_fulltext, illustration = excluded.illustration"
+        " RETURNING id"));
+    q.addBindValue(path);
+    q.addBindValue(Database::text(info->name));
+    q.addBindValue(info->title.isEmpty() ? QFileInfo(path).completeBaseName() : info->title);
+    q.addBindValue(Database::text(info->description));
+    q.addBindValue(Database::text(info->language));
+    q.addBindValue(Database::text(info->creator));
+    q.addBindValue(Database::text(info->publisher));
+    q.addBindValue(Database::text(info->date));
+    q.addBindValue(Database::text(info->flavour));
+    q.addBindValue(Database::text(info->scraper));
+    q.addBindValue(Database::text(info->uuid));
+    q.addBindValue(qint64(info->articleCount));
+    q.addBindValue(QFileInfo(path).size());
+    q.addBindValue(info->hasFulltextIndex);
+    q.addBindValue(info->illustration.isEmpty() ? QVariant(QMetaType(QMetaType::QByteArray)) : QVariant(info->illustration));
+    if (!q.exec() || !q.next()) {
+        if (error)
+            *error = q.lastError().text();
+        return std::nullopt;
+    }
+    return q.value(0).toLongLong();
+}
+
+Library::ScanResult Library::scan(const QString &folder)
+{
+    ScanResult result;
+    QStringList known;
+    for (const LibraryRecord &r : all()) {
+        known << r.path;
+        if (!r.fileExists())
+            result.missing << r.filename();
+    }
+    const QDir dir(folder);
+    for (const QFileInfo &file : dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files)) {
+        if (QFileInfo::exists(file.filePath() + QStringLiteral(".aria2")))
+            continue;  // aria2 writes to the final name while downloading
+        if (known.contains(file.canonicalFilePath()))
+            continue;
+        QString error;
+        if (add(file.filePath(), &error))
+            result.added << file.fileName();
+        else
+            result.errors << QStringLiteral("%1: %2").arg(file.fileName(), error);
+    }
+    return result;
+}
+
+bool Library::remove(qint64 id, bool deleteFile, QString *error)
+{
+    const auto record = byId(id);
+    if (!record) {
+        if (error)
+            *error = QStringLiteral("no such library");
+        return false;
+    }
+    if (deleteFile && record->fileExists() && !QFile::remove(record->path)) {
+        if (error)
+            *error = QStringLiteral("could not delete %1").arg(record->path);
+        return false;
+    }
+    QSqlQuery q;
+    q.prepare(QStringLiteral("DELETE FROM libraries WHERE id = ?"));
+    q.addBindValue(id);
+    if (!q.exec()) {
+        if (error)
+            *error = q.lastError().text();
+        return false;
+    }
+    return true;
+}

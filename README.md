@@ -6,7 +6,7 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** The application skeleton builds and runs (main window, empty pages, database); the features below are not built yet. See [CLAUDE.md](CLAUDE.md) for the design.
+> **Status: early development.** The Library Manager works: browse the Kiwix catalog, download, verify and manage libraries. Reading, searching and asking are not built yet. See [CLAUDE.md](CLAUDE.md) for the design.
 
 ## Features
 
@@ -18,7 +18,7 @@ There is nothing to build before you can use a library: it is searchable and rea
 - **Research projects**: collect articles, selected passages and chats, chat about just that material, and write Markdown documents with AI-drafted summaries. Export to `.md`.
 - **Ask about this article**: a chat panel beside every article.
 - **Highlights and notes**: saved passages are highlighted in their article with your notes.
-- **Library manager**: browse the Kiwix catalog, download with progress and resume, verify downloads, check for updates, see per-library stats, delete safely.
+- **Library manager**: browse the Kiwix catalog (also offline, from a saved copy), download with progress, cancel and resume, verify every download, spot newer versions, add a ZIM file you already have, see each library's details, choose the download folder, remove safely.
 - **Models**: see what Ollama has, test a model, download one, and switch the answer or embedding model without restarting.
 
 The library manager and model settings are ordinary parts of the application, not a separate admin interface, and there is no login: it is your desktop.
@@ -58,7 +58,7 @@ ctest --test-dir build                 # unit tests
 cmake --build build --target package   # make a .deb in build/
 ```
 
-The ZIM metadata test reads a real library when one is given: `KATHENAEUM_TEST_ZIM=/path/to/wikipedia_en_….zim ctest --test-dir build`.
+Some tests read a real library when one is given, and real downloads from kiwix.org run only when asked: `KATHENAEUM_TEST_ZIM=/path/to/wikipedia_en_….zim KATHENAEUM_NETWORK_TESTS=1 ctest --test-dir build`.
 
 ## Relationship to Athenaeum
 

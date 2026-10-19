@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <QApplication>
+#include <QDir>
+#include <QNetworkAccessManager>
+#include <QNetworkDiskCache>
+#include <QQmlNetworkAccessManagerFactory>
+#include <QStandardPaths>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QtWebEngineQuick>
@@ -12,8 +17,28 @@
 #include <KLocalizedString>
 
 #include "appstate.h"
+#include "librarymanager.h"
 #include "core/database.h"
 #include "kathenaeum-version.h"
+
+namespace
+{
+// Images QML loads from the network (catalog illustrations) are kept on disk, so scrolling the catalog again or opening it
+// offline does not fetch them again.
+class CachingNetworkFactory : public QQmlNetworkAccessManagerFactory
+{
+public:
+    QNetworkAccessManager *create(QObject *parent) override
+    {
+        auto *nam = new QNetworkAccessManager(parent);
+        auto *cache = new QNetworkDiskCache(nam);
+        cache->setCacheDirectory(QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).filePath(QStringLiteral("qml-network")));
+        cache->setMaximumCacheSize(50 << 20);
+        nam->setCache(cache);
+        return nam;
+    }
+};
+}
 
 int main(int argc, char *argv[])
 {
@@ -47,8 +72,13 @@ int main(int argc, char *argv[])
     const QString dbPath = Database::defaultPath();
     Database::open(dbPath, &dbError);
     AppState::instance()->setDatabase(dbPath, dbError);
+    LibraryManager *libraries = LibraryManager::createInstance(&app);
+    if (dbError.isEmpty())
+        libraries->initialize();
 
+    CachingNetworkFactory networkFactory;  // declared first: the engine uses it until the engine is destroyed
     QQmlApplicationEngine engine;
+    engine.setNetworkAccessManagerFactory(&networkFactory);
     KLocalization::setupLocalizedContext(&engine);
     engine.loadFromModule("KAthenaeum", "Main");
     if (engine.rootObjects().isEmpty())

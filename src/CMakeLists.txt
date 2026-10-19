@@ -2,16 +2,22 @@
 
 # Everything that is not UI, so tests can link it without QML.
 add_library(kathenaeum_core STATIC
+    core/catalog.cpp core/catalog.h
     core/database.cpp core/database.h
+    core/downloads.cpp core/downloads.h
+    core/library.cpp core/library.h
+    core/settings.cpp core/settings.h
     core/zimarchive.cpp core/zimarchive.h
 )
 target_include_directories(kathenaeum_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql PRIVATE PkgConfig::ZIM)
+target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE Qt6::Concurrent PkgConfig::ZIM)
 kde_target_enable_exceptions(kathenaeum_core PRIVATE)  # libzim reports errors by throwing; KDE builds with -fno-exceptions
 
-add_executable(kathenaeum main.cpp appstate.cpp appstate.h)
+add_executable(kathenaeum main.cpp appstate.cpp appstate.h librarymanager.cpp librarymanager.h librarymodels.cpp librarymodels.h)
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}")
+
+set_source_files_properties(qml/Util.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(kathenaeum
     URI KAthenaeum
@@ -24,6 +30,12 @@ qt_add_qml_module(kathenaeum
         qml/ProjectsPage.qml
         qml/LibraryManagerPage.qml
         qml/SettingsPage.qml
+        qml/InstalledView.qml
+        qml/CatalogView.qml
+        qml/DownloadsView.qml
+        qml/LibraryDetailsDialog.qml
+        qml/LibraryIcon.qml
+        qml/Util.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE

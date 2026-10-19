@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include <QString>
+
+// Small key/value settings kept in the database's `settings` table.
+namespace AppSettings
+{
+QString value(const QString &key, const QString &fallback = {});
+bool setValue(const QString &key, const QString &value);
+
+// Where downloaded libraries go. Default: <AppDataLocation>/zim. Libraries added from elsewhere stay where they are.
+QString libraryFolder();
+QString defaultLibraryFolder();
+bool setLibraryFolder(const QString &folder);
+}
