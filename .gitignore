@@ -1,0 +1,22 @@
+# Build output
+/build/
+/build-*/
+_CPack_Packages/
+*.deb
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+CMakeLists.txt.user*
+.cache/
+compile_commands.json
+
+# Test data and local files: ZIM libraries and databases are never committed
+*.zim
+*.zim.aria2
+*.zim.meta4
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

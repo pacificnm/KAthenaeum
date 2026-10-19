@@ -1,0 +1,100 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "database.h"
+
+#include <QDir>
+#include <QFileInfo>
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QStandardPaths>
+#include <QStringList>
+
+namespace
+{
+// Migration N brings the schema from version N to N+1. Never edit one that has shipped: append a new one.
+// QSQLITE runs one statement per exec(), so each migration is a list of statements.
+const QList<QStringList> migrations = {
+    {
+        QStringLiteral("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"),
+        QStringLiteral("CREATE TABLE libraries ("
+                       " id INTEGER PRIMARY KEY,"
+                       " path TEXT NOT NULL UNIQUE,"
+                       " name TEXT NOT NULL DEFAULT '',"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    },
+};
+
+bool exec(QSqlDatabase &db, const QString &sql, QString *error)
+{
+    QSqlQuery q(db);
+    if (q.exec(sql))
+        return true;
+    if (error)
+        *error = QStringLiteral("%1 (%2)").arg(q.lastError().text(), sql.left(80));
+    return false;
+}
+}
+
+QString Database::defaultPath()
+{
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).filePath(QStringLiteral("kathenaeum.sqlite"));
+}
+
+int Database::latestVersion()
+{
+    return int(migrations.size());
+}
+
+int Database::schemaVersion()
+{
+    QSqlQuery q(QSqlDatabase::database());
+    return q.exec(QStringLiteral("PRAGMA user_version")) && q.next() ? q.value(0).toInt() : -1;
+}
+
+bool Database::open(const QString &path, QString *error)
+{
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        if (error)
+            *error = QStringLiteral("Cannot create the folder for %1").arg(path);
+        return false;
+    }
+    QSqlDatabase db = QSqlDatabase::contains() ? QSqlDatabase::database(QLatin1String(QSqlDatabase::defaultConnection), false)
+                                               : QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"));
+    db.setDatabaseName(path);
+    if (!db.open()) {
+        if (error)
+            *error = db.lastError().text();
+        return false;
+    }
+    if (!exec(db, QStringLiteral("PRAGMA foreign_keys = ON"), error) || !exec(db, QStringLiteral("PRAGMA journal_mode = WAL"), error))
+        return false;
+
+    const int current = schemaVersion();
+    if (current > latestVersion()) {
+        if (error)
+            *error = QStringLiteral("The database was made by a newer KAthenaeum (schema %1, this build knows %2)").arg(current).arg(latestVersion());
+        return false;
+    }
+    for (int v = current; v < latestVersion(); ++v) {
+        db.transaction();
+        bool ok = true;
+        for (const QString &sql : migrations[v])
+            ok = ok && exec(db, sql, error);
+        ok = ok && exec(db, QStringLiteral("PRAGMA user_version = %1").arg(v + 1), error);
+        if (!ok) {
+            db.rollback();
+            return false;
+        }
+        db.commit();
+    }
+    return true;
+}
+
+void Database::close()
+{
+    if (!QSqlDatabase::contains())
+        return;
+    QSqlDatabase::database(QLatin1String(QSqlDatabase::defaultConnection), false).close();
+    QSqlDatabase::removeDatabase(QLatin1String(QSqlDatabase::defaultConnection));
+}

@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+import QtQuick
+import QtQuick.Controls as QQC2
+import org.kde.kirigami as Kirigami
+import org.kde.kirigamiaddons.formcard as FormCard
+import KAthenaeum
+
+Kirigami.ApplicationWindow {
+    id: root
+
+    title: i18n("KAthenaeum")
+    minimumWidth: Kirigami.Units.gridUnit * 22
+    minimumHeight: Kirigami.Units.gridUnit * 20
+    width: Kirigami.Units.gridUnit * 60
+    height: Kirigami.Units.gridUnit * 40
+
+    // One place that switches the main page, so the drawer and other pages share it
+    function show(component) {
+        pageStack.clear();
+        pageStack.push(component);
+    }
+
+    globalDrawer: Kirigami.GlobalDrawer {
+        isMenu: false
+        modal: !root.wideScreen
+        collapsible: true
+        collapsed: !root.wideScreen
+        showHeaderWhenCollapsed: true
+        actions: [
+            Kirigami.Action { text: i18n("Libraries"); icon.name: "bookmarks"; onTriggered: root.show(librariesPage) },
+            Kirigami.Action { text: i18n("Ask"); icon.name: "dialog-messages"; onTriggered: root.show(askPage) },
+            Kirigami.Action { text: i18n("Chats"); icon.name: "view-history"; onTriggered: root.show(chatsPage) },
+            Kirigami.Action { text: i18n("Projects"); icon.name: "project-development"; onTriggered: root.show(projectsPage) },
+            Kirigami.Action { separator: true },
+            Kirigami.Action { text: i18n("Library Manager"); icon.name: "folder-download"; onTriggered: root.show(libraryManagerPage) },
+            Kirigami.Action { text: i18n("Settings"); icon.name: "settings-configure"; onTriggered: root.show(settingsPage) },
+            Kirigami.Action { text: i18n("About KAthenaeum"); icon.name: "help-about"; onTriggered: root.show(aboutPage) }
+        ]
+    }
+
+    pageStack.initialPage: librariesPage
+
+    Component { id: librariesPage; LibrariesPage {} }
+    Component { id: askPage; AskPage {} }
+    Component { id: chatsPage; ChatsPage {} }
+    Component { id: projectsPage; ProjectsPage {} }
+    Component { id: libraryManagerPage; LibraryManagerPage {} }
+    Component { id: settingsPage; SettingsPage {} }
+    Component { id: aboutPage; FormCard.AboutPage {} }
+}

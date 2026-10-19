@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KAthenaeum
+GenericName=Offline Encyclopedia
+Comment=Read and search offline Wikipedia, and ask questions answered by a local AI with citations
+Exec=kathenaeum
+Icon=kathenaeum
+Terminal=false
+Categories=Qt;KDE;Education;Reference;
+Keywords=wikipedia;kiwix;zim;encyclopedia;offline;ai;research;
+StartupNotify=true
