@@ -18,6 +18,23 @@ struct ArticleScope {
     bool isSet() const { return libraryId > 0 && !path.isEmpty(); }
 };
 
+// The project a chat belongs to: it answers from the project's articles and saved excerpts
+struct ProjectScope {
+    qint64 id = 0;
+    QString title;
+    QString goal;
+    QList<ArticleScope> articles;  // in installed libraries only
+    QList<Rag::Clip> clips;        // newest first; an empty vector = to be embedded with this question
+    bool alsoLibrary = false;      // also search the libraries (libraryIds), as a separate group
+    bool isSet() const { return id > 0; }
+};
+
+// Passages to rank: the scope's own, and (a project chat that also searches the library) the library's
+struct Pools {
+    QList<Rag::Candidate> own;
+    QList<Rag::Candidate> library;
+};
+
 struct AnswerRequest {
     QString question;
     QStringList earlierQuestions;  // earlier questions of the chat, oldest first (for follow-ups)
@@ -25,6 +42,7 @@ struct AnswerRequest {
     QString answerModel;
     QString embeddingModel;
     ArticleScope article;  // when set, answer from this article alone (libraryIds is then ignored)
+    ProjectScope project;  // when set, answer from the project (libraryIds only for alsoLibrary)
 };
 
 struct AnswerStats {
@@ -70,15 +88,18 @@ public:
 
     static QString noSourcesAnswer();
     static QString noTextAnswer();  // an article with no prose to answer from
+    static QString noProjectSourcesAnswer();
 
 Q_SIGNALS:
     void phaseChanged(Answerer::Phase phase, int count);
     void sourcesReady(const QList<Rag::Source> &sources, bool degraded, const QString &note);
     void textAdded(const QString &text);
     void finished(const AnswerResult &result);
+    // Saved excerpts embedded for this question, to be stored (id, vector), with the embedding model's name
+    void clipsEmbedded(const QList<std::pair<qint64, Vector>> &vectors, const QString &model);
 
 private:
-    void rankAndAsk(QList<Rag::Candidate> pool);
+    void rankAndAsk(Pools pools);
     void ask();
     void check();
     void finish(const QString &status, const QString &error = {});

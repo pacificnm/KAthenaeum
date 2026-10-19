@@ -22,6 +22,10 @@ class Conversation : public QAbstractListModel
     Q_PROPERTY(qint64 articleLibraryId READ articleLibraryId WRITE setArticleLibraryId NOTIFY articleChanged)
     Q_PROPERTY(QString articlePath READ articlePath WRITE setArticlePath NOTIFY articleChanged)
     Q_PROPERTY(QString articleTitle READ articleTitle WRITE setArticleTitle NOTIFY articleChanged)
+    // A chat in a research project answers from the project's articles and saved excerpts (set before the first question;
+    // a saved chat brings its own). alsoLibrary: search the libraries too, as a separate group of sources.
+    Q_PROPERTY(qint64 projectId READ projectId WRITE setProjectId NOTIFY projectChanged)
+    Q_PROPERTY(bool alsoLibrary MEMBER m_alsoLibrary NOTIFY alsoLibraryChanged)
 
 public:
     enum Role {
@@ -34,6 +38,7 @@ public:
         SourcesRole,    // [{n, libraryId, libraryTitle, path, title, section, snippet}]
         CitationsRole,  // [{start, end, sources, score, reason, numbers}]
         StatsRole,      // a line of timings
+        ContentRole,    // the answer as written, without citation links (for saving it)
     };
     Q_ENUM(Role)
 
@@ -54,6 +59,8 @@ public:
     void setArticlePath(const QString &path);
     QString articleTitle() const { return m_article.title; }
     void setArticleTitle(const QString &title);
+    qint64 projectId() const { return m_projectId; }
+    void setProjectId(qint64 id);
 
     Q_INVOKABLE void ask(const QString &question);
     Q_INVOKABLE void stop();
@@ -66,6 +73,8 @@ Q_SIGNALS:
     void chatIdChanged();
     void busyChanged();
     void articleChanged();
+    void projectChanged();
+    void alsoLibraryChanged();
     // A chat was created or a message saved: the Chats list is out of date
     void saved();
 
@@ -93,6 +102,8 @@ private:
     Answerer *m_answerer;
     qint64 m_chatId = 0;
     ArticleScope m_article;
+    qint64 m_projectId = 0;
+    bool m_alsoLibrary = false;
     QString m_title;
     QList<Message> m_messages;
     int m_answering = -1;  // the row being answered

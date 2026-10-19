@@ -1,0 +1,465 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "projects.h"
+
+#include "database.h"
+#include "library.h"
+
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRegularExpression>
+#include <QSet>
+#include <QSqlQuery>
+#include <QTimeZone>
+#include <QUrl>
+
+namespace
+{
+QDateTime timestamp(const QVariant &v)
+{
+    QDateTime t = QDateTime::fromString(v.toString(), Qt::ISODateWithMs);
+    t.setTimeZone(QTimeZone::UTC);
+    return t;
+}
+
+QVariant nullable(qint64 id)
+{
+    return id > 0 ? QVariant(id) : QVariant(QMetaType::fromType<qint64>());
+}
+
+void touch(qint64 projectId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE projects SET updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') WHERE id = ?"));
+    q.addBindValue(projectId);
+    q.exec();
+}
+
+bool exists(qint64 projectId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT 1 FROM projects WHERE id = ?"));
+    q.addBindValue(projectId);
+    return q.exec() && q.next();
+}
+
+QByteArray refsJson(const QList<ArticleRef> &refs)
+{
+    QJsonArray a;
+    for (const ArticleRef &r : refs)
+        a.append(QJsonObject{{QStringLiteral("libraryId"), r.libraryId}, {QStringLiteral("path"), r.path}, {QStringLiteral("title"), r.title}});
+    return QJsonDocument(a).toJson(QJsonDocument::Compact);
+}
+
+QList<ArticleRef> refsFrom(const QByteArray &json)
+{
+    QList<ArticleRef> out;
+    for (const QJsonValue &v : QJsonDocument::fromJson(json).array()) {
+        const QJsonObject o = v.toObject();
+        out.append({qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(),
+                    o.value(QLatin1String("title")).toString()});
+    }
+    return out;
+}
+
+const char *ProjectSelect =
+    "SELECT p.id, p.title, p.description, p.updated_at,"
+    " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'article'),"
+    " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'clip'),"
+    " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'chat')"
+    "  + (SELECT count(*) FROM chats c WHERE c.project_id = p.id),"
+    " (SELECT count(*) FROM project_documents d WHERE d.project_id = p.id)"
+    " FROM projects p";
+
+ProjectRecord project(const QSqlQuery &q)
+{
+    return {q.value(0).toLongLong(), q.value(1).toString(), q.value(2).toString(), timestamp(q.value(3)),
+            q.value(4).toInt(),      q.value(5).toInt(),    q.value(6).toInt(),    q.value(7).toInt()};
+}
+
+// [text](zim://lib<id>/<path>) as written by articleLink, or by hand
+const QRegularExpression &zimLink()
+{
+    static const QRegularExpression re(QStringLiteral("\\[([^\\]\\n]*)\\]\\(zim://lib(\\d+)/([^)\\s]+)\\)"));
+    return re;
+}
+}
+
+// ---- projects ----
+
+qint64 Projects::create(const QString &title, const QString &description)
+{
+    const QString t = title.simplified().left(200);
+    if (t.isEmpty())
+        return 0;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO projects (title, description) VALUES (?, ?)"));
+    q.addBindValue(t);
+    q.addBindValue(Database::text(description.trimmed()));
+    return q.exec() ? q.lastInsertId().toLongLong() : 0;
+}
+
+bool Projects::update(qint64 id, const QString &title, const QString &description)
+{
+    const QString t = title.simplified().left(200);
+    if (t.isEmpty())
+        return false;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE projects SET title = ?, description = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') WHERE id = ?"));
+    q.addBindValue(t);
+    q.addBindValue(Database::text(description.trimmed()));
+    q.addBindValue(id);
+    return q.exec() && q.numRowsAffected() == 1;
+}
+
+bool Projects::remove(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("DELETE FROM projects WHERE id = ?"));
+    q.addBindValue(id);
+    return q.exec() && q.numRowsAffected() == 1;
+}
+
+QList<ProjectRecord> Projects::all()
+{
+    QList<ProjectRecord> out;
+    QSqlQuery q;
+    if (q.exec(QLatin1String(ProjectSelect) + QStringLiteral(" ORDER BY p.updated_at DESC, p.id DESC")))
+        while (q.next())
+            out.append(project(q));
+    return out;
+}
+
+std::optional<ProjectRecord> Projects::byId(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QLatin1String(ProjectSelect) + QStringLiteral(" WHERE p.id = ?"));
+    q.addBindValue(id);
+    if (q.exec() && q.next())
+        return project(q);
+    return std::nullopt;
+}
+
+QList<qint64> Projects::containing(qint64 libraryId, const QString &path)
+{
+    QList<qint64> out;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT project_id FROM project_items WHERE kind = 'article' AND library_id = ? AND path = ?"));
+    q.addBindValue(libraryId);
+    q.addBindValue(path);
+    if (q.exec())
+        while (q.next())
+            out << q.value(0).toLongLong();
+    return out;
+}
+
+// ---- sources ----
+
+qint64 Projects::addArticle(qint64 projectId, const ArticleRef &a, const QString &note)
+{
+    if (a.libraryId <= 0 || a.path.isEmpty() || !exists(projectId))
+        return 0;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, note) VALUES (?, 'article', ?, ?, ?, ?) "
+                             "ON CONFLICT (project_id, library_id, path) WHERE kind = 'article' DO UPDATE SET "
+                             "note = CASE WHEN excluded.note <> '' THEN excluded.note ELSE project_items.note END "
+                             "RETURNING id"));
+    q.addBindValue(projectId);
+    q.addBindValue(a.libraryId);
+    q.addBindValue(a.path);
+    q.addBindValue(Database::text(a.title));
+    q.addBindValue(Database::text(note.trimmed()));
+    if (!q.exec() || !q.next())
+        return 0;
+    const qint64 id = q.value(0).toLongLong();
+    q.finish();
+    touch(projectId);
+    return id;
+}
+
+qint64 Projects::addClip(qint64 projectId, const QString &text, const QList<ArticleRef> &refs, const QString &section, const QString &note)
+{
+    const QString t = text.trimmed();
+    if (t.isEmpty() || !exists(projectId))
+        return 0;
+    const ArticleRef first = refs.value(0);
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, section, text, refs, note) "
+                             "VALUES (?, 'clip', ?, ?, ?, ?, ?, ?, ?)"));
+    q.addBindValue(projectId);
+    q.addBindValue(nullable(first.libraryId));
+    q.addBindValue(Database::text(first.path));
+    q.addBindValue(Database::text(first.title));
+    q.addBindValue(Database::text(section));
+    q.addBindValue(t);
+    q.addBindValue(QString::fromUtf8(refsJson(refs)));
+    q.addBindValue(Database::text(note.trimmed()));
+    if (!q.exec())
+        return 0;
+    const qint64 id = q.lastInsertId().toLongLong();
+    touch(projectId);
+    return id;
+}
+
+qint64 Projects::attachChat(qint64 projectId, qint64 chatId)
+{
+    if (!exists(projectId))
+        return 0;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, chat_id) SELECT ?, 'chat', id FROM chats WHERE id = ? "
+                             "ON CONFLICT (project_id, chat_id) WHERE kind = 'chat' DO UPDATE SET chat_id = excluded.chat_id RETURNING id"));
+    q.addBindValue(projectId);
+    q.addBindValue(chatId);
+    if (!q.exec() || !q.next())
+        return 0;
+    const qint64 id = q.value(0).toLongLong();
+    q.finish();
+    touch(projectId);
+    return id;
+}
+
+bool Projects::setNote(qint64 projectId, qint64 itemId, const QString &note)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE project_items SET note = ? WHERE id = ? AND project_id = ?"));
+    q.addBindValue(Database::text(note.trimmed()));
+    q.addBindValue(itemId);
+    q.addBindValue(projectId);
+    const bool ok = q.exec() && q.numRowsAffected() == 1;
+    if (ok)
+        touch(projectId);
+    return ok;
+}
+
+bool Projects::removeItem(qint64 projectId, qint64 itemId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("DELETE FROM project_items WHERE id = ? AND project_id = ?"));
+    q.addBindValue(itemId);
+    q.addBindValue(projectId);
+    const bool ok = q.exec() && q.numRowsAffected() == 1;
+    if (ok)
+        touch(projectId);
+    return ok;
+}
+
+bool Projects::setEmbedding(qint64 itemId, const Vector &v, const QString &model)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE project_items SET embedding = ?, embed_model = ? WHERE id = ? AND kind = 'clip'"));
+    q.addBindValue(Embedding::toBlob(v));
+    q.addBindValue(Database::text(Embedding::normalizeName(model)));
+    q.addBindValue(itemId);
+    return q.exec() && q.numRowsAffected() == 1;
+}
+
+QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
+{
+    QList<ProjectItem> out;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT i.id, i.project_id, i.kind, coalesce(i.library_id, 0), i.path, i.title, i.section, i.text, i.refs, i.note,"
+                             " i.embedding, i.embed_model, coalesce(i.chat_id, 0), coalesce(c.title, ''), i.created_at"
+                             " FROM project_items i LEFT JOIN chats c ON c.id = i.chat_id"
+                             " WHERE i.project_id = ? AND (? = '' OR i.kind = ?) ORDER BY i.created_at DESC, i.id DESC"));
+    q.addBindValue(projectId);
+    q.addBindValue(Database::text(kind));
+    q.addBindValue(Database::text(kind));
+    if (!q.exec())
+        return out;
+    while (q.next()) {
+        ProjectItem i;
+        i.id = q.value(0).toLongLong();
+        i.projectId = q.value(1).toLongLong();
+        i.kind = q.value(2).toString();
+        i.article = {q.value(3).toLongLong(), q.value(4).toString(), q.value(5).toString()};
+        i.section = q.value(6).toString();
+        i.text = q.value(7).toString();
+        i.refs = refsFrom(q.value(8).toString().toUtf8());
+        i.note = q.value(9).toString();
+        i.embedding = Embedding::fromBlob(q.value(10).toByteArray());
+        i.embedModel = q.value(11).toString();
+        i.chatId = q.value(12).toLongLong();
+        i.chatTitle = q.value(13).toString();
+        i.createdAt = timestamp(q.value(14));
+        out << i;
+    }
+    return out;
+}
+
+void Projects::forgetLibrary(qint64 libraryId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("DELETE FROM project_items WHERE kind = 'article' AND library_id = ?"));
+    q.addBindValue(libraryId);
+    q.exec();
+}
+
+// ---- documents ----
+
+qint64 Projects::createDocument(qint64 projectId, const QString &title, const QString &content)
+{
+    if (!exists(projectId))
+        return 0;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO project_documents (project_id, title, content) VALUES (?, ?, ?)"));
+    q.addBindValue(projectId);
+    q.addBindValue(title.simplified().isEmpty() ? QStringLiteral("Untitled") : title.simplified().left(200));
+    q.addBindValue(Database::text(content));
+    if (!q.exec())
+        return 0;
+    const qint64 id = q.lastInsertId().toLongLong();
+    touch(projectId);
+    return id;
+}
+
+std::optional<DocumentRecord> Projects::document(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT id, project_id, title, content, updated_at FROM project_documents WHERE id = ?"));
+    q.addBindValue(id);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    return DocumentRecord{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), timestamp(q.value(4))};
+}
+
+bool Projects::saveDocument(qint64 id, const QString &title, const QString &content)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE project_documents SET title = ?, content = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
+                             "WHERE id = ? RETURNING project_id"));
+    q.addBindValue(title.simplified().isEmpty() ? QStringLiteral("Untitled") : title.simplified().left(200));
+    q.addBindValue(Database::text(content));
+    q.addBindValue(id);
+    if (!q.exec() || !q.next())
+        return false;
+    const qint64 projectId = q.value(0).toLongLong();
+    q.finish();
+    touch(projectId);
+    return true;
+}
+
+bool Projects::removeDocument(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("DELETE FROM project_documents WHERE id = ?"));
+    q.addBindValue(id);
+    return q.exec() && q.numRowsAffected() == 1;
+}
+
+QList<DocumentRecord> Projects::documents(qint64 projectId)
+{
+    QList<DocumentRecord> out;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT id, project_id, title, content, updated_at FROM project_documents WHERE project_id = ? ORDER BY updated_at DESC, id DESC"));
+    q.addBindValue(projectId);
+    if (q.exec())
+        while (q.next())
+            out << DocumentRecord{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), timestamp(q.value(4))};
+    return out;
+}
+
+// ---- Markdown ----
+
+QString Projects::articleLink(const ArticleRef &a)
+{
+    // parentheses are encoded: "Ray_(film)" inside a Markdown link's (...) would end it early
+    const QString path = QString::fromLatin1(QUrl::toPercentEncoding(a.path, "/_-.,!~*'"));
+    QString text = a.title;
+    text.replace(QLatin1Char('['), QLatin1Char('(')).replace(QLatin1Char(']'), QLatin1Char(')'));
+    return QStringLiteral("[%1](zim://lib%2/%3)").arg(text).arg(a.libraryId).arg(path);
+}
+
+QString Projects::quote(const ProjectItem &clip)
+{
+    QStringList lines;
+    for (const QString &l : clip.text.trimmed().split(QLatin1Char('\n')))
+        lines << QStringLiteral("> ") + l;
+    QStringList from;
+    for (const ArticleRef &r : clip.refs)
+        if (!r.title.isEmpty())
+            from << r.title;
+    QString source = from.join(QStringLiteral(", "));
+    if (!clip.section.isEmpty())
+        source += QStringLiteral(" (%1)").arg(clip.section);
+    if (!source.trimmed().isEmpty())
+        lines << QStringLiteral(">") << QStringLiteral("> — ") + source.trimmed();
+    return lines.join(QLatin1Char('\n'));
+}
+
+QString Projects::exportMarkdown(const QString &markdown)
+{
+    QString out;
+    QStringList references;
+    QSet<QString> seen;
+    qsizetype last = 0;
+    auto it = zimLink().globalMatch(markdown);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        out += markdown.mid(last, m.capturedStart() - last) + m.captured(1);
+        last = m.capturedEnd();
+        const qint64 libraryId = m.captured(2).toLongLong();
+        const QString path = QUrl::fromPercentEncoding(m.captured(3).toUtf8());
+        if (seen.contains(m.captured(2) + QLatin1Char('/') + path))
+            continue;
+        seen.insert(m.captured(2) + QLatin1Char('/') + path);
+        const auto library = Library::byId(libraryId);
+        const QString title = QString(path).replace(QLatin1Char('_'), QLatin1Char(' '));
+        references << (library && !library->title.isEmpty() ? QStringLiteral("- %1. %2.").arg(title, library->title) : QStringLiteral("- %1.").arg(title));
+    }
+    out += markdown.mid(last);
+    if (references.isEmpty())
+        return out;
+    // an existing References section (the user's own) is kept; ours goes after it
+    out = out.trimmed() + QStringLiteral("\n\n## References\n\n") + references.join(QLatin1Char('\n')) + QLatin1Char('\n');
+    return out;
+}
+
+QString Projects::exportProject(qint64 projectId)
+{
+    const auto p = byId(projectId);
+    if (!p)
+        return {};
+    QStringList out{QStringLiteral("# ") + p->title, QString()};
+    if (!p->description.isEmpty())
+        out << p->description << QString();
+    const auto docs = documents(projectId);
+    for (auto it = docs.crbegin(); it != docs.crend(); ++it)  // oldest first, as they were written
+        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content).trimmed() << QString();
+    const auto articles = items(projectId, QStringLiteral("article"));
+    if (!articles.isEmpty()) {
+        out << QStringLiteral("---") << QString() << QStringLiteral("## Sources") << QString();
+        for (const ProjectItem &a : articles) {
+            const auto library = Library::byId(a.article.libraryId);
+            QString line = QStringLiteral("- ") + a.article.title;
+            if (library)
+                line += QStringLiteral(" (%1)").arg(library->title);
+            if (!a.note.isEmpty())
+                line += QStringLiteral(" — ") + a.note;
+            out << line;
+        }
+        out << QString();
+    }
+    const auto clips = items(projectId, QStringLiteral("clip"));
+    if (!clips.isEmpty()) {
+        out << QStringLiteral("## Saved excerpts") << QString();
+        for (const ProjectItem &c : clips) {
+            out << quote(c);
+            if (!c.note.isEmpty())
+                out << QString() << QStringLiteral("Note: ") + c.note;
+            out << QString();
+        }
+    }
+    return out.join(QLatin1Char('\n')).trimmed() + QLatin1Char('\n');
+}
+
+QString Projects::slug(const QString &text, const QString &fallback)
+{
+    static const QRegularExpression other(QStringLiteral("[^a-z0-9]+"));
+    QString s = text.toLower();
+    s.replace(other, QStringLiteral("-"));
+    while (s.startsWith(QLatin1Char('-')))
+        s.remove(0, 1);
+    while (s.endsWith(QLatin1Char('-')))
+        s.chop(1);
+    return (s.isEmpty() ? fallback : s).left(60);
+}

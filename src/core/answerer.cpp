@@ -7,6 +7,7 @@
 
 #include <QFutureWatcher>
 #include <QJsonArray>
+#include <QSet>
 #include <QtConcurrent>
 
 Answerer::Answerer(OllamaClient *client, QObject *parent)
@@ -23,6 +24,11 @@ Answerer::~Answerer()
 QString Answerer::noSourcesAnswer()
 {
     return QStringLiteral("I couldn't find anything relevant to that in the library.");
+}
+
+QString Answerer::noProjectSourcesAnswer()
+{
+    return QStringLiteral("This project has nothing on that yet. Add articles or excerpts to it, or let it search the whole library too.");
 }
 
 QString Answerer::noTextAnswer()
@@ -46,8 +52,8 @@ void Answerer::start(const AnswerRequest &request)
     m_query = Rag::retrievalQuery(m_request.question, request.earlierQuestions);
 
     Q_EMIT phaseChanged(Finding, 0);
-    auto *watcher = new QFutureWatcher<QList<Rag::Candidate>>(this);
-    connect(watcher, &QFutureWatcher<QList<Rag::Candidate>>::finished, this, [this, watcher, generation] {
+    auto *watcher = new QFutureWatcher<Pools>(this);
+    connect(watcher, &QFutureWatcher<Pools>::finished, this, [this, watcher, generation] {
         watcher->deleteLater();
         if (generation != m_generation)
             return;
@@ -68,48 +74,104 @@ void Answerer::start(const AnswerRequest &request)
             a.found.path = path;
             a.found.title = article.title;
             a.passages = Extract::extract(data).passages;
-            return Rag::pickPassages(query, {a});
+            return Pools{Rag::pickPassages(query, {a}), {}};
+        }));
+        return;
+    }
+    if (request.project.isSet()) {
+        // the project's articles, read in the worker (their archives opened here first: opening reads the database)
+        QList<qint64> ids = request.project.alsoLibrary ? request.libraryIds : QList<qint64>();
+        for (const ArticleScope &a : request.project.articles)
+            if (!ids.contains(a.libraryId))
+                ids << a.libraryId;
+        ZimSearch::prepare(ids);
+        watcher->setFuture(QtConcurrent::run([query = m_query, project = request.project, libraries = request.libraryIds] {
+            QList<ZimSearch::Article> own;
+            QSet<QString> mine;
+            for (const ArticleScope &s : project.articles) {
+                mine.insert(QString::number(s.libraryId) + QLatin1Char('/') + s.path);
+                const auto content = ZimReader::content(s.libraryId, s.path);
+                if (!content)
+                    continue;
+                ZimSearch::Article a;
+                a.found.libraryId = s.libraryId;
+                a.found.path = content->path;
+                a.found.title = s.title;
+                a.passages = Extract::extract(content->data).passages;
+                if (!a.passages.isEmpty())
+                    own << a;
+            }
+            Pools pools{Rag::pickPassages(query, Rag::chooseArticles(query, own)), {}};
+            if (project.alsoLibrary) {
+                QList<ZimSearch::Article> outside;
+                for (const ZimSearch::Article &a : ZimSearch::readArticles(query, libraries, Rag::Articles))
+                    if (!mine.contains(QString::number(a.found.libraryId) + QLatin1Char('/') + a.found.path))
+                        outside << a;
+                pools.library = Rag::pickPassages(query, outside).mid(0, Rag::MaxEmbed / 2);
+            }
+            return pools;
         }));
         return;
     }
     ZimSearch::prepare(request.libraryIds);  // opens the archives here: the worker cannot read the database
     watcher->setFuture(QtConcurrent::run([query = m_query, ids = request.libraryIds] {
-        return Rag::pickPassages(query, ZimSearch::readArticles(query, ids, Rag::Articles));
+        return Pools{Rag::pickPassages(query, ZimSearch::readArticles(query, ids, Rag::Articles)), {}};
     }));
 }
 
-void Answerer::rankAndAsk(QList<Rag::Candidate> pool)
+void Answerer::rankAndAsk(Pools pools)
 {
-    if (pool.isEmpty()) {
+    QList<Rag::Clip> clips = m_request.project.clips;
+    if (pools.own.isEmpty() && pools.library.isEmpty() && clips.isEmpty()) {
         Q_EMIT sourcesReady({}, false, {});
-        m_result.answer = m_request.article.isSet() ? noTextAnswer() : noSourcesAnswer();
+        m_result.answer = m_request.article.isSet() ? noTextAnswer() : m_request.project.isSet() ? noProjectSourcesAnswer() : noSourcesAnswer();
         Q_EMIT textAdded(m_result.answer);
         finish(QStringLiteral("done"));
         return;
     }
-    Q_EMIT phaseChanged(Ranking, int(pool.size()));
+    Q_EMIT phaseChanged(Ranking, int(pools.own.size() + pools.library.size() + clips.size()));
+    // one request: the question, the passages, and the saved excerpts that have no vector from this model yet
     const QString model = m_request.embeddingModel;
     QStringList input{Embedding::formatQuery(model, m_query)};
-    for (const Rag::Candidate &c : std::as_const(pool))
+    for (const Rag::Candidate &c : std::as_const(pools.own))
         input << Embedding::formatDocument(model, c.text.left(3000));
+    for (const Rag::Candidate &c : std::as_const(pools.library))
+        input << Embedding::formatDocument(model, c.text.left(3000));
+    QList<int> unembedded;
+    for (int i = 0; i < clips.size(); ++i)
+        if (clips.at(i).vector.isEmpty()) {
+            unembedded << i;
+            input << Embedding::formatDocument(model, clips.at(i).text.left(3000));
+        }
     const quint64 generation = m_generation;
-    m_reply = m_client->embed(model, input, this, [this, pool, generation](const QList<Vector> &vectors, const QString &error) mutable {
+    m_reply = m_client->embed(model, input, this, [this, pools, clips, unembedded, model, generation](const QList<Vector> &vectors, const QString &error) mutable {
         if (generation != m_generation)
             return;
         m_result.stats.embedMs = int(m_clock.elapsed()) - m_result.stats.findMs;
         Vector question;
         QString note;
         if (error.isEmpty()) {
-            question = vectors.first();
-            for (int i = 0; i < pool.size(); ++i)
-                pool[i].vector = vectors.at(i + 1);
+            int k = 0;
+            question = vectors.at(k++);
+            for (Rag::Candidate &c : pools.own)
+                c.vector = vectors.at(k++);
+            for (Rag::Candidate &c : pools.library)
+                c.vector = vectors.at(k++);
+            QList<std::pair<qint64, Vector>> fresh;
+            for (int i : std::as_const(unembedded)) {
+                clips[i].vector = vectors.at(k++);
+                fresh.append({clips.at(i).id, clips.at(i).vector});
+            }
+            if (!fresh.isEmpty())
+                Q_EMIT clipsEmbedded(fresh, model);
         } else {
             m_degraded = true;
             note = error;
         }
-        const QList<Rag::Candidate> ranked = Rag::rank(pool, question);
-        m_result.stats.passages = int(ranked.size());
-        m_context = Rag::buildContext(ranked, m_request.article.isSet());
+        const QList<Rag::Candidate> own = Rag::rank(pools.own, question);
+        const QList<Rag::Candidate> library = Rag::rank(pools.library, question);
+        m_result.stats.passages = int(own.size() + library.size());
+        m_context = Rag::buildContext(own, m_request.article.isSet(), Rag::rankClips(clips, question), library);
         Q_EMIT sourcesReady(m_context.sources, m_degraded, note);
         ask();
     });
@@ -129,7 +191,9 @@ void Answerer::ask()
             finish(QStringLiteral("error"), error);
             return;
         }
-        const QString system = m_request.article.isSet() ? Rag::articleSystemPrompt(m_request.article.title) : Rag::systemPrompt();
+        const QString system = m_request.article.isSet() ? Rag::articleSystemPrompt(m_request.article.title)
+            : m_request.project.isSet() ? Rag::projectSystemPrompt(m_request.project.title, m_request.project.goal, m_request.project.alsoLibrary)
+                                        : Rag::systemPrompt();
         QJsonArray messages{QJsonObject{{QStringLiteral("role"), QStringLiteral("system")}, {QStringLiteral("content"), system}}};
         messages.append(QJsonObject{{QStringLiteral("role"), QStringLiteral("user")},
                                     {QStringLiteral("content"), Rag::userMessage(m_context, m_request.question, m_request.earlierQuestions)}});

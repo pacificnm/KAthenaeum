@@ -123,9 +123,12 @@ ColumnLayout {
             width: parent.width - Kirigami.Units.gridUnit * 4
             visible: list.count === 0
             icon.name: "dialog-messages"
-            text: view.conversation.articlePath !== "" ? i18n("Ask about “%1”", view.conversation.articleTitle) : i18n("Ask a question")
+            text: view.conversation.articlePath !== "" ? i18n("Ask about “%1”", view.conversation.articleTitle)
+                : view.conversation.projectId > 0 ? i18n("Ask about this project") : i18n("Ask a question")
             explanation: view.conversation.articlePath !== ""
                 ? i18n("Answers come from this article alone. Each sentence links to the section it comes from.")
+                : view.conversation.projectId > 0
+                ? i18n("Answers come from the project's articles and saved excerpts, written with its goal in mind. Switch on “Also search the whole library” to look further.")
                 : i18n("A local model answers from your libraries. Each sentence links to the article it comes from; sentences no source backs are marked for checking.")
         }
 
@@ -141,6 +144,7 @@ ColumnLayout {
             required property string note
             required property var sources
             required property string stats
+            required property string content
 
             width: ListView.view.width - ListView.view.leftMargin - ListView.view.rightMargin
             spacing: Kirigami.Units.smallSpacing
@@ -264,13 +268,26 @@ ColumnLayout {
                             QQC2.Label {
                                 Layout.fillWidth: true
                                 visible: text !== "" && view.conversation.articlePath === ""
-                                text: sourceRow.modelData.libraryTitle ?? ""
+                                text: sourceRow.modelData.kind === "library" ? i18n("%1 · outside the project", sourceRow.modelData.libraryTitle ?? "")
+                                                                             : sourceRow.modelData.libraryTitle ?? ""
                                 color: Kirigami.Theme.disabledTextColor
                                 font: Kirigami.Theme.smallFont
                                 elide: Text.ElideRight
                             }
                         }
                     }
+                }
+            }
+
+            QQC2.ToolButton {
+                visible: message.role === "assistant" && message.status === "done" && message.content !== "" && message.sources.length > 0
+                text: i18n("Save to Project…")
+                icon.name: "project-development"
+                font: Kirigami.Theme.smallFont
+                onClicked: {
+                    answerPicker.sources = message.sources;
+                    answerPicker.preview = message.content;
+                    answerPicker.open();
                 }
             }
 
@@ -294,7 +311,8 @@ ColumnLayout {
                 id: input
                 Layout.fillWidth: true
                 placeholderText: list.count > 0 ? i18n("Ask a follow-up question…")
-                    : view.conversation.articlePath !== "" ? i18n("Ask about this article…") : i18n("Ask a question about your libraries…")
+                    : view.conversation.articlePath !== "" ? i18n("Ask about this article…")
+                    : view.conversation.projectId > 0 ? i18n("Ask about this project…") : i18n("Ask a question about your libraries…")
                 onAccepted: view.send()
             }
             QQC2.Button {
@@ -310,6 +328,19 @@ ColumnLayout {
                 icon.name: "process-stop"
                 onClicked: view.conversation.stop()
             }
+        }
+    }
+
+    ProjectList {
+        id: projects
+    }
+    ProjectPicker {
+        id: answerPicker
+        property var sources: []
+        title: i18n("Save Answer to Project")
+        onChosen: (projectId, projectTitle, note) => {
+            if (projects.addAnswer(projectId, answerPicker.preview, answerPicker.sources, note))
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
         }
     }
 }

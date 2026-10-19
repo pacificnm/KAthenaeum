@@ -68,7 +68,7 @@ int main(int argc, char **argv)
         ArticleScope article;
         if (p.isSet(QStringLiteral("article")))
             article = {ids.first(), p.value(QStringLiteral("article")), p.value(QStringLiteral("article")).replace(QLatin1Char('_'), QLatin1Char(' '))};
-        answerer.start({q, earlier, ids, p.value(QStringLiteral("answer")), p.value(QStringLiteral("embed")), article});
+        answerer.start({q, earlier, ids, p.value(QStringLiteral("answer")), p.value(QStringLiteral("embed")), article, {}});
         earlier << q;
     };
     QObject::connect(&answerer, &Answerer::sourcesReady, [&](const QList<Rag::Source> &sources, bool degraded, const QString &note) {

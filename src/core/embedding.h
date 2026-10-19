@@ -19,4 +19,8 @@ QString normalizeName(const QString &model);
 
 // Cosine similarity; 0 for empty or mismatched vectors
 double cosine(const Vector &a, const Vector &b);
+
+// A vector as stored in SQLite: float32, little-endian. An empty or malformed blob gives an empty vector.
+QByteArray toBlob(const Vector &v);
+Vector fromBlob(const QByteArray &blob);
 }

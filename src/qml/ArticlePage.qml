@@ -90,6 +90,16 @@ Kirigami.Page {
             }
         },
         Kirigami.Action {
+            text: i18n("Add to Project")
+            icon.name: "project-development"
+            enabled: page.info.path !== undefined
+            tooltip: i18n("Add this article to a research project")
+            onTriggered: {
+                articlePicker.already = projects.containing(page.info.libraryId, page.info.path);
+                articlePicker.open();
+            }
+        },
+        Kirigami.Action {
             text: i18n("Contents")
             icon.name: "view-list-text"
             enabled: (page.info.toc ?? []).length > 0
@@ -231,6 +241,26 @@ Kirigami.Page {
     }
     }
 
+    ProjectList {
+        id: projects
+    }
+    ProjectPicker {
+        id: articlePicker
+        title: i18n("Add Article to Project")
+        onChosen: (projectId, projectTitle, note) => {
+            if (projects.addArticle(projectId, page.info.libraryId, page.info.path, page.info.title, note))
+                applicationWindow().showPassiveNotification(i18n("Added to “%1”", projectTitle));
+        }
+    }
+    ProjectPicker {
+        id: excerptPicker
+        title: i18n("Save Passage to Project")
+        onChosen: (projectId, projectTitle, note) => {
+            if (projects.addExcerpt(projectId, excerptPicker.preview, page.info.libraryId, page.info.path, page.info.title, "", note))
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+        }
+    }
+
     ChatList {
         id: articleChats
         articleLibraryId: page.info.libraryId ?? 0
@@ -265,6 +295,14 @@ Kirigami.Page {
             text: i18n("Copy")
             icon.name: "edit-copy"
             onTriggered: view.triggerWebAction(WebEngineView.Copy)
+        }
+        QQC2.MenuItem {
+            text: i18n("Save to Project…")
+            icon.name: "project-development"
+            onTriggered: {
+                excerptPicker.preview = selectionMenu.selection;
+                excerptPicker.open();
+            }
         }
         QQC2.MenuItem {
             text: i18n("Ask About This")

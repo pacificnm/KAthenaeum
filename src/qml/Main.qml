@@ -19,9 +19,19 @@ Kirigami.ApplicationWindow {
         pageStack.clear();
         pageStack.push(component, properties ?? {});
     }
-    // a chat about one article opens with its article, the panel beside it
-    function openChat(chatId, articleLibraryId, articlePath) {
-        if (articleLibraryId > 0)
+    function openProject(projectId) {
+        pageStack.push(projectPage, { projectId: projectId });
+    }
+    function openDocument(documentId) {
+        pageStack.push(documentPage, { documentId: documentId });
+    }
+    // a chat about one article opens with its article, the panel beside it; a project's chat in its project
+    function openChat(chatId, articleLibraryId, articlePath, projectId) {
+        if (projectId > 0) {
+            show(projectsPage);
+            pageStack.push(projectPage, { projectId: projectId });
+            pageStack.currentItem.showChat(chatId);
+        } else if (articleLibraryId > 0)
             show(articlePage, { url: LibraryBrowser.articleUrl(articleLibraryId, articlePath), openChatId: chatId });
         else
             show(askPage, { chatId: chatId });
@@ -114,10 +124,30 @@ Kirigami.ApplicationWindow {
     Component {
         id: chatsPage
         ChatsPage {
-            onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath)
+            onOpenChat: (chatId, articleLibraryId, articlePath, projectId) => root.openChat(chatId, articleLibraryId, articlePath, projectId)
         }
     }
-    Component { id: projectsPage; ProjectsPage {} }
+    Component {
+        id: projectsPage
+        ProjectsPage {
+            onOpenProject: projectId => root.openProject(projectId)
+        }
+    }
+    Component {
+        id: projectPage
+        ProjectPage {
+            onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
+            onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0)
+            onOpenDocument: documentId => root.openDocument(documentId)
+            onClosed: root.show(projectsPage)
+        }
+    }
+    Component {
+        id: documentPage
+        DocumentPage {
+            onOpenUrl: url => root.pageStack.push(articlePage, { url: url })
+        }
+    }
     Component { id: libraryManagerPage; LibraryManagerPage {} }
     Component { id: settingsPage; SettingsPage {} }
     Component { id: aboutPage; FormCard.AboutPage {} }

@@ -112,50 +112,133 @@ QList<Rag::Candidate> Rag::rank(QList<Candidate> pool, const Vector &question, i
     return pool.mid(0, n);
 }
 
-Rag::Context Rag::buildContext(const QList<Candidate> &ranked, bool bySection)
+namespace
+{
+// Ranked passages -> up to `maxSources` groups (articles, or sections of one article), each with its best passages
+std::pair<QStringList, QHash<QString, QList<Rag::Candidate>>> group(const QList<Rag::Candidate> &ranked, int maxSources, bool bySection)
 {
     QStringList order;
-    QHash<QString, QList<Candidate>> grouped;
-    for (const Candidate &c : ranked) {
+    QHash<QString, QList<Rag::Candidate>> grouped;
+    for (const Rag::Candidate &c : ranked) {
         const QString k = key(c.libraryId, c.path) + (bySection ? QLatin1Char('#') + c.section : QString());
         if (!grouped.contains(k)) {
-            if (order.size() >= MaxSources)
+            if (order.size() >= maxSources)
                 continue;
             order << k;
         }
-        QList<Candidate> &g = grouped[k];
-        if (g.size() < ChunksPerSource)
+        QList<Rag::Candidate> &g = grouped[k];
+        if (g.size() < Rag::ChunksPerSource)
             g.append(c);
     }
+    return {order, grouped};
+}
+}
+
+Rag::Context Rag::buildContext(const QList<Candidate> &ranked, bool bySection, const QList<Clip> &clips, const QList<Candidate> &library)
+{
+    const auto [order, grouped] = group(ranked, MaxSources, bySection);
+    const auto [libraryOrder, libraryGrouped] = group(library, LibrarySources, false);
     Context out;
-    if (order.isEmpty())
+    const qsizetype count = order.size() + libraryOrder.size() + clips.size();
+    if (count == 0)
         return out;
-    const int perSource = ContextChars / int(order.size());
+    const int perSource = ContextChars / int(count);
     QStringList blocks;
-    for (const QString &k : std::as_const(order)) {
-        const QList<Candidate> &cs = grouped.value(k);
-        QStringList texts;
+
+    // Saved excerpts first, numbered like any other source
+    if (!clips.isEmpty() && !libraryOrder.isEmpty())
+        blocks << QStringLiteral("Saved excerpts and project sources:");
+    for (const Clip &c : clips) {
         Source s;
-        for (const Candidate &c : cs) {
-            texts << c.text.trimmed();
-            if (!c.vector.isEmpty())
-                s.vectors << c.vector;
-        }
         s.n = int(out.sources.size()) + 1;
-        s.libraryId = cs.first().libraryId;
-        s.path = cs.first().path;
-        s.title = cs.first().title;
-        s.section = cs.first().section;
-        s.snippet = cs.first().text.trimmed().left(240);
-        s.evidence = texts.join(QLatin1Char('\n')).left(perSource);
-        blocks << QStringLiteral("[%1] %2%3\n%4")
-                      .arg(s.n)
-                      .arg(s.title,
-                           !s.section.isEmpty() ? QStringLiteral(" - ") + s.section : bySection ? QStringLiteral(" - Introduction") : QString(),
-                           s.evidence);
+        s.kind = QStringLiteral("clip");
+        s.libraryId = c.libraryId;
+        s.path = c.path;
+        s.title = c.title.isEmpty() ? QStringLiteral("Saved excerpt") : QStringLiteral("Saved excerpt: ") + c.title;
+        s.section = c.section;
+        s.evidence = c.text.trimmed().left(qMin(ClipChars, perSource));
+        s.snippet = s.evidence.left(240);
+        if (!c.vector.isEmpty())
+            s.vectors << c.vector;
+        blocks << QStringLiteral("[%1] %2\n%3").arg(s.n).arg(s.title, s.evidence);
         out.sources.append(s);
     }
+
+    auto add = [&](const QStringList &keys, const QHash<QString, QList<Candidate>> &groups, const QString &kind) {
+        for (const QString &k : keys) {
+            const QList<Candidate> &cs = groups.value(k);
+            QStringList texts;
+            Source s;
+            for (const Candidate &c : cs) {
+                texts << c.text.trimmed();
+                if (!c.vector.isEmpty())
+                    s.vectors << c.vector;
+            }
+            s.n = int(out.sources.size()) + 1;
+            s.kind = kind;
+            s.libraryId = cs.first().libraryId;
+            s.path = cs.first().path;
+            s.title = cs.first().title;
+            s.section = cs.first().section;
+            s.snippet = cs.first().text.trimmed().left(240);
+            s.evidence = texts.join(QLatin1Char('\n')).left(perSource);
+            blocks << QStringLiteral("[%1] %2%3\n%4")
+                          .arg(s.n)
+                          .arg(s.title,
+                               !s.section.isEmpty() ? QStringLiteral(" - ") + s.section : bySection ? QStringLiteral(" - Introduction") : QString(),
+                               s.evidence);
+            out.sources.append(s);
+        }
+    };
+    add(order, grouped, QString());
+    // Kept apart and labelled: merged in without a label, the 3B model ignored them (Athenaeum)
+    if (!libraryOrder.isEmpty()) {
+        blocks << QStringLiteral("Other library articles (NOT part of the research project):");
+        add(libraryOrder, libraryGrouped, QStringLiteral("library"));
+    }
     out.text = blocks.join(QStringLiteral("\n\n"));
+    return out;
+}
+
+QList<Rag::Clip> Rag::rankClips(const QList<Clip> &clips, const Vector &question)
+{
+    QList<Clip> usable, unembedded;
+    for (const Clip &c : clips)
+        (c.vector.isEmpty() ? unembedded : usable) << c;
+    if (usable.isEmpty() || question.isEmpty())
+        return clips.mid(0, 2);  // nothing to compare: the two newest are the best guess
+    QList<std::pair<double, int>> sims;
+    for (int i = 0; i < usable.size(); ++i)
+        sims.append({Embedding::cosine(question, usable.at(i).vector), i});
+    std::stable_sort(sims.begin(), sims.end(), [](const auto &a, const auto &b) {
+        return a.first > b.first;
+    });
+    QList<Clip> out;
+    for (const auto &[sim, i] : sims)
+        if (sim >= ClipMinSim && out.size() < MaxClips)
+            out << usable.at(i);
+    out += unembedded.mid(0, 2);  // saved while Ollama was down: offer the newest
+    return out.mid(0, MaxClips);
+}
+
+QList<ZimSearch::Article> Rag::chooseArticles(const QString &query, const QList<ZimSearch::Article> &articles, int n)
+{
+    if (articles.size() <= n)
+        return articles;
+    const QStringList s = stems(query);
+    QList<std::pair<double, int>> scores;
+    for (int i = 0; i < articles.size(); ++i) {
+        double best = ZimSearch::overlap(s, articles.at(i).found.title);
+        for (const Passage &p : articles.at(i).passages)
+            best = qMax(best, ZimSearch::overlap(s, p.section + QLatin1Char(' ') + p.text));
+        scores.append({best, i});
+    }
+    std::stable_sort(scores.begin(), scores.end(), [](const auto &a, const auto &b) {
+        return a.first > b.first;
+    });
+    QList<ZimSearch::Article> out;
+    for (int k = 0; k < n; ++k)
+        out << articles.at(scores.at(k).second);
     return out;
 }
 
@@ -178,6 +261,21 @@ QString Rag::articleSystemPrompt(const QString &title)
         + QStringLiteral("\n\nThe user is reading the article \"%1\" and asking about it. The sources are numbered sections of that one "
                          "article. If the article does not answer the question, say so plainly instead of using outside knowledge.")
               .arg(title);
+}
+
+QString Rag::projectSystemPrompt(const QString &title, const QString &goal, bool withLibrary)
+{
+    const QString g = goal.trimmed().isEmpty() ? QString() : QStringLiteral("\nProject goal: ") + goal.trimmed();
+    const QString where = withLibrary
+        ? QStringLiteral("Sources come in two groups: the project's own material, and 'Other library articles' from outside the project. "
+                         "Prefer the project's material. If it does not answer the question, answer from the other library articles and say "
+                         "that the answer comes from outside the project.")
+        : QStringLiteral("The sources are only the project's own articles and the excerpts the user saved from them.");
+    return systemPrompt()
+        + QStringLiteral("\n\nYou are helping with a research project titled \"%1\".%2\n%3 A source titled \"Saved excerpt\" is a passage "
+                         "the user chose to keep. If the sources do not cover the question, say so plainly and suggest adding relevant "
+                         "articles to the project.")
+              .arg(title, g, where);
 }
 
 QString Rag::userMessage(const Context &context, const QString &question, const QStringList &earlierQuestions)

@@ -92,6 +92,49 @@ const QList<QStringList> migrations = {
         QStringLiteral("ALTER TABLE chats ADD COLUMN article_title TEXT NOT NULL DEFAULT ''"),
         QStringLiteral("CREATE INDEX chats_article ON chats (library_id, article_path)"),
     },
+    {
+        // Research projects: sources (articles, saved excerpts, attached chats), Markdown documents, and chats started
+        // in a project (deleting the project keeps those chats)
+        QStringLiteral("CREATE TABLE projects ("
+                       " id INTEGER PRIMARY KEY,"
+                       " title TEXT NOT NULL,"
+                       " description TEXT NOT NULL DEFAULT '',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX projects_recent ON projects (updated_at DESC)"),
+        // kind: article | clip | chat. An article: library_id, path, title. A clip (a saved excerpt): text, section, and
+        // refs (JSON [{libraryId, path, title}], the articles it came from; library_id/path/title repeat the first), with an
+        // embedding (float32 BLOB) and the model that made it. A chat: chat_id.
+        QStringLiteral("CREATE TABLE project_items ("
+                       " id INTEGER PRIMARY KEY,"
+                       " project_id INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,"
+                       " kind TEXT NOT NULL CHECK (kind IN ('article', 'clip', 'chat')),"
+                       " library_id INTEGER,"
+                       " path TEXT NOT NULL DEFAULT '',"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " section TEXT NOT NULL DEFAULT '',"
+                       " text TEXT NOT NULL DEFAULT '',"
+                       " refs TEXT NOT NULL DEFAULT '[]',"
+                       " note TEXT NOT NULL DEFAULT '',"
+                       " embedding BLOB,"
+                       " embed_model TEXT NOT NULL DEFAULT '',"
+                       " chat_id INTEGER REFERENCES chats (id) ON DELETE CASCADE,"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE UNIQUE INDEX project_articles ON project_items (project_id, library_id, path) WHERE kind = 'article'"),
+        QStringLiteral("CREATE UNIQUE INDEX project_chats ON project_items (project_id, chat_id) WHERE kind = 'chat'"),
+        QStringLiteral("CREATE INDEX project_items_project ON project_items (project_id, kind)"),
+        QStringLiteral("CREATE INDEX project_items_article ON project_items (library_id, path)"),
+        QStringLiteral("CREATE TABLE project_documents ("
+                       " id INTEGER PRIMARY KEY,"
+                       " project_id INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,"
+                       " title TEXT NOT NULL,"
+                       " content TEXT NOT NULL DEFAULT '',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX project_documents_project ON project_documents (project_id, updated_at DESC)"),
+        QStringLiteral("ALTER TABLE chats ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL"),
+        QStringLiteral("CREATE INDEX chats_project ON chats (project_id)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

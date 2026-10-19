@@ -4,6 +4,7 @@
 #include "core/answerer.h"
 #include "core/chats.h"
 #include "core/library.h"
+#include "core/projects.h"
 #include "modelsettings.h"
 
 #include <KLocalizedString>
@@ -63,6 +64,7 @@ QVariantList toVariant(const QList<Rag::Source> &sources)
     for (const Rag::Source &s : sources) {
         const auto library = Library::byId(s.libraryId);
         out << QVariantMap{{QStringLiteral("n"), s.n},
+                           {QStringLiteral("kind"), s.kind},
                            {QStringLiteral("libraryId"), s.libraryId},
                            {QStringLiteral("libraryTitle"), library ? library->title : QString()},
                            {QStringLiteral("path"), s.path},
@@ -122,6 +124,10 @@ Conversation::Conversation(QObject *parent)
         changed(m_answering);
     });
     connect(m_answerer, &Answerer::finished, this, &Conversation::finished);
+    connect(m_answerer, &Answerer::clipsEmbedded, this, [](const QList<std::pair<qint64, Vector>> &vectors, const QString &model) {
+        for (const auto &[id, v] : vectors)
+            Projects::setEmbedding(id, v, model);
+    });
 }
 
 Conversation::~Conversation()
@@ -138,7 +144,8 @@ QHash<int, QByteArray> Conversation::roleNames() const
 {
     return {{RoleRole, "role"},     {TextRole, "text"},           {StatusRole, "status"},
             {PhaseRole, "phase"},   {ErrorRole, "error"},         {NoteRole, "note"},
-            {SourcesRole, "sources"}, {CitationsRole, "citations"}, {StatsRole, "stats"}};
+            {SourcesRole, "sources"}, {CitationsRole, "citations"}, {StatsRole, "stats"},
+            {ContentRole, "content"}};
 }
 
 QVariant Conversation::data(const QModelIndex &index, int role) const
@@ -165,6 +172,8 @@ QVariant Conversation::data(const QModelIndex &index, int role) const
         return m.citations;
     case StatsRole:
         return statsLine(m);
+    case ContentRole:
+        return m.content;
     }
     return {};
 }
@@ -232,6 +241,14 @@ void Conversation::setArticleTitle(const QString &title)
     Q_EMIT articleChanged();
 }
 
+void Conversation::setProjectId(qint64 id)
+{
+    if (id == m_projectId || m_chatId > 0)
+        return;  // a saved chat keeps its project
+    m_projectId = id;
+    Q_EMIT projectChanged();
+}
+
 void Conversation::setChatId(qint64 id)
 {
     if (id == m_chatId)
@@ -254,6 +271,10 @@ void Conversation::load()
             if (chat->articleLibraryId > 0) {
                 m_article = {chat->articleLibraryId, chat->articlePath, chat->articleTitle};
                 Q_EMIT articleChanged();
+            }
+            if (chat->projectId > 0 && chat->projectId != m_projectId) {
+                m_projectId = chat->projectId;
+                Q_EMIT projectChanged();
             }
         }
         for (const MessageRecord &r : Chats::messages(m_chatId)) {
@@ -293,7 +314,7 @@ void Conversation::ask(const QString &question)
             earlier << m.content;
 
     if (m_chatId <= 0) {
-        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title);
+        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title, m_projectId);
         m_title = q.simplified().left(200);
         Q_EMIT chatIdChanged();
     }
@@ -334,7 +355,38 @@ void Conversation::ask(const QString &question)
         return;
     }
     ModelSettings *models = ModelSettings::instance();
-    m_answerer->start({q, earlier, libraries, models->answerModel(), models->embeddingModel(), m_article});
+    ProjectScope project;
+    if (m_projectId > 0) {
+        const auto p = Projects::byId(m_projectId);
+        if (!p) {
+            AnswerResult gone;
+            gone.status = QStringLiteral("error");
+            gone.error = i18n("This chat's project has been deleted.");
+            finished(gone);
+            return;
+        }
+        project.id = p->id;
+        project.title = p->title;
+        project.goal = p->description;
+        project.alsoLibrary = m_alsoLibrary;
+        for (const ProjectItem &i : Projects::items(m_projectId, QStringLiteral("article")))
+            if (libraries.contains(i.article.libraryId))
+                project.articles << ArticleScope{i.article.libraryId, i.article.path, i.article.title};
+        const QString model = Embedding::normalizeName(models->embeddingModel());
+        for (const ProjectItem &i : Projects::items(m_projectId, QStringLiteral("clip"))) {
+            Rag::Clip c;
+            c.id = i.id;
+            c.title = i.refs.value(0).title;
+            c.section = i.section;
+            c.text = i.text;
+            c.libraryId = i.article.libraryId;
+            c.path = i.article.path;
+            if (i.embedModel == model)  // a vector from another model cannot be compared: it is made again
+                c.vector = i.embedding;
+            project.clips << c;
+        }
+    }
+    m_answerer->start({q, earlier, libraries, models->answerModel(), models->embeddingModel(), m_article, project});
     Q_EMIT busyChanged();
 }
 

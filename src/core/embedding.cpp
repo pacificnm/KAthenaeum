@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "embedding.h"
 
+#include <QtEndian>
+
 #include <cmath>
+#include <cstring>
 
 namespace
 {
@@ -65,4 +68,22 @@ double Embedding::cosine(const Vector &a, const Vector &b)
         nb += double(b[i]) * b[i];
     }
     return na > 0 && nb > 0 ? dot / (std::sqrt(na) * std::sqrt(nb)) : 0;
+}
+
+QByteArray Embedding::toBlob(const Vector &v)
+{
+    QByteArray out(v.size() * qsizetype(sizeof(float)), Qt::Uninitialized);
+    for (qsizetype i = 0; i < v.size(); ++i)
+        qToLittleEndian(v[i], out.data() + i * qsizetype(sizeof(float)));
+    return out;
+}
+
+Vector Embedding::fromBlob(const QByteArray &blob)
+{
+    if (blob.isEmpty() || blob.size() % qsizetype(sizeof(float)))
+        return {};
+    Vector out(blob.size() / qsizetype(sizeof(float)));
+    for (qsizetype i = 0; i < out.size(); ++i)
+        out[i] = qFromLittleEndian<float>(blob.constData() + i * qsizetype(sizeof(float)));
+    return out;
 }

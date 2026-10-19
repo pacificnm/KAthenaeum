@@ -2,6 +2,7 @@
 #include "library.h"
 
 #include "database.h"
+#include "projects.h"
 #include "zimarchive.h"
 
 #include <QDir>
@@ -167,5 +168,6 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
             *error = q.lastError().text();
         return false;
     }
+    Projects::forgetLibrary(id);  // its articles leave projects; saved excerpts stay
     return true;
 }

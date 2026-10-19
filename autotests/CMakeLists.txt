@@ -9,6 +9,7 @@ ecm_add_tests(
     downloadstest.cpp
     librarytest.cpp
     ollamatest.cpp
+    projectstest.cpp
     ragtest.cpp
     zimarchivetest.cpp
     zimreadertest.cpp

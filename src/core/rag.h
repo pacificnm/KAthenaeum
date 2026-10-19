@@ -25,6 +25,10 @@ constexpr double Temperature = 0.2;
 constexpr int MaxEarlierQuestions = 3;  // named in a follow-up's prompt; earlier answers are not replayed (see userMessage)
 constexpr double SupportMin = 0.68;  // below this no source clearly backs a sentence (nomic-embed-text; re-measure for another model)
 constexpr double CiteTie = 0.03;     // a second source within this of the best one is cited too
+constexpr int MaxClips = 3;          // saved excerpts shown to the model in a project chat
+constexpr int ClipChars = 1200;      // per excerpt
+constexpr double ClipMinSim = 0.45;  // below this an excerpt is not relevant enough
+constexpr int LibrarySources = 3;    // a project chat that also searches the library: articles from outside it
 
 // A passage that may go into the prompt
 struct Candidate {
@@ -42,6 +46,7 @@ struct Candidate {
 // A numbered source in the prompt: one article and its best passages
 struct Source {
     int n = 0;
+    QString kind;  // empty: an article (or a section of one); "clip": a saved excerpt; "library": outside the project
     qint64 libraryId = 0;
     QString path;
     QString title;
@@ -49,6 +54,17 @@ struct Source {
     QString snippet;
     QString evidence;  // exactly what the model was shown for it (cut to its share of the budget)
     QList<Vector> vectors;
+};
+
+// A saved excerpt of a project, as the project chat sees it
+struct Clip {
+    qint64 id = 0;
+    QString title;  // the article it came from (empty for a saved answer)
+    QString section;
+    QString text;
+    qint64 libraryId = 0;
+    QString path;
+    Vector vector;  // empty when not embedded with the current model
 };
 
 struct Context {
@@ -78,11 +94,22 @@ QList<Candidate> rank(QList<Candidate> pool, const Vector &question, int n = Pas
 
 // Up to MaxSources articles with their best passages, numbered, within ContextChars. `bySection`: the sources are
 // sections of one article instead (a chat about that article), so a citation names "Career", not the article again.
-Context buildContext(const QList<Candidate> &ranked, bool bySection = false);
+// A project chat adds its saved excerpts (first) and, when it also searches the library, up to LibrarySources articles
+// from outside the project as a separately labelled group.
+Context buildContext(const QList<Candidate> &ranked, bool bySection = false, const QList<Clip> &clips = {},
+                     const QList<Candidate> &library = {});
+
+// The excerpts worth showing for this question: the best MaxClips at or above ClipMinSim. Excerpts with no vector (not
+// embedded) are offered newest first, at most two.
+QList<Clip> rankClips(const QList<Clip> &clips, const Vector &question);
+// A project with many articles: the `n` whose passages share the most words with the question (ties: the order given)
+QList<ZimSearch::Article> chooseArticles(const QString &query, const QList<ZimSearch::Article> &articles, int n = Articles);
 
 QString systemPrompt();
 // For a chat about one article: answer from it alone, and say so when it does not cover the question
 QString articleSystemPrompt(const QString &title);
+// For a project chat: its title and goal, and whether other library articles may be among the sources
+QString projectSystemPrompt(const QString &title, const QString &goal, bool withLibrary);
 // `earlierQuestions` (oldest first; the last MaxEarlierQuestions are used) say what "it" or "he" refers to in a
 // follow-up. Earlier answers are deliberately not replayed as chat turns, as Athenaeum did: given its own previous
 // answer, qwen3.5:2b copied it word for word instead of answering the new question (2 of 4 follow-ups; 0 of 4 with

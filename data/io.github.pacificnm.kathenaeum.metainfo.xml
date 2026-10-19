@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.6.0" date="2026-10-19">
+      <description>
+        <p>Research projects: collect articles, saved passages, answers and chats with notes; ask questions answered from the project; write Markdown documents that cite its sources, and export them.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-10-19">
       <description>
         <p>Ask about this article: a chat panel beside every article that answers from that article alone, with citations to its sections. Ask about selected text.</p>

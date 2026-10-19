@@ -275,6 +275,97 @@ private Q_SLOTS:
         QVERIFY(Rag::articleSystemPrompt(QStringLiteral("Water")).contains(QLatin1String("reading the article \"Water\"")));
     }
 
+    // ---- project chats ----
+
+    static Rag::Clip clip(qint64 id, const Vector &v = {})
+    {
+        Rag::Clip c;
+        c.id = id;
+        c.title = QStringLiteral("Ice");
+        c.text = QStringLiteral("saved passage text %1").arg(id);
+        c.libraryId = 1;
+        c.path = QStringLiteral("Ice");
+        c.vector = v;
+        return c;
+    }
+
+    void excerptsComeFirstAndTheLibraryGroupIsLabelled()
+    {
+        // Athenaeum: test_clips_come_first_use_negative_ids_and_library_group_is_labelled
+        const auto ctx = Rag::buildContext({candidate(QStringLiteral("Water"))}, false, {clip(5, unit(0))}, {candidate(QStringLiteral("Other"))});
+        QCOMPARE(ctx.sources.size(), 3);
+        QCOMPARE(ctx.sources[0].kind, QStringLiteral("clip"));
+        QCOMPARE(ctx.sources[0].title, QStringLiteral("Saved excerpt: Ice"));
+        QCOMPARE(ctx.sources[0].vectors.size(), 1);  // excerpts are cited like any source
+        QCOMPARE(ctx.sources[1].kind, QString());
+        QCOMPARE(ctx.sources[2].kind, QStringLiteral("library"));
+        QVERIFY(ctx.text.startsWith(QLatin1String("Saved excerpts and project sources:\n\n[1] Saved excerpt: Ice\nsaved passage text 5\n\n[2] Water")));
+        QVERIFY(ctx.text.contains(QLatin1String("Other library articles (NOT part of the research project):\n\n[3] Other")));
+        // without the library group there is no heading at all
+        QVERIFY(Rag::buildContext({candidate(QStringLiteral("Water"))}, false, {clip(5)}).text.startsWith(QLatin1String("[1] Saved excerpt: Ice")));
+        // only excerpts, no articles: still a context
+        QCOMPARE(Rag::buildContext({}, false, {clip(5)}).sources.size(), 1);
+    }
+
+    void outsideArticlesAreCapped()
+    {
+        QList<Rag::Candidate> outside;
+        for (int i = 0; i < 10; ++i)
+            outside << candidate(QStringLiteral("O%1").arg(i));
+        const auto ctx = Rag::buildContext({candidate(QStringLiteral("Water"))}, false, {}, outside);
+        QCOMPARE(ctx.sources.size(), 1 + Rag::LibrarySources);
+    }
+
+    void excerptsAreChosenBySimilarityToTheQuestion()
+    {
+        // Athenaeum: test_rank_clips_filters_by_similarity_and_handles_missing_embeddings
+        const auto near = clip(1, unit(0));
+        const auto far = clip(2, unit(1));
+        auto ranked = Rag::rankClips({far, near}, unit(0));
+        QCOMPARE(ranked.size(), 1);
+        QCOMPARE(ranked.first().id, 1);
+        QList<Rag::Clip> none;
+        for (int i = 0; i < 5; ++i)
+            none << clip(10 + i);
+        QCOMPARE(Rag::rankClips(none, unit(0)).size(), 2);  // nothing to compare: the two newest
+        QCOMPARE(Rag::rankClips({near}, {}).size(), 1);     // no question vector
+        QList<Rag::Clip> many;
+        for (int i = 0; i < 6; ++i)
+            many << clip(20 + i, unit(0));
+        QCOMPARE(Rag::rankClips(many, unit(0)).size(), Rag::MaxClips);
+    }
+
+    void excerptsWithoutAnEmbeddingAreStillOffered()
+    {
+        // Athenaeum: test_excerpts_without_an_embedding_are_still_offered
+        const auto ranked = Rag::rankClips({clip(1, unit(0)), clip(2)}, unit(0));
+        QCOMPARE(ranked.size(), 2);
+        QCOMPARE(ranked[0].id, 1);
+        QCOMPARE(ranked[1].id, 2);
+    }
+
+    void aBigProjectReadsTheArticlesThatShareTheQuestionsWords()
+    {
+        QList<ZimSearch::Article> arts;
+        for (int i = 0; i < 9; ++i)
+            arts << article(QStringLiteral("A%1").arg(i), {{QString(), QStringLiteral("Nothing related here at all.")}});
+        arts[7] = article(QStringLiteral("Volcano"), {{QString(), QStringLiteral("Intro.")}, {QStringLiteral("Eruptions"), QStringLiteral("Magma erupts.")}});
+        const auto chosen = Rag::chooseArticles(QStringLiteral("how does magma erupt"), arts, 3);
+        QCOMPARE(chosen.size(), 3);
+        QCOMPARE(chosen.first().found.title, QStringLiteral("Volcano"));  // matched in a section, not its introduction
+        QCOMPARE(chosen[1].found.title, QStringLiteral("A0"));            // then the order given
+        QCOMPARE(Rag::chooseArticles(QStringLiteral("x"), arts.mid(0, 2), 3).size(), 2);
+    }
+
+    void aProjectChatIsToldItsGoal()
+    {
+        const QString own = Rag::projectSystemPrompt(QStringLiteral("Water"), QStringLiteral(" Why is water a good solvent? "), false);
+        QVERIFY(own.contains(QLatin1String("research project titled \"Water\".\nProject goal: Why is water a good solvent?")));
+        QVERIFY(own.contains(QLatin1String("only the project's own articles")));
+        QVERIFY(!Rag::projectSystemPrompt(QStringLiteral("Water"), QString(), false).contains(QLatin1String("Project goal")));
+        QVERIFY(Rag::projectSystemPrompt(QStringLiteral("Water"), QString(), true).contains(QLatin1String("say that the answer comes from outside the project")));
+    }
+
     void sourcesAndPassagesPerSourceAreCapped()
     {
         QList<Rag::Candidate> chunks;

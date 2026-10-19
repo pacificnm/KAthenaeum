@@ -17,6 +17,7 @@ struct ChatRecord {
     qint64 articleLibraryId = 0;
     QString articlePath;
     QString articleTitle;
+    qint64 projectId = 0;  // a chat started in a project answers from it
 };
 
 struct MessageRecord {
@@ -35,9 +36,11 @@ struct MessageRecord {
 namespace Chats
 {
 // The new chat's id, or 0 on failure. The title is cut to 200 characters. A chat about one article names it.
-qint64 create(const QString &title, qint64 articleLibraryId = 0, const QString &articlePath = {}, const QString &articleTitle = {});
+qint64 create(const QString &title, qint64 articleLibraryId = 0, const QString &articlePath = {}, const QString &articleTitle = {},
+              qint64 projectId = 0);
 QList<ChatRecord> all();  // most recently used first
 QList<ChatRecord> aboutArticle(qint64 libraryId, const QString &path);  // most recently used first
+QList<ChatRecord> inProject(qint64 projectId);  // started in it, most recently used first
 std::optional<ChatRecord> byId(qint64 id);
 bool rename(qint64 id, const QString &title);
 bool remove(qint64 id);  // and its messages

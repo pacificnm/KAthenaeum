@@ -13,6 +13,7 @@ add_library(kathenaeum_core STATIC
     core/history.cpp core/history.h
     core/library.cpp core/library.h
     core/ollama.cpp core/ollama.h
+    core/projects.cpp core/projects.h
     core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
     core/zimarchive.cpp core/zimarchive.h
@@ -30,10 +31,13 @@ add_executable(kathenaeum
     articlestore.cpp articlestore.h
     chatlist.cpp chatlist.h
     conversation.cpp conversation.h
+    documentmodel.cpp documentmodel.h
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
     librarymodels.cpp librarymodels.h
     modelsettings.cpp modelsettings.h
+    projectlist.cpp projectlist.h
+    projectmodel.cpp projectmodel.h
     searchcontroller.cpp searchcontroller.h
     zimschemehandler.cpp zimschemehandler.h
 )
@@ -64,6 +68,11 @@ qt_add_qml_module(kathenaeum
         qml/TitlesPage.qml
         qml/ArticlePage.qml
         qml/SearchPage.qml
+        qml/ProjectPicker.qml
+        qml/ProjectEditDialog.qml
+        qml/ProjectPage.qml
+        qml/SourceRow.qml
+        qml/DocumentPage.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE

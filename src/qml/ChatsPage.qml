@@ -10,7 +10,7 @@ import KAthenaeum
 Kirigami.ScrollablePage {
     id: page
 
-    signal openChat(var chatId, var articleLibraryId, string articlePath)
+    signal openChat(var chatId, var articleLibraryId, string articlePath, var projectId)
 
     title: i18n("Chats")
 
@@ -42,14 +42,16 @@ Kirigami.ScrollablePage {
             required property var articleLibraryId
             required property string articlePath
             required property string articleTitle
+            required property var projectId
+            required property string projectTitle
 
             width: ListView.view.width
-            onClicked: page.openChat(chatId, articleLibraryId, articlePath)
+            onClicked: page.openChat(chatId, articleLibraryId, articlePath, projectId)
 
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
                 Kirigami.Icon {
-                    source: row.articleLibraryId > 0 ? "document-preview" : "dialog-messages"
+                    source: row.projectId > 0 ? "project-development" : row.articleLibraryId > 0 ? "document-preview" : "dialog-messages"
                     Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                     Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                 }
@@ -63,11 +65,24 @@ Kirigami.ScrollablePage {
                     }
                     QQC2.Label {
                         Layout.fillWidth: true
-                        text: (row.articleLibraryId > 0 ? i18n("About “%1”", row.articleTitle) + " · " : "")
+                        text: (row.projectId > 0 ? i18n("In “%1”", row.projectTitle) + " · " : "")
+                              + (row.articleLibraryId > 0 ? i18n("About “%1”", row.articleTitle) + " · " : "")
                               + i18np("%1 question", "%1 questions", row.questions) + " · " + Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))
                         color: Kirigami.Theme.disabledTextColor
                         font: Kirigami.Theme.smallFont
                         elide: Text.ElideRight
+                    }
+                }
+                QQC2.ToolButton {
+                    visible: row.projectId <= 0
+                    icon.name: "project-development"
+                    text: i18n("Add to Project…")
+                    display: QQC2.AbstractButton.IconOnly
+                    QQC2.ToolTip.text: text
+                    QQC2.ToolTip.visible: hovered
+                    onClicked: {
+                        picker.chatId = row.chatId;
+                        picker.open();
                     }
                 }
                 QQC2.ToolButton {
@@ -95,6 +110,19 @@ Kirigami.ScrollablePage {
                     }
                 }
             }
+        }
+    }
+
+    ProjectList {
+        id: projects
+    }
+    ProjectPicker {
+        id: picker
+        property var chatId
+        withNote: false
+        onChosen: (projectId, projectTitle) => {
+            if (projects.attachChat(projectId, picker.chatId))
+                applicationWindow().showPassiveNotification(i18n("Added to “%1”", projectTitle));
         }
     }
 

@@ -123,11 +123,13 @@ class AnswererTest : public QObject
         QList<Answerer::Phase> phases;
         AnswerResult result;
         bool done = false;
+        QList<std::pair<qint64, Vector>> embeddedClips;
+        QString clipModel;
     };
 
     // Asks and waits for finished(); `whileRunning` is called once the answer has started streaming
     Run ask(Fake &fake, const QString &question, const QStringList &earlier = {}, const std::function<void(Answerer &)> &whileRunning = {},
-            const ArticleScope &article = {})
+            const ArticleScope &article = {}, const ProjectScope &project = {})
     {
         OllamaClient client;
         client.setBaseUrl(fake.url());
@@ -144,11 +146,15 @@ class AnswererTest : public QObject
             if (whileRunning)
                 QTimer::singleShot(0, &answerer, [&] { whileRunning(answerer); });
         });
+        connect(&answerer, &Answerer::clipsEmbedded, this, [&](const QList<std::pair<qint64, Vector>> &v, const QString &model) {
+            run.embeddedClips = v;
+            run.clipModel = model;
+        });
         connect(&answerer, &Answerer::finished, this, [&](const AnswerResult &r) {
             run.result = r;
             run.done = true;
         });
-        answerer.start({question, earlier, {m_id}, QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text"), article});
+        answerer.start({question, earlier, {m_id}, QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text"), article, project});
         [&] { QTRY_VERIFY_WITH_TIMEOUT(run.done, 20000); }();
         return run;
     }
@@ -305,6 +311,76 @@ private Q_SLOTS:
         const Run run = ask(fake, QStringLiteral("what is this"), {}, {}, {m_id, QStringLiteral("No_such_page"), QStringLiteral("No such page")});
         QCOMPARE(run.result.status, QStringLiteral("error"));
         QVERIFY(run.result.error.contains(QLatin1String("No such page")));
+        QVERIFY(fake.paths.isEmpty());
+    }
+
+    // ---- a project chat ----
+
+    ProjectScope project(bool alsoLibrary = false)
+    {
+        ProjectScope p;
+        p.id = 7;
+        p.title = QStringLiteral("Leaves");
+        p.goal = QStringLiteral("How do leaves catch light?");
+        p.articles = {{m_id, QStringLiteral("Leaf"), QStringLiteral("Leaf")}};
+        Rag::Clip saved;
+        saved.id = 42;
+        saved.title = QStringLiteral("Photosynthesis");
+        saved.text = QStringLiteral("Chlorophyll absorbs mostly red and blue light.");
+        saved.libraryId = m_id;
+        saved.path = QStringLiteral("Photosynthesis");
+        p.clips = {saved};  // no vector yet
+        p.alsoLibrary = alsoLibrary;
+        return p;
+    }
+
+    void aProjectChatAnswersFromItsArticlesAndExcerpts()
+    {
+        Fake fake;
+        const Run run = ask(fake, QStringLiteral("how do leaves catch sunlight"), {}, {}, {}, project());
+        QCOMPARE(run.result.status, QStringLiteral("done"));
+        QStringList kinds, titles;
+        for (const Rag::Source &s : run.sources) {
+            kinds << s.kind;
+            titles << s.title;
+        }
+        QCOMPARE(kinds, (QStringList{QStringLiteral("clip"), QString()}));
+        QCOMPARE(titles, (QStringList{QStringLiteral("Saved excerpt: Photosynthesis"), QStringLiteral("Leaf")}));  // not the Photosynthesis article
+        // the excerpt was embedded with the question, and handed back to be saved
+        QCOMPARE(run.embeddedClips.size(), 1);
+        QCOMPARE(run.embeddedClips.first().first, 42);
+        QCOMPARE(run.clipModel, QStringLiteral("nomic-embed-text"));
+        const QJsonArray input = fake.requests.first().value(QLatin1String("input")).toArray();
+        QVERIFY(input.last().toString().contains(QLatin1String("Chlorophyll absorbs")));
+        const QJsonArray messages = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray();
+        const QString system = messages.first().toObject().value(QLatin1String("content")).toString();
+        QVERIFY(system.contains(QLatin1String("research project titled \"Leaves\".\nProject goal: How do leaves catch light?")));
+        QVERIFY(!messages.last().toObject().value(QLatin1String("content")).toString().contains(QLatin1String("Other library articles")));
+    }
+
+    void aProjectChatCanAlsoSearchTheLibraryAsASeparateGroup()
+    {
+        Fake fake;
+        const Run run = ask(fake, QStringLiteral("how do plants use sunlight"), {}, {}, {}, project(true));
+        QCOMPARE(run.result.status, QStringLiteral("done"));
+        QStringList outside;
+        for (const Rag::Source &s : run.sources)
+            if (s.kind == QLatin1String("library"))
+                outside << s.path;
+        QCOMPARE(outside, QStringList{QStringLiteral("Photosynthesis")});  // Leaf is the project's own, never "outside"
+        const QString prompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().last().toObject()
+                                   .value(QLatin1String("content")).toString();
+        QVERIFY(prompt.contains(QLatin1String("Other library articles (NOT part of the research project):")));
+    }
+
+    void anEmptyProjectAsksNoModel()
+    {
+        Fake fake;
+        ProjectScope empty;
+        empty.id = 8;
+        empty.title = QStringLiteral("Empty");
+        const Run run = ask(fake, QStringLiteral("how do plants use sunlight"), {}, {}, {}, empty);
+        QCOMPARE(run.result.answer, Answerer::noProjectSourcesAnswer());
         QVERIFY(fake.paths.isEmpty());
     }
 

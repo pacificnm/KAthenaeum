@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "chatlist.h"
 
+#include "core/projects.h"
+
 ChatList::ChatList(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -21,7 +23,9 @@ QHash<int, QByteArray> ChatList::roleNames() const
             {QuestionsRole, "questions"},
             {ArticleLibraryIdRole, "articleLibraryId"},
             {ArticlePathRole, "articlePath"},
-            {ArticleTitleRole, "articleTitle"}};
+            {ArticleTitleRole, "articleTitle"},
+            {ProjectIdRole, "projectId"},
+            {ProjectTitleRole, "projectTitle"}};
 }
 
 QVariant ChatList::data(const QModelIndex &index, int role) const
@@ -44,6 +48,10 @@ QVariant ChatList::data(const QModelIndex &index, int role) const
         return c.articlePath;
     case ArticleTitleRole:
         return c.articleTitle;
+    case ProjectIdRole:
+        return c.projectId;
+    case ProjectTitleRole:
+        return m_projectTitles.value(c.projectId);
     }
     return {};
 }
@@ -52,6 +60,9 @@ void ChatList::refresh()
 {
     beginResetModel();
     m_chats = m_libraryId > 0 && !m_path.isEmpty() ? Chats::aboutArticle(m_libraryId, m_path) : Chats::all();
+    m_projectTitles.clear();
+    for (const ProjectRecord &p : Projects::all())
+        m_projectTitles.insert(p.id, p.title);
     endResetModel();
     Q_EMIT countChanged();
 }
