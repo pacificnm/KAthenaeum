@@ -17,6 +17,7 @@ Kirigami.ScrollablePage {
 
     signal openArticle(var libraryId, string path)
     signal openTitles(var libraryId, string label, string key, bool isPrefix)
+    signal openSearch(string query, var libraryId)
 
     title: info.title ?? ""
 
@@ -90,14 +91,20 @@ Kirigami.ScrollablePage {
         Kirigami.SearchField {
             id: search
             Layout.fillWidth: true
-            placeholderText: i18n("Find an article by title…")
+            placeholderText: i18n("Find an article…")
             onTextChanged: page.suggestions = LibraryBrowser.suggest(page.libraryId, text)
-            onAccepted: if (page.suggestions.length > 0) page.openArticle(page.libraryId, page.suggestions[0].path)
+            onAccepted: page.openSearch(text, page.libraryId)
         }
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 0
             visible: search.text !== ""
+            QQC2.ItemDelegate {
+                Layout.fillWidth: true
+                icon.name: "search"
+                text: i18n("Search the text of this library for “%1”", search.text.trim())
+                onClicked: page.openSearch(search.text, page.libraryId)
+            }
             Repeater {
                 model: page.suggestions
                 delegate: QQC2.ItemDelegate {

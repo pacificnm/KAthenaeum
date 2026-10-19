@@ -63,6 +63,7 @@ public:
     Q_INVOKABLE void removeLibrary(qint64 id, bool deleteFile);
     Q_INVOKABLE bool setFolder(const QUrl &folder);
     Q_INVOKABLE QVariantMap details(qint64 id) const;
+    Q_INVOKABLE QVariantList libraryList() const;  // [{libraryId, title}] of the installed libraries whose file is there
 
 Q_SIGNALS:
     void folderChanged();

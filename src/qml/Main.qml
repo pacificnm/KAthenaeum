@@ -26,6 +26,9 @@ Kirigami.ApplicationWindow {
     function openTitles(libraryId, label, key, isPrefix) {
         pageStack.push(titlesPage, { libraryId: libraryId, label: label, key: key, isPrefix: isPrefix });
     }
+    function openSearch(query, libraryId) {
+        pageStack.push(searchPage, { initialQuery: query, libraryId: libraryId });
+    }
     function openArticle(libraryId, path) {
         pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path) });
     }
@@ -40,6 +43,7 @@ Kirigami.ApplicationWindow {
         collapsed: !root.wideScreen
         showHeaderWhenCollapsed: true
         actions: [
+            Kirigami.Action { text: i18n("Search"); icon.name: "search"; shortcut: StandardKey.Find; onTriggered: root.show(searchPage) },
             Kirigami.Action { text: i18n("Libraries"); icon.name: "bookmarks"; onTriggered: root.show(librariesPage) },
             Kirigami.Action { text: i18n("Ask"); icon.name: "dialog-messages"; onTriggered: root.show(askPage) },
             Kirigami.Action { text: i18n("Chats"); icon.name: "view-history"; onTriggered: root.show(chatsPage) },
@@ -72,6 +76,13 @@ Kirigami.ApplicationWindow {
         LibraryPage {
             onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
             onOpenTitles: (libraryId, label, key, isPrefix) => root.openTitles(libraryId, label, key, isPrefix)
+            onOpenSearch: (query, libraryId) => root.openSearch(query, libraryId)
+        }
+    }
+    Component {
+        id: searchPage
+        SearchPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
         }
     }
     Component {

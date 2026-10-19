@@ -6,11 +6,14 @@ add_library(kathenaeum_core STATIC
     core/catalog.cpp core/catalog.h
     core/database.cpp core/database.h
     core/downloads.cpp core/downloads.h
+    core/extract.cpp core/extract.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h
     core/settings.cpp core/settings.h
     core/zimarchive.cpp core/zimarchive.h
+    core/zimarchives_p.h
     core/zimreader.cpp core/zimreader.h
+    core/zimsearch.cpp core/zimsearch.h
 )
 target_include_directories(kathenaeum_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2)
@@ -23,6 +26,7 @@ add_executable(kathenaeum
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
     librarymodels.cpp librarymodels.h
+    searchcontroller.cpp searchcontroller.h
     zimschemehandler.cpp zimschemehandler.h
 )
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -50,11 +54,12 @@ qt_add_qml_module(kathenaeum
         qml/LibraryPage.qml
         qml/TitlesPage.qml
         qml/ArticlePage.qml
+        qml/SearchPage.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE
     kathenaeum_core
-    Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::WebEngineCore Qt6::WebEngineQuick
+    Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Concurrent Qt6::WebEngineCore Qt6::WebEngineQuick
     KF6::CoreAddons KF6::I18n KF6::I18nQml KF6::Crash KF6::DBusAddons KF6::IconThemes
 )
 

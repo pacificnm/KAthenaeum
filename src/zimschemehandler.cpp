@@ -37,6 +37,12 @@ void ZimSchemeHandler::requestStarted(QWebEngineUrlRequestJob *job)
         return;
     }
     const QPalette palette = QGuiApplication::palette();
+    // a redirect (the ZIM's own, or an HTML page forwarding to a section): show the real address, so Back, the
+    // breadcrumb and Recently read all name the article that is actually on screen
+    if (const auto content = ZimReader::content(libraryId, path); content && (content->path != path || !content->fragment.isEmpty())) {
+        job->redirect(ArticleStore::url(libraryId, content->path, content->fragment));
+        return;
+    }
     if (const auto article = ArticleStore::article(libraryId, path)) {
         reply("text/html;charset=utf-8", ArticleStore::page(*article, palette));
         return;

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "zimreader.h"
 
+#include "articlerenderer.h"
 #include "library.h"
+#include "zimarchives_p.h"
 
 #include <QHash>
+#include <QMutex>
+#include <QRegularExpression>
 
 #include <memory>
 #include <zim/archive.h>
@@ -14,22 +18,44 @@
 
 namespace
 {
+QMutex archivesLock;
 QHash<qint64, std::shared_ptr<zim::Archive>> archives;
+}
 
-std::shared_ptr<zim::Archive> archive(qint64 libraryId)
+std::shared_ptr<zim::Archive> ZimArchives::opened(qint64 libraryId)
 {
-    if (auto it = archives.constFind(libraryId); it != archives.cend())
-        return *it;
+    QMutexLocker lock(&archivesLock);
+    return archives.value(libraryId);
+}
+
+std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
+{
+    if (auto a = opened(libraryId))
+        return a;
     const auto lib = Library::byId(libraryId);
     if (!lib || !lib->fileExists())
         return nullptr;
     try {
         auto a = std::make_shared<zim::Archive>(lib->path.toStdString());
+        QMutexLocker lock(&archivesLock);
         archives.insert(libraryId, a);
         return a;
     } catch (const std::exception &) {
         return nullptr;
     }
+}
+
+void ZimArchives::close(qint64 libraryId)
+{
+    QMutexLocker lock(&archivesLock);
+    archives.remove(libraryId);  // a search still holding it keeps its own reference until it finishes
+}
+
+namespace
+{
+std::shared_ptr<zim::Archive> archive(qint64 libraryId)
+{
+    return ZimArchives::get(libraryId);
 }
 
 QString str(const std::string &s)
@@ -39,7 +65,15 @@ QString str(const std::string &s)
 
 bool isArticle(const zim::Entry &e)
 {
-    return !e.isRedirect() && !str(e.getTitle()).endsWith(QLatin1String("(disambiguation)"));
+    if (e.isRedirect() || str(e.getTitle()).endsWith(QLatin1String("(disambiguation)")))
+        return false;
+    // mwoffliner's HTML redirect pages (a few hundred bytes forwarding to a section of another article) are not
+    // articles either: the article they lead to is listed under its own title. Only small pages need a look.
+    const zim::Item item = e.getItem();
+    if (item.getSize() > 4096 || !str(item.getMimetype()).startsWith(QLatin1String("text/html")))
+        return true;
+    const zim::Blob blob = item.getData();
+    return ZimReader::htmlRedirectTarget(QByteArray(blob.data(), qsizetype(blob.size())), str(e.getPath())).isEmpty();
 }
 
 // The first title-order index whose title is >= key, comparing bytes as libzim orders them
@@ -73,19 +107,44 @@ QList<std::pair<quint32, quint32>> letterRanges(const zim::Archive &z, const QSt
 }
 }
 
+QString ZimReader::htmlRedirectTarget(const QByteArray &html, const QString &path)
+{
+    if (html.size() > 4096)  // these pages are a few hundred bytes; a real article is never one
+        return {};
+    static const QRegularExpression refresh(QStringLiteral("http-equiv\\s*=\\s*[\"']refresh[\"'][^>]*content\\s*=\\s*\"\\s*\\d+\\s*;\\s*url\\s*=\\s*'?([^'\"]+)"),
+                                            QRegularExpression::CaseInsensitiveOption);
+    const auto m = refresh.match(QString::fromUtf8(html));
+    if (!m.hasMatch())
+        return {};
+    const QString href = m.captured(1).trimmed();
+    const int hash = href.indexOf(QLatin1Char('#'));
+    const QString target = ArticleRenderer::resolve(path, href);
+    if (target.isEmpty())
+        return {};
+    return hash >= 0 ? target + href.mid(hash) : target;
+}
+
 std::optional<ZimContent> ZimReader::content(qint64 libraryId, const QString &path)
 {
     const auto z = archive(libraryId);
     if (!z)
         return std::nullopt;
     try {
-        const zim::Entry entry = z->getEntryByPath(path.toStdString());
-        const zim::Item item = entry.getItem(true);  // follows redirects
-        const zim::Blob blob = item.getData();
-        return ZimContent{str(item.getPath()), str(item.getTitle()), str(item.getMimetype()), QByteArray(blob.data(), qsizetype(blob.size()))};
+        QString current = path, fragment;
+        for (int hop = 0; hop < 4; ++hop) {
+            const zim::Item item = z->getEntryByPath(current.toStdString()).getItem(true);  // follows the ZIM's redirects
+            const zim::Blob blob = item.getData();
+            ZimContent c{str(item.getPath()), fragment, str(item.getTitle()), str(item.getMimetype()), QByteArray(blob.data(), qsizetype(blob.size()))};
+            const QString next = c.mimetype.startsWith(QLatin1String("text/html")) ? htmlRedirectTarget(c.data, c.path) : QString();
+            if (next.isEmpty())
+                return c;
+            const int hash = next.indexOf(QLatin1Char('#'));
+            current = hash >= 0 ? next.left(hash) : next;
+            fragment = hash >= 0 ? next.mid(hash + 1) : QString();
+        }
     } catch (const std::exception &) {
-        return std::nullopt;
     }
+    return std::nullopt;  // missing, or redirects going round in circles
 }
 
 bool ZimReader::hasEntry(qint64 libraryId, const QString &path)
@@ -100,7 +159,7 @@ bool ZimReader::hasEntry(qint64 libraryId, const QString &path)
 
 void ZimReader::close(qint64 libraryId)
 {
-    archives.remove(libraryId);
+    ZimArchives::close(libraryId);
 }
 
 namespace

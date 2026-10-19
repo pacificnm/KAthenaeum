@@ -18,6 +18,7 @@
 #include <KLocalizedString>
 
 #include "appstate.h"
+#include "core/extract.h"
 #include "librarymanager.h"
 #include "zimschemehandler.h"
 #include "core/database.h"
@@ -45,6 +46,7 @@ public:
 int main(int argc, char *argv[])
 {
     KIconTheme::initTheme();
+    initXmlParser();  // once, on the main thread, before any worker parses HTML
     ZimSchemeHandler::registerScheme();  // before any web engine profile exists
     QtWebEngineQuick::initialize();  // must run before the application object exists
     QApplication app(argc, argv);    // QApplication, not QGuiApplication: the desktop style needs widgets

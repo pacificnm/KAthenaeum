@@ -12,7 +12,8 @@ struct ZimEntry {
 };
 
 struct ZimContent {
-    QString path;  // after following redirects
+    QString path;      // after following redirects
+    QString fragment;  // the section an HTML redirect page pointed at, if any
     QString title;
     QString mimetype;
     QByteArray data;
@@ -22,7 +23,12 @@ struct ZimContent {
 // in here. Call from the UI thread.
 namespace ZimReader
 {
+// Follows both kinds of redirect: the ZIM's own, and mwoffliner's tiny HTML pages that forward to a section of another
+// article with <meta http-equiv="refresh" content="0;URL='./Cry_(song)#Version'">
 std::optional<ZimContent> content(qint64 libraryId, const QString &path);
+
+// The target of an HTML redirect page ("Cry_(song)#Version"), or empty. `path` is the page's own path.
+QString htmlRedirectTarget(const QByteArray &html, const QString &path);
 bool hasEntry(qint64 libraryId, const QString &path);
 void close(qint64 libraryId);  // before a library's file is deleted
 

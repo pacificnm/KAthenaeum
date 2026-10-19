@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "articlerenderer.h"
 
+#include "extract.h"
+
 #include <QRegularExpression>
 #include <QSet>
 #include <QUrl>
@@ -173,6 +175,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
             *error = why;
         return std::nullopt;
     };
+    initXmlParser();
     if (raw.trimmed().isEmpty())
         return fail(QStringLiteral("empty page"));
 

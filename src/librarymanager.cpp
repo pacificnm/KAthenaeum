@@ -263,6 +263,15 @@ QVariantMap LibraryManager::details(qint64 id) const
             {QStringLiteral("addedAt"), r->addedAt.toLocalTime()}};
 }
 
+QVariantList LibraryManager::libraryList() const
+{
+    QVariantList out;
+    for (const LibraryRecord &r : Library::all())
+        if (r.fileExists())
+            out.append(QVariantMap{{QStringLiteral("libraryId"), r.id}, {QStringLiteral("title"), r.title}});
+    return out;
+}
+
 void LibraryManager::reloadInstalled()
 {
     QHash<qint64, CatalogEntry> updates;

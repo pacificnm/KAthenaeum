@@ -6,12 +6,12 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries) and reading (library home, A to Z, articles with pictures). Searching across libraries and asking questions are not built yet. See [CLAUDE.md](CLAUDE.md) for the design.
+> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures) and search. Asking questions is not built yet. See [CLAUDE.md](CLAUDE.md) for the design.
 
 ## Features
 
 - **Read** articles from any Wikipedia ZIM, rendered cleanly with their pictures, following the Plasma colour scheme (light and dark), with a contents menu and back/forward. Links to the web open in your browser.
-- **Search** through the ZIM's own title and word indexes. An exact article title always ranks first.
+- **Search** every library at once, or one: titles as you type, then the text of every article through the ZIMs' own word indexes, with the matching passage shown. An article the search names ranks first.
 - **Ask** questions in plain language. Answers stream in, each sentence carries a citation computed by the app (not trusted to the model), and sentences the sources do not support are flagged.
 - **Browse** each library from its home page: find an article by title, A to Z, Random article, recently read, and Wikipedia's own overview articles ("Outline of …", "List of …", "Timeline of …"). All read straight from the ZIM, nothing to build.
 - **Chat history**: saved, searchable and renameable.
