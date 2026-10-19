@@ -27,5 +27,5 @@ void clear();  // after a library is removed
 
 // The page the web view shows: the article in a document styled from the desktop's colours
 QByteArray page(const Article &article, const QPalette &palette);
-QByteArray notFoundPage(const QString &path, const QPalette &palette);
+QByteArray notFoundPage(qint64 libraryId, const QString &path, const QPalette &palette);
 }

@@ -32,7 +32,7 @@ public:
     void setTitle(const QString &title);
     QString content() const { return m_content; }
     void setContent(const QString &content);
-    bool saved() const { return !m_timer.isActive() && m_error.isEmpty(); }
+    bool saved() const { return !m_dirty; }
     QString error() const { return m_error; }
 
     Q_INVOKABLE void save();
@@ -56,4 +56,5 @@ private:
     QString m_content;
     QString m_error;
     QTimer m_timer;
+    bool m_dirty = false;  // typed and not yet saved successfully (a failed save keeps it set, so leaving tries again)
 };

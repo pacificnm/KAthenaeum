@@ -9,6 +9,7 @@
 
 #include <KLocalizedString>
 
+#include <QCoreApplication>
 #include <QJsonDocument>
 
 namespace
@@ -75,6 +76,68 @@ QVariantList toVariant(const QList<Rag::Source> &sources)
     return out;
 }
 
+QString degradedNote(const QString &why)
+{
+    return i18n("Sources were ranked by words only, and sentences are not linked to them: %1", why);
+}
+
+void saveEmbeddings(const QList<std::pair<qint64, Vector>> &vectors, const QString &model)
+{
+    for (const auto &[id, v] : vectors)
+        Projects::setEmbedding(id, v, model);
+}
+
+// What is kept of an answer, and the saving of it: shared by an open chat and an answer finishing after its page closed
+struct AnswerContext {
+    qint64 chatId = 0;
+    QString answerModel;
+    QString embeddingModel;
+    QVariantList sources;
+    QString note;
+};
+
+struct SavedAnswer {
+    qint64 id = 0;
+    QString content;
+    QVariantList citations;
+    QVariantMap meta;
+};
+
+SavedAnswer saveAnswer(const AnswerContext &c, const AnswerResult &result)
+{
+    SavedAnswer out;
+    // a finished answer was tidied by the Answerer and its citations index that text: tidy only what it did not finish
+    out.content = result.status == QLatin1String("done") ? result.answer : Rag::tidyAnswer(result.answer);
+    out.citations = toVariant(result.citations);
+    const AnswerStats &s = result.stats;
+    out.meta = {{QStringLiteral("findMs"), s.findMs},
+                {QStringLiteral("embedMs"), s.embedMs},
+                {QStringLiteral("firstTokenMs"), s.firstTokenMs},
+                {QStringLiteral("citeMs"), s.citeMs},
+                {QStringLiteral("totalMs"), s.totalMs},
+                {QStringLiteral("tokens"), s.tokens},
+                {QStringLiteral("tokensPerSecond"), qRound(s.tokensPerSecond * 10) / 10.0},
+                {QStringLiteral("truncated"), s.truncated},
+                {QStringLiteral("answerModel"), c.answerModel},
+                {QStringLiteral("embeddingModel"), c.embeddingModel}};
+    if (!result.error.isEmpty())
+        out.meta.insert(QStringLiteral("error"), result.error);
+    if (!c.note.isEmpty())
+        out.meta.insert(QStringLiteral("note"), c.note);
+    MessageRecord record;
+    record.chatId = c.chatId;
+    record.role = QStringLiteral("assistant");
+    record.content = out.content;
+    record.status = result.status;
+    record.sources = json(c.sources);
+    record.citations = json(out.citations);
+    record.meta = json(out.meta);
+    out.id = Chats::addMessage(record);
+    return out;
+}
+
+bool s_quitting = false;  // set when the app starts to quit: an answer still running then is saved as stopped
+
 QString seconds(int ms)
 {
     return QString::number(ms / 1000.0, 'f', 1);
@@ -114,7 +177,7 @@ Conversation::Conversation(QObject *parent)
         Message &m = m_messages[m_answering];
         m.sources = toVariant(sources);
         if (degraded)
-            m.note = i18n("Sources were ranked by words only, and sentences are not linked to them: %1", note);
+            m.note = degradedNote(note);
         changed(m_answering);
     });
     connect(m_answerer, &Answerer::textAdded, this, [this](const QString &text) {
@@ -124,15 +187,42 @@ Conversation::Conversation(QObject *parent)
         changed(m_answering);
     });
     connect(m_answerer, &Answerer::finished, this, &Conversation::finished);
-    connect(m_answerer, &Answerer::clipsEmbedded, this, [](const QList<std::pair<qint64, Vector>> &vectors, const QString &model) {
-        for (const auto &[id, v] : vectors)
-            Projects::setEmbedding(id, v, model);
-    });
+    connect(m_answerer, &Answerer::clipsEmbedded, this, &saveEmbeddings);
+    static const bool watching = [] {
+        QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [] {
+            s_quitting = true;
+        });
+        return true;
+    }();
+    Q_UNUSED(watching)
 }
 
 Conversation::~Conversation()
 {
-    m_answerer->stop();  // saves what was written as stopped
+    if (!busy() || s_quitting || m_answering < 0) {
+        m_answerer->stop();  // quitting: saves what was written as stopped
+        return;
+    }
+    // The page was left during an answer (the reader opened something else): let it finish and save it, rather than
+    // stop it (it was stopped before; the review, 2026-10-19). The answerer now belongs to the app until it is done.
+    auto context = std::make_shared<AnswerContext>(
+        AnswerContext{m_chatId, m_answerModel, m_embeddingModel, m_messages.at(m_answering).sources, m_messages.at(m_answering).note});
+    Answerer *answerer = m_answerer;
+    answerer->disconnect(this);
+    answerer->setParent(QCoreApplication::instance());
+    connect(answerer, &Answerer::sourcesReady, answerer, [context](const QList<Rag::Source> &sources, bool degraded, const QString &note) {
+        context->sources = toVariant(sources);
+        if (degraded)
+            context->note = degradedNote(note);
+    });
+    connect(answerer, &Answerer::clipsEmbedded, answerer, &saveEmbeddings);
+    connect(answerer, &Answerer::finished, answerer, [context, answerer](const AnswerResult &result) {
+        saveAnswer(*context, result);
+        answerer->deleteLater();
+    });
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, answerer, [answerer] {
+        answerer->stop();  // saved as stopped
+    });
 }
 
 int Conversation::rowCount(const QModelIndex &parent) const
@@ -307,6 +397,24 @@ void Conversation::ask(const QString &question)
     if (q.isEmpty() || busy())
         return;
 
+    QList<qint64> libraries;
+    for (const LibraryRecord &r : Library::all())
+        if (r.fileExists() && (!m_article.isSet() || r.id == m_article.libraryId))
+            libraries << r.id;
+    if (libraries.isEmpty() && !m_article.isSet()) {
+        // nothing to answer from: say so, without saving an empty chat to the Chats list (the review)
+        Message user;
+        user.role = QStringLiteral("user");
+        user.content = q;
+        append(user);
+        Message none;
+        none.role = QStringLiteral("assistant");
+        none.status = QStringLiteral("error");
+        none.error = i18n("No libraries are installed. Add one in the Library Manager, then ask again.");
+        append(none);
+        return;
+    }
+
     // what was asked before, for follow-ups ("and its density?")
     QStringList earlier;
     for (const Message &m : std::as_const(m_messages))
@@ -336,22 +444,11 @@ void Conversation::ask(const QString &question)
     append(answer);
     m_answering = int(m_messages.size()) - 1;
 
-    QList<qint64> libraries;
-    for (const LibraryRecord &r : Library::all())
-        if (r.fileExists() && (!m_article.isSet() || r.id == m_article.libraryId))
-            libraries << r.id;
-    if (libraries.isEmpty() && m_article.isSet()) {
+    if (libraries.isEmpty()) {
         AnswerResult gone;
         gone.status = QStringLiteral("error");
         gone.error = i18n("“%1” cannot be read: its library is no longer installed.", m_article.title);
         finished(gone);
-        return;
-    }
-    if (libraries.isEmpty()) {
-        AnswerResult none;
-        none.status = QStringLiteral("error");
-        none.error = i18n("No libraries are installed. Add one in the Library Manager, then ask again.");
-        finished(none);
         return;
     }
     ModelSettings *models = ModelSettings::instance();
@@ -386,7 +483,9 @@ void Conversation::ask(const QString &question)
             project.clips << c;
         }
     }
-    m_answerer->start({q, earlier, libraries, models->answerModel(), models->embeddingModel(), m_article, project});
+    m_answerModel = models->answerModel();
+    m_embeddingModel = models->embeddingModel();
+    m_answerer->start({q, earlier, libraries, m_answerModel, m_embeddingModel, m_article, project});
     Q_EMIT busyChanged();
 }
 
@@ -400,36 +499,14 @@ void Conversation::finished(const AnswerResult &result)
     if (m_answering < 0)
         return;
     Message &m = m_messages[m_answering];
+    const SavedAnswer kept = saveAnswer({m_chatId, m_answerModel, m_embeddingModel, m.sources, m.note}, result);
+    m.id = kept.id;
     m.status = result.status;
-    m.content = Rag::tidyAnswer(result.answer);
+    m.content = kept.content;
     m.phase.clear();
     m.error = result.error;
-    m.citations = toVariant(result.citations);
-    const AnswerStats &s = result.stats;
-    m.meta = {{QStringLiteral("findMs"), s.findMs},
-              {QStringLiteral("embedMs"), s.embedMs},
-              {QStringLiteral("firstTokenMs"), s.firstTokenMs},
-              {QStringLiteral("citeMs"), s.citeMs},
-              {QStringLiteral("totalMs"), s.totalMs},
-              {QStringLiteral("tokens"), s.tokens},
-              {QStringLiteral("tokensPerSecond"), qRound(s.tokensPerSecond * 10) / 10.0},
-              {QStringLiteral("truncated"), s.truncated},
-              {QStringLiteral("answerModel"), ModelSettings::instance()->answerModel()},
-              {QStringLiteral("embeddingModel"), ModelSettings::instance()->embeddingModel()}};
-    if (!m.error.isEmpty())
-        m.meta.insert(QStringLiteral("error"), m.error);
-    if (!m.note.isEmpty())
-        m.meta.insert(QStringLiteral("note"), m.note);
-
-    MessageRecord record;
-    record.chatId = m_chatId;
-    record.role = m.role;
-    record.content = m.content;
-    record.status = m.status;
-    record.sources = json(m.sources);
-    record.citations = json(m.citations);
-    record.meta = json(m.meta);
-    m.id = Chats::addMessage(record);
+    m.citations = kept.citations;
+    m.meta = kept.meta;
 
     const int row = m_answering;
     m_answering = -1;

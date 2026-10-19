@@ -33,12 +33,14 @@ Kirigami.ScrollablePage {
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.smallSpacing
                     Kirigami.Heading {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         level: 4
                         text: row.model.title
                         elide: Text.ElideRight
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.model.description
                         wrapMode: Text.Wrap
@@ -46,6 +48,7 @@ Kirigami.ScrollablePage {
                         elide: Text.ElideRight
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         opacity: 0.7
                         font: Kirigami.Theme.smallFont

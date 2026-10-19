@@ -18,6 +18,7 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QStorageInfo>
+#include <QCoreApplication>
 #include <QtConcurrent>
 
 #include <csignal>
@@ -146,10 +147,17 @@ double DownloadRecord::progress() const
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent)
 {
+    // ~QCoreApplication waits for the thread pool before it deletes its children (this manager among them), so the
+    // verification must be told to stop when the app starts to quit, not when this object goes
+    if (QCoreApplication::instance())
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [stop = m_stopVerifying] {
+            stop->store(true);
+        });
 }
 
 DownloadManager::~DownloadManager()
 {
+    m_stopVerifying->store(true);  // the pool's thread returns within one read; the row stays "verifying" for next time
     // SIGTERM, not a kill, so aria2c writes its control file and Resume loses nothing
     for (QProcess *p : std::as_const(m_processes)) {
         p->disconnect(this);
@@ -165,10 +173,17 @@ QString DownloadManager::aria2Program()
 
 void DownloadManager::reconcile()
 {
+    // a file that was being verified is complete: verify it again rather than ask for a Resume
+    QList<qint64> verifying;
+    QSqlQuery v(QStringLiteral("SELECT id FROM downloads WHERE status = 'verifying'"));
+    while (v.next())
+        verifying << v.value(0).toLongLong();
     QSqlQuery q;
-    q.prepare(QStringLiteral("UPDATE downloads SET status = 'failed', error = ? WHERE status IN ('queued', 'downloading', 'verifying')"));
+    q.prepare(QStringLiteral("UPDATE downloads SET status = 'failed', error = ? WHERE status IN ('queued', 'downloading')"));
     q.addBindValue(QStringLiteral("Interrupted when KAthenaeum closed. Press Resume to continue."));
     q.exec();
+    for (qint64 id : std::as_const(verifying))
+        startVerifying(id);
 }
 
 QList<DownloadRecord> DownloadManager::list() const
@@ -226,9 +241,7 @@ QString DownloadManager::start(const QUrl &url, const QString &filename, const Q
     const qint64 free = QStorageInfo(folder).bytesAvailable();
     if (size > 0 && free >= 0 && free < size - have + (64 << 20))
         return QStringLiteral("not enough free space in %1: this needs %2 MB, %3 MB are free")
-            .arg(folder)
-            .arg((size - have) >> 20)
-            .arg(free >> 20);
+            .arg(folder, QString::number((size - have) >> 20), QString::number(free >> 20));
 
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO downloads (url, filename, folder, title, total_bytes, done_bytes) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"));
@@ -350,19 +363,29 @@ void DownloadManager::processFinished(qint64 id, int exitCode)
     }
 
     // Transferred, not yet proven good: aria2c exiting 0 is not proof enough
+    startVerifying(id);
+}
+
+void DownloadManager::startVerifying(qint64 id)
+{
+    const auto r = byId(id);
+    if (!r)
+        return;
     setStatus(id, QStringLiteral("verifying"));
     auto *watcher = new QFutureWatcher<QString>(this);
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, id] {
         watcher->deleteLater();
         verified(id, watcher->result());
     });
-    watcher->setFuture(QtConcurrent::run(&ZimArchive::verify, r->path(), r->totalBytes));
+    watcher->setFuture(QtConcurrent::run([path = r->path(), size = r->totalBytes, stop = m_stopVerifying] {
+        return ZimArchive::verify(path, size, stop.get());
+    }));
 }
 
 void DownloadManager::verified(qint64 id, const QString &problem)
 {
     const auto r = byId(id);
-    if (!r)
+    if (!r || problem == ZimArchive::Stopped)
         return;
     if (!problem.isEmpty()) {
         removePartial(r->path());  // a corrupt file must not be registered, and resuming it would not fix it

@@ -55,6 +55,28 @@ private Q_SLOTS:
 
         QVERIFY(!Database::open(path, &error));
         QVERIFY(error.contains(QStringLiteral("newer")));
+        // and left untouched: nothing can be written through the refused connection
+        QVERIFY(!QSqlQuery().exec(QStringLiteral("INSERT INTO settings (key, value) VALUES ('after', 'refused')")));
+        Database::close();
+        QVERIFY(Database::open(path + QStringLiteral(".check"), &error));
+        QVERIFY(QSqlQuery().exec(QStringLiteral("ATTACH DATABASE '%1' AS refused").arg(path)));
+        QSqlQuery q(QStringLiteral("SELECT count(*) FROM refused.settings WHERE key = 'after'"));
+        QVERIFY(q.next());
+        QCOMPARE(q.value(0).toInt(), 0);
+    }
+
+    void aFailedMigrationLeavesNothingOpen()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("test.sqlite"));
+        QString error;
+        QVERIFY2(Database::open(path, &error), qPrintable(error));
+        // pretend the last migration has not run, with a table in its way so it fails
+        QVERIFY(QSqlQuery().exec(QStringLiteral("PRAGMA user_version = %1").arg(Database::latestVersion() - 1)));
+        Database::close();
+        QVERIFY(!Database::open(path, &error));
+        QVERIFY(!error.isEmpty());
+        QVERIFY(!QSqlQuery().exec(QStringLiteral("SELECT 1 FROM settings")));
     }
 };
 

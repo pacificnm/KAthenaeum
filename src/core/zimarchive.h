@@ -3,6 +3,8 @@
 
 #include <QByteArray>
 #include <QString>
+
+#include <atomic>
 #include <optional>
 
 // What the library home and the library manager show about a ZIM, read from its metadata.
@@ -30,8 +32,10 @@ std::optional<ZimInfo> readInfo(const QString &path, QString *error = nullptr);
 
 // Is the file at `path` a complete, intact ZIM? Returns an empty string if so, otherwise what is wrong.
 // `expectedSize` is the catalog's figure (0 = unknown). Recomputes the ZIM's internal checksum, so it reads the whole
-// file: minutes for a big library. Run it off the UI thread.
-QString verify(const QString &path, qint64 expectedSize);
+// file: minutes for a big library. Run it off the UI thread. Setting `stop` ends it within one read and returns Stopped:
+// libzim's own check() cannot be interrupted, and the app could not exit until it finished (the review, 2026-10-19).
+QString verify(const QString &path, qint64 expectedSize, const std::atomic<bool> *stop = nullptr);
+inline const QString Stopped = QStringLiteral("stopped");
 
 // Is the ZIM a Wikipedia-style (mwoffliner) one, the only kind KAthenaeum can search and answer from?
 bool isMwoffliner(const QString &scraper);

@@ -36,12 +36,14 @@ QQC2.ItemDelegate {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing / 2
             QQC2.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: row.heading !== ""
                 text: row.heading
                 elide: Text.ElideRight
             }
             QQC2.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: row.quote !== ""
                 text: "“" + row.quote + "”"
@@ -51,6 +53,7 @@ QQC2.ItemDelegate {
                 font.italic: true
             }
             QQC2.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: row.detail !== ""
                 text: row.quote !== "" ? "— " + row.detail : row.detail
@@ -59,6 +62,7 @@ QQC2.ItemDelegate {
                 elide: Text.ElideRight
             }
             QQC2.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 visible: row.note !== ""
                 text: i18n("Note: %1", row.note)
@@ -77,7 +81,7 @@ QQC2.ItemDelegate {
         }
         QQC2.ToolButton {
             visible: row.removable
-            icon.name: "edit-delete-remove"
+            icon.name: "edit-delete"
             text: row.removeText
             display: QQC2.AbstractButton.IconOnly
             QQC2.ToolTip.text: text

@@ -19,6 +19,9 @@ Kirigami.ApplicationWindow {
         pageStack.clear();
         pageStack.push(component, properties ?? {});
     }
+    function showLibraryManager() {
+        show(libraryManagerPage);
+    }
     function openProject(projectId) {
         pageStack.push(projectPage, { projectId: projectId });
     }
@@ -26,15 +29,19 @@ Kirigami.ApplicationWindow {
         pageStack.push(documentPage, { documentId: documentId });
     }
     // a chat about one article opens with its article, the panel beside it; a project's chat in its project
-    function openChat(chatId, articleLibraryId, articlePath, projectId) {
+    // `onTop`: opened from inside a page (a project's sources), so Back returns there; from the Chats list it replaces
+    // the stack. (Opening an attached chat from a project threw the project away; the review.)
+    function openChat(chatId, articleLibraryId, articlePath, projectId, onTop) {
         if (projectId > 0) {
             show(projectsPage);
             pageStack.push(projectPage, { projectId: projectId });
             pageStack.currentItem.showChat(chatId);
-        } else if (articleLibraryId > 0)
-            show(articlePage, { url: LibraryBrowser.articleUrl(articleLibraryId, articlePath), openChatId: chatId });
-        else
-            show(askPage, { chatId: chatId });
+        } else if (articleLibraryId > 0) {
+            const props = { url: LibraryBrowser.articleUrl(articleLibraryId, articlePath), openChatId: chatId };
+            onTop ? pageStack.push(articlePage, props) : show(articlePage, props);
+        } else {
+            onTop ? pageStack.push(askPage, { chatId: chatId }) : show(askPage, { chatId: chatId });
+        }
     }
     // Reading goes deeper one page at a time: Libraries > Chemistry > A to Z > Water
     function openLibrary(libraryId) {
@@ -64,7 +71,7 @@ Kirigami.ApplicationWindow {
             Kirigami.Action { text: i18n("Libraries"); icon.name: "bookmarks"; onTriggered: root.show(librariesPage) },
             Kirigami.Action { text: i18n("Ask"); icon.name: "dialog-messages"; onTriggered: root.show(askPage) },
             Kirigami.Action { text: i18n("Chats"); icon.name: "view-history"; onTriggered: root.show(chatsPage) },
-            Kirigami.Action { text: i18n("Projects"); icon.name: "project-development"; onTriggered: root.show(projectsPage) },
+            Kirigami.Action { text: i18n("Projects"); icon.name: "folder-bookmark"; onTriggered: root.show(projectsPage) },
             Kirigami.Action { separator: true },
             Kirigami.Action { text: i18n("Library Manager"); icon.name: "folder-download"; onTriggered: root.show(libraryManagerPage) },
             Kirigami.Action { text: i18n("Settings"); icon.name: "settings-configure"; onTriggered: root.show(settingsPage) },
@@ -73,6 +80,25 @@ Kirigami.ApplicationWindow {
     }
 
     pageStack.initialPage: librariesPage
+
+    // an AI draft is written as a project document, wherever the reader has gone meanwhile
+    Connections {
+        target: Drafting
+        function onDocumentReady(documentId, projectId, title) {
+            const page = root.pageStack.currentItem;
+            if (page && page.project !== undefined && page.project.projectId === projectId)
+                root.openDocument(documentId);
+            else
+                root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => {
+                    root.show(projectsPage);
+                    root.openProject(projectId);
+                    root.openDocument(documentId);
+                });
+        }
+        function onFailed(message) {
+            root.showPassiveNotification(message, "long");
+        }
+    }
 
     Connections {
         target: LibraryManager
@@ -112,6 +138,7 @@ Kirigami.ApplicationWindow {
         id: articlePage
         ArticlePage {
             onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
+            onOpenSettings: root.show(settingsPage)
         }
     }
     Component {
@@ -137,7 +164,7 @@ Kirigami.ApplicationWindow {
         id: projectPage
         ProjectPage {
             onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
-            onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0)
+            onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onClosed: root.show(projectsPage)
         }

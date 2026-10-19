@@ -17,7 +17,7 @@ Kirigami.Page {
 
     signal openUrl(url url)
 
-    title: doc.title
+    title: Util.pageTitle(doc.title)
     padding: 0
 
     actions: [
@@ -90,6 +90,7 @@ Kirigami.Page {
                     onTextEdited: doc.title = text
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     text: doc.error !== "" ? doc.error : doc.saved ? i18n("Saved") : i18n("Saving…")
                     color: doc.error !== "" ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
                 }
@@ -166,7 +167,7 @@ Kirigami.Page {
             model: project.articles
             delegate: QQC2.MenuItem {
                 required property var modelData
-                text: modelData.note !== "" ? i18n("%1 (has a note)", modelData.title) : modelData.title
+                text: Util.plain(modelData.note !== "" ? i18n("%1 (has a note)", modelData.title) : modelData.title)
                 icon.name: "text-html"
                 onTriggered: page.insert(project.articleLink(modelData.itemId))
             }
@@ -177,7 +178,7 @@ Kirigami.Page {
             model: project.excerpts
             delegate: QQC2.MenuItem {
                 required property var modelData
-                text: "“" + (modelData.text.length > 60 ? modelData.text.slice(0, 60) + "…" : modelData.text) + "”"
+                text: Util.plain("“" + (modelData.text.length > 60 ? modelData.text.slice(0, 60) + "…" : modelData.text) + "”")
                 icon.name: "format-text-blockquote"
                 onTriggered: page.insert(project.quote(modelData.itemId))
             }

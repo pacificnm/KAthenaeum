@@ -15,7 +15,7 @@ Kirigami.ScrollablePage {
 
     actions: [
         Kirigami.Action {
-            text: i18n("New Project")
+            text: i18n("New Project…")
             icon.name: "list-add"
             onTriggered: newDialog.open()
         }
@@ -33,11 +33,11 @@ Kirigami.ScrollablePage {
             anchors.centerIn: parent
             width: parent.width - Kirigami.Units.gridUnit * 4
             visible: list.count === 0
-            icon.name: "project-development"
+            icon.name: "folder-bookmark"
             text: i18n("No projects yet")
             explanation: i18n("A project gathers articles, passages you select in them, and chats around one question. Ask questions about just that material, and write up what you find.")
             helpfulAction: Kirigami.Action {
-                text: i18n("New Project")
+                text: i18n("New Project…")
                 icon.name: "list-add"
                 onTriggered: newDialog.open()
             }
@@ -55,12 +55,13 @@ Kirigami.ScrollablePage {
             required property int documents
 
             width: ListView.view.width
+            highlighted: false
             onClicked: page.openProject(projectId)
 
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
                 Kirigami.Icon {
-                    source: "project-development"
+                    source: "folder-bookmark"
                     Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                     Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                     Layout.alignment: Qt.AlignTop
@@ -69,22 +70,25 @@ Kirigami.ScrollablePage {
                     Layout.fillWidth: true
                     spacing: 0
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.title
                         font.bold: true
                         elide: Text.ElideRight
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         visible: row.description !== ""
                         text: row.description
                         elide: Text.ElideRight
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: [i18np("%1 article", "%1 articles", row.articles), i18np("%1 excerpt", "%1 excerpts", row.excerpts),
                                i18np("%1 chat", "%1 chats", row.chats), i18np("%1 document", "%1 documents", row.documents),
-                               Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))].join(" · ")
+                               Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))].join(i18nc("between facts in a list row", " · "))
                         color: Kirigami.Theme.disabledTextColor
                         font: Kirigami.Theme.smallFont
                         elide: Text.ElideRight

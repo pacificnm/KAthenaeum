@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QtConcurrent>
 
 #include "core/database.h"
 #include "core/library.h"
@@ -258,6 +260,73 @@ private Q_SLOTS:
         const auto found = ZimSearch::findArticles(QStringLiteral("Eruption (volcano)"), {m_id}, 10);
         for (const auto &f : found)
             QVERIFY(f.path != QLatin1String("Eruption_(volcano)"));
+    }
+
+    void removingALibraryDuringASearchIsSafe()
+    {
+        // found by the review (2026-10-19): the search looked an archive up again after a library was removed, and crashed
+        const QList<qint64> ids{m_id, m_music};
+        std::atomic<bool> done = false;
+        auto future = QtConcurrent::run([&] {
+            for (int i = 0; i < 60; ++i)
+                ZimSearch::search(QStringLiteral("river valley water"), ids, 10);
+            done = true;
+        });
+        while (!done) {
+            ZimReader::close(m_id);
+            QCoreApplication::processEvents();
+            ZimSearch::prepare(ids);
+        }
+        future.waitForFinished();
+        ZimSearch::prepare(ids);
+        QVERIFY(!ZimSearch::search(QStringLiteral("river"), ids, 10).isEmpty());
+    }
+
+    void workersNeverOpenArchivesThemselves()
+    {
+        // opening reads the database, which belongs to the main thread: a worker gets only what is already open.
+        // (A thread of its own: QFuture::result() may run a task that has not started yet on the waiting thread.)
+        auto onWorker = [this] {
+            bool found = true;
+            QThread *t = QThread::create([&found, this] { found = ZimReader::content(m_music, QStringLiteral("Morning_song")).has_value(); });
+            t->start();
+            t->wait();
+            delete t;
+            return found;
+        };
+        QTest::failOnWarning(QRegularExpression(QStringLiteral("does not belong to the calling thread")));
+        ZimReader::close(m_music);
+        QVERIFY(!onWorker());
+        QVERIFY(ZimReader::content(m_music, QStringLiteral("Morning_song")));  // the main thread opens it
+        QVERIFY(onWorker());
+    }
+
+    void anEntryTooLargeToReadSafelyIsNotRead()
+    {
+        // the review's "bomb": a tiny ZIM with an enormous article (it compresses to almost nothing)
+        const QString file = m_dir.filePath(QStringLiteral("bomb.zim"));
+        {
+            zim::writer::Creator c;
+            c.startZimCreation(file.toStdString());
+            c.setMainPath("Small");
+            c.addMetadata("Title", "Bomb");
+            const std::string page = "<html><head><title>Big</title></head><body><div class='mw-parser-output'><p>"
+                + std::string(size_t(ZimReader::MaxHtmlBytes) + 1024, 'a') + "</p><script>x()</script></div></body></html>";
+            c.addItem(zim::writer::StringItem::create(std::string("Big"), std::string("text/html"), std::string("Big"),
+                                                      zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, page));
+            c.addItem(zim::writer::StringItem::create(std::string("Small"), std::string("text/html"), std::string("Small"),
+                                                      zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
+                                                      std::string("<html><head><title>Small</title></head><body><div class='mw-parser-output'><p>Fine.</p></div></body></html>")));
+            c.finishZimCreation();
+        }
+        QVERIFY(QFileInfo(file).size() < 2 << 20);
+        const auto id = Library::add(file);
+        QVERIFY(id);
+        QVERIFY(!ZimReader::content(*id, QStringLiteral("Big")));
+        QVERIFY(ZimReader::content(*id, QStringLiteral("Small")));
+        QVERIFY(ZimReader::tooLarge(ZimReader::MaxHtmlBytes + 1, true));
+        QVERIFY(!ZimReader::tooLarge(ZimReader::MaxHtmlBytes + 1, false));  // an image may be bigger than a page
+        QVERIFY(Library::remove(*id, false));
     }
 
     void cleanupTestCase() { Database::close(); }

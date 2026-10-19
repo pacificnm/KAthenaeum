@@ -24,7 +24,8 @@ const char *DropXPath =
 const QSet<QByteArray> KeepAttributes = {"class", "id", "href", "src", "alt", "title", "colspan", "rowspan", "scope",
                                          "style", "lang", "dir", "width", "height"};
 
-const QRegularExpression BadStyle(QStringLiteral("url\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
+// A backslash anywhere: CSS escapes spell anything ("u\\72l(" is url(), which got past this filter; the review, 2026-10-19)
+const QRegularExpression BadStyle(QStringLiteral("\\\\|url\\s*\\(|image-set|src\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
                                   QRegularExpression::CaseInsensitiveOption);
 const QRegularExpression External(QStringLiteral("^(?:[a-z][a-z0-9+.-]*:)?//|^(?:https?|ftp|mailto):"), QRegularExpression::CaseInsensitiveOption);
 const QRegularExpression Scripting(QStringLiteral("^\\s*(?:javascript|data|vbscript):"), QRegularExpression::CaseInsensitiveOption);
@@ -42,6 +43,9 @@ struct XPathResult {
         if (obj) xmlXPathFreeObject(obj);
         if (ctx) xmlXPathFreeContext(ctx);
     }
+    // A query libxml2 could not finish (a document past its limits) is not an empty one: the sanitiser must not treat
+    // "nothing found to drop" as safe (it failed open on a huge page, the review found)
+    bool ok() const { return obj != nullptr; }
     QList<xmlNodePtr> nodes() const
     {
         QList<xmlNodePtr> out;
@@ -293,7 +297,10 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         // another one (a script in a navbox) would touch freed memory.
         // Decide everything before freeing anything: reading a node to ask whether it is nested is itself a use after
         // free once its ancestor has gone (AddressSanitizer caught exactly that).
-        const QList<xmlNodePtr> matches = xpath(d.doc, nullptr, DropXPath)->nodes();
+        const auto dropped = xpath(d.doc, nullptr, DropXPath);
+        if (!dropped->ok())
+            return fail(QStringLiteral("the page is too large or too complex to make safe"));
+        const QList<xmlNodePtr> matches = dropped->nodes();
         const QSet<xmlNodePtr> matched(matches.cbegin(), matches.cend());
         QList<xmlNodePtr> outermost;
         for (xmlNodePtr n : matches) {
@@ -324,7 +331,11 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
             removeAttr(el, n.constData());
     });
 
-    for (xmlNodePtr img : xpath(d.doc, root, ".//img")->nodes()) {
+    const auto images = xpath(d.doc, root, ".//img");
+    const auto links = xpath(d.doc, root, ".//a");
+    if (!images->ok() || !links->ok())
+        return fail(QStringLiteral("the page is too large or too complex to make safe"));
+    for (xmlNodePtr img : images->nodes()) {
         const QString src = attr(img, "src");
         // Offline ZIMs without pictures embed an alt-text placeholder as a data: URI; it adds nothing
         const QString media = src.isEmpty() || src.startsWith(QLatin1String("data:")) || External.match(src).hasMatch() ? QString() : resolve(path, src);
@@ -336,7 +347,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         setAttr(img, "loading", QStringLiteral("lazy"));
     }
 
-    for (xmlNodePtr a : xpath(d.doc, root, ".//a")->nodes()) {
+    for (xmlNodePtr a : links->nodes()) {
         if (!hasAttr(a, "href"))
             continue;
         const QString href = attr(a, "href").trimmed();

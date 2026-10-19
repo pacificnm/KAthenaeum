@@ -284,13 +284,15 @@ QString Rag::userMessage(const Context &context, const QString &question, const 
     if (!earlierQuestions.isEmpty()) {
         QStringList quoted;
         for (const QString &q : earlierQuestions.mid(qMax<qsizetype>(0, earlierQuestions.size() - MaxEarlierQuestions)))
-            quoted << QStringLiteral("\"%1\"").arg(q.trimmed());
+            quoted << QStringLiteral("\"%1\"").arg(q.simplified().left(300));  // enough to know what "it" is
         earlier = QStringLiteral("Earlier in this conversation the user asked: %1\n").arg(quoted.join(QStringLiteral(", then ")));
     }
     return QStringLiteral("Sources:\n\n%1\n\n%2Question: %3").arg(context.text, earlier, question.trimmed());
 }
 
-QString Rag::tidyAnswer(const QString &answer)
+namespace
+{
+QString tidyOnce(const QString &answer)
 {
     // a line that is only a list of sources: "Sources: [1], [3], [5]", "**Sources:** 1, 2"
     static const QRegularExpression sourceLine(
@@ -330,6 +332,24 @@ QString Rag::tidyAnswer(const QString &answer)
     while (out.contains(QLatin1String("\n\n\n")))
         out.replace(QLatin1String("\n\n\n"), QLatin1String("\n\n"));
     return out.trimmed();
+}
+}
+
+QString Rag::tidyAnswer(const QString &answer)
+{
+    // No images: the model was told by an article to end its answer with ![](http://host/?q=<the question>) and did (the
+    // review, 2026-10-19). The interface fetches nothing outside kiwix.org anyway; the alt text is kept.
+    static const QRegularExpression image(QStringLiteral("!\\[([^\\]\\n]*)\\]\\([^)\\n]*\\)"));
+    QString out = QString(answer).replace(image, QStringLiteral("\\1"));
+    // Until nothing changes: removing a marker can leave a line that is now only a list of sources, and citations are
+    // offsets into this text, so tidying it again must give the same text (the review found 6 in 300,000 that did not)
+    for (int i = 0; i < 4; ++i) {
+        const QString next = tidyOnce(out);
+        if (next == out)
+            break;
+        out = next;
+    }
+    return out;
 }
 
 QList<std::pair<int, int>> Rag::splitSentences(const QString &text)

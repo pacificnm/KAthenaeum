@@ -116,6 +116,9 @@ private Q_SLOTS:
         QCOMPARE(Chats::inProject(p).size(), 1);
         QCOMPARE(Chats::inProject(p).first().id, own);
         QCOMPARE(Projects::byId(p)->chats, 2);
+        // a chat started in the project is not attached to it as well (it was listed and counted twice; the review)
+        QCOMPARE(Projects::attachChat(p, own), 0);
+        QCOMPARE(Projects::byId(p)->chats, 2);
         // deleting a chat detaches it
         QVERIFY(Chats::remove(general));
         QVERIFY(Projects::items(p, QStringLiteral("chat")).isEmpty());
@@ -188,6 +191,9 @@ private Q_SLOTS:
     {
         QCOMPARE(Projects::articleLink({2, QStringLiteral("Ray_(film)"), QStringLiteral("Ray (film)")}), QStringLiteral("[Ray (film)](zim://lib2/Ray_%28film%29)"));
         QCOMPARE(Projects::articleLink({1, QStringLiteral("A"), QStringLiteral("[weird] title")}), QStringLiteral("[(weird) title](zim://lib1/A)"));
+        // a title with %1 in it is text, not a placeholder (chained arg() filled it in)
+        QCOMPARE(Projects::articleLink({7, QStringLiteral("Rate_of_5%1_growth"), QStringLiteral("Rate of 5%1 growth")}),
+                 QStringLiteral("[Rate of 5%1 growth](zim://lib7/Rate_of_5%251_growth)"));
         ProjectItem clip;
         clip.text = QStringLiteral("Water is polar.\nIt bends.");
         clip.refs = {{1, QStringLiteral("Water"), QStringLiteral("Water")}};

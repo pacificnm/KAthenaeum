@@ -15,14 +15,13 @@ Kirigami.Page {
     property alias project: project
     property alias conversation: conversation
     property alias tab: tabs.currentIndex
-    property alias drafting: drafting
 
     signal openArticle(var libraryId, string path, string fragment)
     signal openChat(var chatId, var articleLibraryId, string articlePath)
     signal openDocument(var documentId)
     signal closed()
 
-    title: project.title
+    title: Util.pageTitle(project.title)
     padding: 0
 
     actions: [
@@ -67,17 +66,15 @@ Kirigami.Page {
         id: projects
     }
 
-    Drafting {
-        id: drafting
-        onDocumentReady: documentId => page.openDocument(documentId)
-        onFailed: message => applicationWindow().showPassiveNotification(message, "long")
-    }
+    // the app's one drafting job (Main.qml opens what it writes); this page shows it when it is for this project
+    readonly property bool drafting: Drafting.running && Drafting.projectId === project.projectId
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
         QQC2.Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.largeSpacing
             Layout.bottomMargin: 0
@@ -90,7 +87,7 @@ Kirigami.Page {
         QQC2.TabBar {
             id: tabs
             Layout.fillWidth: true
-            QQC2.TabButton { text: i18np("Sources (%1)", "Sources (%1)", project.articles.length + project.excerpts.length) }
+            QQC2.TabButton { text: i18np("Sources (%1)", "Sources (%1)", project.articles.length + project.excerpts.length + project.chats.length) }
             QQC2.TabButton { text: i18n("Chat") }
             QQC2.TabButton { text: i18np("Documents (%1)", "Documents (%1)", project.documents.length) }
         }
@@ -133,6 +130,7 @@ Kirigami.Page {
                         Layout.bottomMargin: 0
                         visible: project.articles.length > 0
                         Kirigami.Heading {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             level: 3
                             text: i18np("%1 Article", "%1 Articles", project.articles.length)
@@ -159,6 +157,7 @@ Kirigami.Page {
 
                     // saved excerpts
                     Kirigami.Heading {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
                         Layout.bottomMargin: 0
@@ -184,6 +183,7 @@ Kirigami.Page {
 
                     // chats
                     Kirigami.Heading {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
                         Layout.bottomMargin: 0
@@ -196,8 +196,8 @@ Kirigami.Page {
                         delegate: SourceRow {
                             Layout.fillWidth: true
                             heading: modelData.title
-                            detail: (modelData.itemId > 0 ? i18n("Added from Chats") : i18n("Asked in this project")) + " · "
-                                    + i18np("%1 question", "%1 questions", modelData.questions)
+                            detail: modelData.itemId > 0 ? i18np("Added from Chats · %1 question", "Added from Chats · %1 questions", modelData.questions)
+                                                         : i18np("Asked in this project · %1 question", "Asked in this project · %1 questions", modelData.questions)
                             iconName: "dialog-messages"
                             canNote: false
                             removable: modelData.itemId > 0
@@ -275,6 +275,7 @@ Kirigami.Page {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
                         Kirigami.Heading {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             level: 3
                             text: i18n("Documents")
@@ -282,7 +283,7 @@ Kirigami.Page {
                         QQC2.Button {
                             text: i18n("Draft with AI")
                             icon.name: "tools-wizard"
-                            enabled: !drafting.running && (project.articles.length + project.excerpts.length + project.chats.length > 0)
+                            enabled: !Drafting.running && (project.articles.length + project.excerpts.length + project.chats.length > 0)
                             onClicked: draftMenu.popup()
                         }
                         QQC2.Button {
@@ -300,40 +301,42 @@ Kirigami.Page {
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.largeSpacing
-                        visible: drafting.running
+                        visible: page.drafting
                         RowLayout {
                             QQC2.BusyIndicator {
-                                running: drafting.running
+                                running: page.drafting
                                 Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                                 Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                             }
                             QQC2.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
-                                text: drafting.total > 1 ? i18n("%1 (%2 of %3)", drafting.label, drafting.step, drafting.total) : drafting.label
+                                text: Drafting.total > 1 ? i18n("%1 (%2 of %3)", Drafting.label, Drafting.step, Drafting.total) : Drafting.label
                                 elide: Text.ElideRight
                             }
                             QQC2.Button {
                                 text: i18n("Stop")
                                 icon.name: "process-stop"
-                                onClicked: drafting.stop()
+                                onClicked: Drafting.stop()
                             }
                         }
                         QQC2.ProgressBar {
                             Layout.fillWidth: true
-                            visible: drafting.total > 1
+                            visible: Drafting.total > 1
                             from: 0
-                            to: drafting.total
-                            value: drafting.step
+                            to: Drafting.total
+                            value: Drafting.step
                         }
                         QQC2.Label {
                             Layout.fillWidth: true
-                            visible: drafting.streamed !== ""
-                            text: drafting.streamed
+                            visible: Drafting.streamed !== ""
+                            text: Drafting.streamed
                             textFormat: Text.MarkdownText
                             wrapMode: Text.Wrap
                             color: Kirigami.Theme.disabledTextColor
                         }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: i18n("A small local model writes the draft. It becomes a document you can edit; check it against the sources.")
                             color: Kirigami.Theme.disabledTextColor
@@ -345,7 +348,7 @@ Kirigami.Page {
                     Kirigami.PlaceholderMessage {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.gridUnit * 2
-                        visible: project.documents.length === 0 && !drafting.running
+                        visible: project.documents.length === 0 && !page.drafting
                         icon.name: "document-new"
                         text: i18n("No documents yet")
                         explanation: i18n("Write notes, an outline or a report in Markdown, citing the project's articles and excerpts.")
@@ -355,8 +358,8 @@ Kirigami.Page {
                         delegate: SourceRow {
                             Layout.fillWidth: true
                             heading: modelData.title
-                            detail: i18np("%1 character", "%1 characters", modelData.characters) + " · "
-                                    + Qt.formatDateTime(modelData.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))
+                            detail: i18np("%1 character · %2", "%1 characters · %2", modelData.characters,
+                                          Qt.formatDateTime(modelData.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat)))
                             iconName: "text-markdown"
                             canNote: false
                             removeText: i18n("Delete Document")
@@ -379,7 +382,7 @@ Kirigami.Page {
             text: i18n("Summary of the Project")
             icon.name: "view-list-text"
             enabled: project.articles.length + project.excerpts.length > 0
-            onTriggered: drafting.summarizeProject(project.projectId)
+            onTriggered: Drafting.summarizeProject(project.projectId)
         }
         QQC2.MenuSeparator { visible: project.chats.length > 0 }
         QQC2.MenuItem {
@@ -391,9 +394,9 @@ Kirigami.Page {
             model: project.chats
             delegate: QQC2.MenuItem {
                 required property var modelData
-                text: modelData.title
+                text: Util.plain(modelData.title)
                 icon.name: "dialog-messages"
-                onTriggered: drafting.summarizeChat(project.projectId, modelData.chatId)
+                onTriggered: Drafting.summarizeChat(project.projectId, modelData.chatId)
             }
             onObjectAdded: (index, object) => draftMenu.addItem(object)
             onObjectRemoved: (index, object) => draftMenu.removeItem(object)
@@ -406,7 +409,7 @@ Kirigami.Page {
             model: project.chats.filter(c => c.itemId === 0)
             delegate: QQC2.MenuItem {
                 required property var modelData
-                text: modelData.title
+                text: Util.plain(modelData.title)
                 checkable: true
                 checked: modelData.chatId === conversation.chatId
                 onTriggered: conversation.chatId = modelData.chatId
@@ -521,13 +524,14 @@ Kirigami.Page {
                     required property var modelData
                     Layout.fillWidth: true
                     readonly property bool added: project.articles.some(a => a.libraryId === modelData.libraryId && a.path === modelData.path)
-                    text: modelData.title
+                    text: Util.plain(modelData.title)
                     icon.name: added ? "checkmark" : "list-add"
                     enabled: !added
                     contentItem: ColumnLayout {
                         spacing: 0
-                        QQC2.Label { text: modelData.title; Layout.fillWidth: true; elide: Text.ElideRight }
+                        QQC2.Label { textFormat: Text.PlainText; text: modelData.title; Layout.fillWidth: true; elide: Text.ElideRight }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             text: added ? i18n("%1 · already in the project", modelData.libraryTitle) : modelData.libraryTitle
                             color: Kirigami.Theme.disabledTextColor
                             font: Kirigami.Theme.smallFont

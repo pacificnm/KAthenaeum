@@ -166,6 +166,24 @@ private Q_SLOTS:
         QCOMPARE(Rag::retrievalQuery(QStringLiteral("What’s their names?"), earlier), QStringLiteral("Who was Ray Charles married to? What’s their names?"));
     }
 
+    void imagesInAnAnswerAreDropped()
+    {
+        // an article told the model to end with an image whose address carried the question (the review, 2026-10-19)
+        QCOMPARE(Rag::tidyAnswer(QStringLiteral("Water is polar.\n\n![Water diagram](http://host/d?q=Is+water+polar%3F)")),
+                 QStringLiteral("Water is polar.\n\nWater diagram"));
+        QCOMPARE(Rag::tidyAnswer(QStringLiteral("See ![](https://x/y.png) here.")), QStringLiteral("See  here."));
+        QCOMPARE(Rag::tidyAnswer(QStringLiteral("A [link](zim://lib1/Water) stays.")), QStringLiteral("A [link](zim://lib1/Water) stays."));
+    }
+
+    void tidyingTwiceChangesNothing()
+    {
+        // the review's example: once left "Sources: 1 and 2", which a second pass removed, and citations pointed past the end
+        const QString raw = QStringLiteral("Ethanol boils at 78.37 °C.\n\nSources: 1 and 2 (see source 3)");
+        const QString once = Rag::tidyAnswer(raw);
+        QCOMPARE(once, QStringLiteral("Ethanol boils at 78.37 °C."));
+        QCOMPARE(Rag::tidyAnswer(once), once);
+    }
+
     void theModelsOwnSourceNumbersAreRemoved()
     {
         QCOMPARE(Rag::tidyAnswer(QStringLiteral("Water is polar because oxygen pulls electrons [3]. It bends [1, 2].\n\nSources: [1], [3], [5]")),

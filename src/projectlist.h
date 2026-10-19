@@ -57,4 +57,5 @@ public:
     static ProjectsNotifier *instance();
 Q_SIGNALS:
     void changed();
+    void documentSaved(qint64 projectId);
 };

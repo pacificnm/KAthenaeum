@@ -25,6 +25,7 @@ ColumnLayout {
                 Layout.preferredHeight: Kirigami.Units.iconSizes.small
             }
             QQC2.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 elide: Text.ElideMiddle
                 text: i18n("Downloads go to %1 · %2 free", LibraryManager.folder, KCoreAddons.Format.formatByteSize(LibraryManager.freeSpace, 1))
@@ -67,12 +68,14 @@ ColumnLayout {
                         spacing: Kirigami.Units.smallSpacing
 
                         Kirigami.Heading {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             level: 4
                             text: row.model.title
                             elide: Text.ElideRight
                         }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: row.model.description
                             wrapMode: Text.Wrap
@@ -81,6 +84,7 @@ ColumnLayout {
                             visible: text !== ""
                         }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             opacity: 0.7
                             font: Kirigami.Theme.smallFont
@@ -119,7 +123,7 @@ ColumnLayout {
                     }
                     QQC2.ToolButton {
                         Layout.alignment: Qt.AlignTop
-                        icon.name: "delete"
+                        icon.name: "edit-delete"
                         display: QQC2.AbstractButton.IconOnly
                         text: i18n("Remove…")
                         QQC2.ToolTip.text: text
@@ -166,10 +170,20 @@ ColumnLayout {
             open();
         }
 
-        title: i18n("Remove %1?", libraryTitle)
-        subtitle: i18n("Chats and projects that used it keep their text, but its articles will no longer open.")
-        standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
-        onAccepted: LibraryManager.removeLibrary(libraryId, deleteFile.checked)
+        title: i18n("Remove %1?", Util.plain(libraryTitle))
+        subtitle: i18n("Its articles will no longer open. Chats and projects keep their text, and if you add this library again later, they link to it again.")
+        standardButtons: Kirigami.Dialog.NoButton
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Remove")
+                icon.name: "edit-delete"
+                onTriggered: {
+                    LibraryManager.removeLibrary(removeDialog.libraryId, deleteFile.checked);
+                    removeDialog.close();
+                }
+            },
+            Kirigami.Action { text: i18n("Cancel"); icon.name: "dialog-cancel"; onTriggered: removeDialog.close() }
+        ]
 
         QQC2.CheckBox {
             id: deleteFile

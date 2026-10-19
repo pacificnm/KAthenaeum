@@ -66,8 +66,8 @@ const char *ProjectSelect =
     "SELECT p.id, p.title, p.description, p.updated_at,"
     " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'article'),"
     " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'clip'),"
-    " (SELECT count(*) FROM project_items i WHERE i.project_id = p.id AND i.kind = 'chat')"
-    "  + (SELECT count(*) FROM chats c WHERE c.project_id = p.id),"
+    " (SELECT count(*) FROM chats c WHERE c.project_id = p.id"
+    "   OR c.id IN (SELECT i.chat_id FROM project_items i WHERE i.project_id = p.id AND i.kind = 'chat')),"
     " (SELECT count(*) FROM project_documents d WHERE d.project_id = p.id)"
     " FROM projects p";
 
@@ -206,10 +206,13 @@ qint64 Projects::attachChat(qint64 projectId, qint64 chatId)
     if (!exists(projectId))
         return 0;
     QSqlQuery q;
+    // not a chat started in this project: it is listed there already (attached as well, it was counted and shown twice)
     q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, chat_id) SELECT ?, 'chat', id FROM chats WHERE id = ? "
+                             "AND coalesce(project_id, 0) <> ? "
                              "ON CONFLICT (project_id, chat_id) WHERE kind = 'chat' DO UPDATE SET chat_id = excluded.chat_id RETURNING id"));
     q.addBindValue(projectId);
     q.addBindValue(chatId);
+    q.addBindValue(projectId);
     if (!q.exec() || !q.next())
         return 0;
     const qint64 id = q.value(0).toLongLong();
@@ -395,7 +398,8 @@ QString Projects::articleLink(const ArticleRef &a)
     const QString path = QString::fromLatin1(QUrl::toPercentEncoding(a.path, "/_-.,!~*'"));
     QString text = a.title;
     text.replace(QLatin1Char('['), QLatin1Char('(')).replace(QLatin1Char(']'), QLatin1Char(')'));
-    return QStringLiteral("[%1](zim://lib%2/%3)").arg(text).arg(a.libraryId).arg(path);
+    // one arg() call: chained, a title containing "%1" was filled in by the next one (the review, 2026-10-19)
+    return QStringLiteral("[%1](zim://lib%2/%3)").arg(text, QString::number(a.libraryId), path);
 }
 
 QString Projects::quote(const ProjectItem &clip)

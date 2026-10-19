@@ -8,6 +8,8 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <atomic>
+#include <memory>
 #include <optional>
 
 class QProcess;
@@ -92,4 +94,7 @@ private:
     QHash<qint64, Aria2Progress> m_live;
     QHash<qint64, QString> m_outputTail;
     QSet<qint64> m_cancelled;
+    // set when the manager goes (the app closes): a verification in progress stops instead of holding up the exit
+    std::shared_ptr<std::atomic<bool>> m_stopVerifying = std::make_shared<std::atomic<bool>>(false);
+    void startVerifying(qint64 id);
 };

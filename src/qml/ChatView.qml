@@ -80,8 +80,19 @@ ColumnLayout {
             position: Kirigami.InlineMessage.Position.Header
             visible: Models.reachable && !Models.answerModelInstalled
             type: Kirigami.MessageType.Error
-            text: i18n("The answer model “%1” is not installed. Install it in a terminal with: <b>ollama pull %1</b>", Models.answerModel)
-            actions: [ Kirigami.Action { text: i18n("Check Again"); icon.name: "view-refresh"; onTriggered: Models.refresh() } ]
+            text: i18n("The answer model “%1” is not installed. Install it in a terminal with: <b>ollama pull %1</b>, or choose another in Settings.", Models.answerModel)
+            actions: [
+                Kirigami.Action { text: i18n("Check Again"); icon.name: "view-refresh"; onTriggered: Models.refresh() },
+                Kirigami.Action { text: i18n("Settings"); icon.name: "settings-configure"; onTriggered: view.openSettings() }
+            ]
+        }
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            position: Kirigami.InlineMessage.Position.Header
+            visible: LibraryManager.installed.count === 0
+            type: Kirigami.MessageType.Information
+            text: i18n("No libraries are installed yet, so there is nothing to answer from.")
+            actions: [ Kirigami.Action { text: i18n("Library Manager"); icon.name: "folder-download"; onTriggered: applicationWindow().showLibraryManager() } ]
         }
         Kirigami.InlineMessage {
             Layout.fillWidth: true
@@ -123,7 +134,7 @@ ColumnLayout {
             width: parent.width - Kirigami.Units.gridUnit * 4
             visible: list.count === 0
             icon.name: "dialog-messages"
-            text: view.conversation.articlePath !== "" ? i18n("Ask about “%1”", view.conversation.articleTitle)
+            text: view.conversation.articlePath !== "" ? i18n("Ask about “%1”", Util.plain(view.conversation.articleTitle))
                 : view.conversation.projectId > 0 ? i18n("Ask about this project") : i18n("Ask a question")
             explanation: view.conversation.articlePath !== ""
                 ? i18n("Answers come from this article alone. Each sentence links to the section it comes from.")
@@ -180,6 +191,7 @@ ColumnLayout {
                     running: visible
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     text: message.phase
                     color: Kirigami.Theme.disabledTextColor
                 }
@@ -204,11 +216,12 @@ ColumnLayout {
                     cursorShape: answer.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor
                 }
                 QQC2.ToolTip.visible: answer.hoveredLink !== "" && QQC2.ToolTip.text !== ""
-                QQC2.ToolTip.text: view.linkTip(message.index, answer.hoveredLink)
+                QQC2.ToolTip.text: Util.plain(view.linkTip(message.index, answer.hoveredLink))
                 QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
             }
 
             QQC2.Label {
+                textFormat: Text.PlainText
                 visible: message.role === "assistant" && message.status === "stopped"
                 text: message.text === "" ? i18n("Stopped before the answer began.") : i18n("Stopped.")
                 color: Kirigami.Theme.disabledTextColor
@@ -224,13 +237,14 @@ ColumnLayout {
 
             Kirigami.InlineMessage {
                 Layout.fillWidth: true
-                visible: message.note !== ""
+                visible: message.note !== "" && message.error === ""  // the error already says what went wrong
                 type: Kirigami.MessageType.Warning
                 text: message.note
             }
 
             // the sources the model was shown
             QQC2.Label {
+                textFormat: Text.PlainText
                 visible: message.role === "assistant" && message.sources.length > 0
                 Layout.topMargin: Kirigami.Units.smallSpacing
                 text: i18n("Sources")
@@ -246,12 +260,13 @@ ColumnLayout {
                     bottomPadding: Kirigami.Units.smallSpacing
                     onClicked: view.openCitation(message.index, "cite:" + modelData.n)
                     QQC2.ToolTip.visible: hovered && modelData.snippet !== ""
-                    QQC2.ToolTip.text: modelData.snippet + "…"
+                    QQC2.ToolTip.text: Util.plain(modelData.snippet + "…")
                     QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
 
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             text: "[" + sourceRow.modelData.n + "]"
                             color: Kirigami.Theme.linkColor
                             Layout.alignment: Qt.AlignTop
@@ -260,12 +275,14 @@ ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
                             QQC2.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: view.conversation.articlePath !== "" ? (sourceRow.modelData.section || i18n("Introduction"))
                                     : sourceRow.modelData.section ? i18n("%1 – %2", sourceRow.modelData.title, sourceRow.modelData.section) : sourceRow.modelData.title
                                 elide: Text.ElideRight
                             }
                             QQC2.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: text !== "" && view.conversation.articlePath === ""
                                 text: sourceRow.modelData.kind === "library" ? i18n("%1 · outside the project", sourceRow.modelData.libraryTitle ?? "")
@@ -282,7 +299,7 @@ ColumnLayout {
             QQC2.ToolButton {
                 visible: message.role === "assistant" && message.status === "done" && message.content !== "" && message.sources.length > 0
                 text: i18n("Save to Project…")
-                icon.name: "project-development"
+                icon.name: "bookmark-new"
                 font: Kirigami.Theme.smallFont
                 onClicked: {
                     answerPicker.sources = message.sources;
@@ -292,6 +309,7 @@ ColumnLayout {
             }
 
             QQC2.Label {
+                textFormat: Text.PlainText
                 visible: message.stats !== ""
                 Layout.fillWidth: true
                 text: message.stats
@@ -309,6 +327,8 @@ ColumnLayout {
             spacing: Kirigami.Units.smallSpacing
             QQC2.TextField {
                 id: input
+                // a pasted page as a question pushed the sources out of the model's context (num_ctx 6144; the review)
+                maximumLength: 2000
                 Layout.fillWidth: true
                 placeholderText: list.count > 0 ? i18n("Ask a follow-up question…")
                     : view.conversation.articlePath !== "" ? i18n("Ask about this article…")

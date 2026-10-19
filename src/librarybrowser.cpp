@@ -47,6 +47,7 @@ QVariantMap LibraryBrowser::libraryInfo(qint64 libraryId) const
             {QStringLiteral("articleCount"), double(r->articleCount)},
             {QStringLiteral("hasFulltext"), r->hasFulltextIndex},
             {QStringLiteral("isWikipedia"), ZimArchive::isMwoffliner(r->scraper)},
+            {QStringLiteral("available"), r->fileExists()},
             {QStringLiteral("missing"), !r->fileExists()},
             {QStringLiteral("icon"), png.isEmpty() ? QString() : QStringLiteral("data:image/png;base64,") + QString::fromLatin1(png.toBase64())}};
 }

@@ -5,9 +5,11 @@
 #include "library.h"
 #include "zimarchives_p.h"
 
+#include <QCoreApplication>
 #include <QHash>
 #include <QMutex>
 #include <QRegularExpression>
+#include <QThread>
 
 #include <memory>
 #include <zim/archive.h>
@@ -32,6 +34,10 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
 {
     if (auto a = opened(libraryId))
         return a;
+    // Opening reads the libraries table, and the database connection belongs to the main thread: a worker gets only
+    // what the main thread opened (ZimSearch::prepare). Workers reached the database this way (the review, 2026-10-19).
+    if (QCoreApplication::instance() && QThread::currentThread() != QCoreApplication::instance()->thread())
+        return nullptr;
     const auto lib = Library::byId(libraryId);
     if (!lib || !lib->fileExists())
         return nullptr;
@@ -48,7 +54,7 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
 void ZimArchives::close(qint64 libraryId)
 {
     QMutexLocker lock(&archivesLock);
-    archives.remove(libraryId);  // a search still holding it keeps its own reference until it finishes
+    archives.remove(libraryId);  // a search takes its own references when it starts (ZimSearch candidates) and keeps them
 }
 
 namespace
@@ -145,6 +151,10 @@ std::optional<ZimContent> ZimReader::content(qint64 libraryId, const QString &pa
         QString current = path, fragment;
         for (int hop = 0; hop < 4; ++hop) {
             const zim::Item item = z->getEntryByPath(current.toStdString()).getItem(true);  // follows the ZIM's redirects
+            if (tooLarge(qint64(item.getSize()), str(item.getMimetype()).startsWith(QLatin1String("text/html")))) {
+                qWarning("Not reading %s: %lld bytes", qUtf8Printable(current), qint64(item.getSize()));
+                return std::nullopt;
+            }
             const zim::Blob blob = item.getData();
             ZimContent c{str(item.getPath()), fragment, str(item.getTitle()), str(item.getMimetype()), QByteArray(blob.data(), qsizetype(blob.size()))};
             const QString next = c.mimetype.startsWith(QLatin1String("text/html")) ? htmlRedirectTarget(c.data, c.path) : QString();

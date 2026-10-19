@@ -117,13 +117,18 @@ bool ModelSettings::embeddingModelInstalled() const
 void ModelSettings::refresh()
 {
     m_checking = true;
+    const quint64 refresh = ++m_refresh;
     Q_EMIT statusChanged();
-    m_client->installed(this, [this](const QStringList &names, const QString &error) {
+    m_client->installed(this, [this, refresh](const QStringList &names, const QString &error) {
+        if (refresh != m_refresh)
+            return;
         m_reachable = error.isEmpty();
         m_error = error;
         m_installed = names;
         m_installed.sort();
-        m_client->loaded(this, [this](const QStringList &loaded, const QString &) {
+        m_client->loaded(this, [this, refresh](const QStringList &loaded, const QString &) {
+            if (refresh != m_refresh)
+                return;
             m_loaded = loaded;
             m_checking = false;
             m_checked = true;

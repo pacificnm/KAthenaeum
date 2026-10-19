@@ -46,12 +46,13 @@ Kirigami.ScrollablePage {
             required property string projectTitle
 
             width: ListView.view.width
+            highlighted: false
             onClicked: page.openChat(chatId, articleLibraryId, articlePath, projectId)
 
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
                 Kirigami.Icon {
-                    source: row.projectId > 0 ? "project-development" : row.articleLibraryId > 0 ? "document-preview" : "dialog-messages"
+                    source: row.projectId > 0 ? "folder-bookmark" : row.articleLibraryId > 0 ? "document-preview" : "dialog-messages"
                     Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                     Layout.preferredHeight: Kirigami.Units.iconSizes.medium
                 }
@@ -59,15 +60,19 @@ Kirigami.ScrollablePage {
                     Layout.fillWidth: true
                     spacing: 0
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.title
                         elide: Text.ElideRight
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
-                        text: (row.projectId > 0 ? i18n("In “%1”", row.projectTitle) + " · " : "")
-                              + (row.articleLibraryId > 0 ? i18n("About “%1”", row.articleTitle) + " · " : "")
-                              + i18np("%1 question", "%1 questions", row.questions) + " · " + Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))
+                        // independent facts, joined with a separator translators can change
+                        text: [row.projectId > 0 ? i18n("In “%1”", row.projectTitle) : "",
+                               row.articleLibraryId > 0 ? i18n("About “%1”", row.articleTitle) : "",
+                               i18np("%1 question", "%1 questions", row.questions),
+                               Qt.formatDateTime(row.updated, Qt.locale().dateTimeFormat(Locale.ShortFormat))].filter(s => s !== "").join(i18nc("between facts in a list row", " · "))
                         color: Kirigami.Theme.disabledTextColor
                         font: Kirigami.Theme.smallFont
                         elide: Text.ElideRight
@@ -75,7 +80,7 @@ Kirigami.ScrollablePage {
                 }
                 QQC2.ToolButton {
                     visible: row.projectId <= 0
-                    icon.name: "project-development"
+                    icon.name: "bookmark-new"
                     text: i18n("Add to Project…")
                     display: QQC2.AbstractButton.IconOnly
                     QQC2.ToolTip.text: text

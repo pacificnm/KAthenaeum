@@ -92,6 +92,18 @@ private Q_SLOTS:
         QCOMPARE(list[0].status, QStringLiteral("complete"));
     }
 
+    void aDownloadLeftVerifyingIsVerifiedAgainAtStart()
+    {
+        // the app closed during verification (which now stops at once): the file is complete, so check it again
+        QSqlQuery q;
+        QVERIFY(q.exec(QStringLiteral("INSERT INTO downloads (url, filename, folder, status) VALUES ('https://download.kiwix.org/c_2026-01.zim', 'c_2026-01.zim', '%1', 'verifying')").arg(m_folder)));
+        DownloadManager dm;
+        QSignalSpy failed(&dm, &DownloadManager::failed);
+        dm.reconcile();
+        QTRY_COMPARE(failed.size(), 1);  // the file is not there, so this verification fails, and says why
+        QVERIFY(failed.first().at(1).toString().contains(QLatin1String("missing")));
+    }
+
     void removeKeepsInstalledFiles()
     {
         const QString zim = qEnvironmentVariable("KATHENAEUM_TEST_ZIM");

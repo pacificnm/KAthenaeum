@@ -58,6 +58,7 @@ QQC2.ScrollView {
                     spacing: Kirigami.Units.smallSpacing
 
                     Kirigami.Heading {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         level: 4
                         text: row.model.title
@@ -70,6 +71,7 @@ QQC2.ScrollView {
                         value: row.model.progress
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
                         text: view.statusText(row.model)
@@ -77,6 +79,7 @@ QQC2.ScrollView {
                         opacity: row.model.status === "failed" ? 1 : 0.7
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true
                         text: row.model.filename
                         font: Kirigami.Theme.smallFont

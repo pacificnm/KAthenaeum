@@ -16,7 +16,7 @@ Kirigami.Page {
     signal openArticle(var libraryId, string path, string fragment)
     signal openSettings()
 
-    title: conversation.title !== "" ? conversation.title : i18n("Ask")
+    title: conversation.title !== "" ? Util.pageTitle(conversation.title) : i18n("Ask")
     padding: 0
 
     actions: [

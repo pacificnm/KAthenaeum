@@ -47,7 +47,9 @@ Kirigami.ScrollablePage {
                 id: scope
                 textRole: "title"
                 valueRole: "libraryId"
-                model: [{ libraryId: -1, title: i18n("All libraries") }].concat(LibraryManager.libraryList())
+                // read again when libraries are added or removed (a method call alone is not watched)
+                model: (LibraryManager.installed.count, [{ libraryId: -1, title: i18n("All libraries") }]
+                        .concat(LibraryManager.libraryList().map(l => ({ libraryId: l.libraryId, title: Util.plain(l.title) }))))
                 currentIndex: Math.max(0, model.findIndex(m => m.libraryId === page.libraryId))
                 onActivated: if (page.submitted) page.submit()
             }
@@ -79,12 +81,14 @@ Kirigami.ScrollablePage {
                 RowLayout {
                     Layout.fillWidth: true
                     Kirigami.Heading {
+                        textFormat: Text.PlainText
                         level: 4
                         text: row.modelData.title
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         text: row.modelData.libraryTitle
                         opacity: 0.6
                         font: Kirigami.Theme.smallFont
@@ -92,6 +96,7 @@ Kirigami.ScrollablePage {
                     }
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     visible: page.submitted && (row.modelData.section ?? "") !== ""
                     text: row.modelData.section ?? ""
@@ -99,6 +104,7 @@ Kirigami.ScrollablePage {
                     opacity: 0.7
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     visible: page.submitted
                     text: row.modelData.snippet ?? ""
@@ -128,8 +134,10 @@ Kirigami.ScrollablePage {
             width: parent.width - Kirigami.Units.gridUnit * 4
             visible: !Search.running && list.count === 0
             icon.name: "search"
-            text: page.submitted ? i18n("Nothing found") : (field.text === "" ? i18n("Search your libraries") : i18n("No article titles start like that"))
-            explanation: page.submitted ? i18n("Try other words. Search finds articles by their words, so a question worded differently from the article can miss.")
+            text: LibraryManager.installed.count === 0 ? i18n("No libraries installed")
+                : page.submitted ? i18n("Nothing found") : (field.text === "" ? i18n("Search your libraries") : i18n("No article titles start like that"))
+            explanation: LibraryManager.installed.count === 0 ? i18n("Add a library in the Library Manager to search it.")
+                : page.submitted ? i18n("Try other words. Search finds articles by their words, so a question worded differently from the article can miss.")
                        : field.text === "" ? i18n("Type a title or some words, then press Enter to search the text of every article.") : ""
         }
     }

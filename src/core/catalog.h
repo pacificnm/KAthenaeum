@@ -47,6 +47,9 @@ QList<CatalogEntry> parse(const QByteArray &xml, const QUrl &feedUrl, QString *e
 // "wikipedia_en_all_nopic_2026-06.zim" -> {"wikipedia_en_all_nopic", "2026-06"}
 std::optional<std::pair<QString, QString>> splitFilename(const QString &filename);
 
+// https on kiwix.org or one of its subdomains, with no user info: the only place the app fetches anything from
+bool isKiwixUrl(const QUrl &url);
+
 // A plain ZIM file name, nothing that could escape the library folder.
 bool isValidFilename(const QString &filename);
 

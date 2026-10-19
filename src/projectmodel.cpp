@@ -25,6 +25,10 @@ ProjectModel::ProjectModel(QObject *parent)
     : QObject(parent)
 {
     connect(ProjectsNotifier::instance(), &ProjectsNotifier::changed, this, &ProjectModel::refresh);
+    connect(ProjectsNotifier::instance(), &ProjectsNotifier::documentSaved, this, [this](qint64 projectId) {
+        if (projectId == m_id)
+            refresh();
+    });
 }
 
 void ProjectModel::setProjectId(qint64 id)

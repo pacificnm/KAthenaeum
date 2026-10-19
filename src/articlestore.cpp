@@ -3,6 +3,7 @@
 
 #include "core/zimreader.h"
 
+#include "core/library.h"
 #include "core/projects.h"
 
 #include <QCache>
@@ -73,8 +74,11 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 .article table.wikitable th { background: var(--surface-2); }
 @media (max-width: 640px) { body { padding: 16px; } .article table.infobox, .article table.ib-chembox { float: none; width: 100%; margin: 1em 0; } }
 )");
-    if (dark)  // Wikipedia hard-codes light backgrounds inline; keep their text readable
-        rules += QStringLiteral(".article [style*='background'] { color: #1b1d21; } .article [style*='background'] a { color: #234a9e; }\n");
+    // Wikipedia hard-codes light backgrounds inline; keep their text readable. !important: the infobox rules are more
+    // specific, and an infobox section header ("Names") stayed white on pale yellow (the review, 2026-10-19).
+    if (dark)
+        rules += QStringLiteral(".article [style*='background'], .article [style*='background'] * { color: #1b1d21 !important; }"
+                                " .article [style*='background'] a { color: #234a9e !important; }\n");
     return vars + rules;
 }
 
@@ -140,8 +144,15 @@ QByteArray ArticleStore::page(const Article &article, const QPalette &palette)
     return document(article.rendered.title, article.rendered.html, palette);
 }
 
-QByteArray ArticleStore::notFoundPage(const QString &path, const QPalette &palette)
+QByteArray ArticleStore::notFoundPage(qint64 libraryId, const QString &path, const QPalette &palette)
 {
+    const auto library = Library::byId(libraryId);
+    if (!library || !library->fileExists())  // a saved chat or project can outlive its library
+        return document(QStringLiteral("Library not installed"),
+                        QStringLiteral("<p>The library this article came from is no longer installed. Add it again in the Library Manager "
+                                       "to read <code>%1</code>; its chats and saved passages come back with it.</p>")
+                            .arg(path.toHtmlEscaped()),
+                        palette);
     return document(QStringLiteral("Not found"),
                     QStringLiteral("<p>This library has no article at <code>%1</code>.</p>").arg(path.toHtmlEscaped()), palette);
 }

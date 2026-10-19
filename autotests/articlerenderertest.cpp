@@ -254,6 +254,14 @@ private Q_SLOTS:
         QCOMPARE(out.html, QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"a\">Water is a polar molecule.</mark> "
                                           "<mark class=\"excerpt-hl\" title=\"b\">Ice floats on top of water.</mark></p>"));
     }
+
+    void cssEscapesAndImageFunctionsAreDropped()
+    {
+        // "u\72l(" is url() written with a CSS escape: it got past the filter (only the page's CSP stopped it)
+        for (const char *style : {"background:u\\72l(http://x/a)", "background:image-set('a.png' 1x)", "content:src(x)", "color:red\\9"})
+            QVERIFY2(!run(QStringLiteral("<p style=\"%1\">t</p>").arg(QString::fromLatin1(style))).contains(QLatin1String("style=")), style);
+        QVERIFY(run(QStringLiteral("<p style=\"color:red\">t</p>")).contains(QLatin1String("style=\"color:red\"")));
+    }
 };
 
 QTEST_GUILESS_MAIN(ArticleRendererTest)

@@ -10,8 +10,21 @@ Kirigami.ScrollablePage {
     id: page
 
     required property var libraryId
-    readonly property var info: LibraryBrowser.libraryInfo(libraryId)
-    readonly property var overviews: LibraryBrowser.overviews(libraryId)
+    // read again when the installed libraries change: a method call in a binding is never re-run, so a removed
+    // library's home stayed as it was (the review, 2026-10-19)
+    property var info: LibraryBrowser.libraryInfo(libraryId)
+    property var overviews: LibraryBrowser.overviews(libraryId)
+    readonly property bool available: info.available === true
+    function reload() {
+        info = LibraryBrowser.libraryInfo(libraryId);
+        overviews = available ? LibraryBrowser.overviews(libraryId) : [];
+    }
+    Connections {
+        target: LibraryManager.installed
+        function onModelReset() { page.reload(); }
+        function onRowsRemoved() { page.reload(); }
+        function onDataChanged() { page.reload(); }
+    }
     property var recent: []
     property var suggestions: []
 
@@ -19,21 +32,25 @@ Kirigami.ScrollablePage {
     signal openTitles(var libraryId, string label, string key, bool isPrefix)
     signal openSearch(string query, var libraryId)
 
-    title: info.title ?? ""
+    title: info.title !== undefined ? Util.pageTitle(info.title) : i18n("Removed library")
 
     actions: [
         Kirigami.Action {
             text: i18n("A to Z")
             icon.name: "view-sort-ascending-name"
+            enabled: page.available
             onTriggered: page.openTitles(page.libraryId, i18n("%1: A to Z", page.info.title), "A", false)
         },
         Kirigami.Action {
             text: i18n("Random Article")
             icon.name: "roll"
+            enabled: page.available
             onTriggered: {
                 const a = LibraryBrowser.randomArticle(page.libraryId);
                 if (a.path)
                     page.openArticle(page.libraryId, a.path);
+                else
+                    applicationWindow().showPassiveNotification(i18n("This library has no articles to pick from."));
             }
         }
     ]
@@ -44,6 +61,14 @@ Kirigami.ScrollablePage {
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            visible: !page.available
+            type: Kirigami.MessageType.Warning
+            text: page.info.libraryId === undefined ? i18n("This library has been removed.")
+                                                    : i18n("This library's file is missing. Add it again in the Library Manager.")
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -56,17 +81,20 @@ Kirigami.ScrollablePage {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
                 Kirigami.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: page.info.title ?? ""
                     wrapMode: Text.Wrap
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: page.info.description ?? ""
                     wrapMode: Text.Wrap
                     visible: text !== ""
                 }
                 QQC2.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     opacity: 0.7
                     font: Kirigami.Theme.smallFont
@@ -91,6 +119,8 @@ Kirigami.ScrollablePage {
         Kirigami.SearchField {
             id: search
             Layout.fillWidth: true
+            enabled: page.available
+            autoAccept: false  // Kirigami accepts by itself after a moment, which jumped to full-text search while typing
             placeholderText: i18n("Find an article…")
             onTextChanged: page.suggestions = LibraryBrowser.suggest(page.libraryId, text)
             onAccepted: page.openSearch(text, page.libraryId)
@@ -110,12 +140,13 @@ Kirigami.ScrollablePage {
                 delegate: QQC2.ItemDelegate {
                     required property var modelData
                     Layout.fillWidth: true
-                    text: modelData.title
+                    text: Util.plain(modelData.title)
                     icon.name: "document-preview"
                     onClicked: page.openArticle(page.libraryId, modelData.path)
                 }
             }
             QQC2.Label {
+                textFormat: Text.PlainText
                 visible: page.suggestions.length === 0
                 text: i18n("No article titles start like that.")
                 opacity: 0.7
@@ -123,6 +154,7 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Heading {
+            textFormat: Text.PlainText
             level: 3
             text: i18n("Recently read")
             visible: page.recent.length > 0
@@ -135,7 +167,7 @@ Kirigami.ScrollablePage {
                 model: page.recent
                 delegate: Kirigami.Chip {
                     required property var modelData
-                    text: modelData.title
+                    text: Util.plain(modelData.title)
                     closable: false
                     checkable: false
                     onClicked: page.openArticle(page.libraryId, modelData.path)
@@ -152,6 +184,7 @@ Kirigami.ScrollablePage {
                 spacing: Kirigami.Units.smallSpacing
 
                 Kirigami.Heading {
+                    textFormat: Text.PlainText
                     level: 3
                     text: overview.modelData.label
                 }
@@ -162,7 +195,7 @@ Kirigami.ScrollablePage {
                         model: overview.modelData.entries
                         delegate: Kirigami.Chip {
                             required property var modelData
-                            text: modelData.title
+                            text: Util.plain(modelData.title)
                             closable: false
                             checkable: false
                             onClicked: page.openArticle(page.libraryId, modelData.path)

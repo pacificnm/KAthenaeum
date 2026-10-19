@@ -104,6 +104,8 @@ private:
     ArticleScope m_article;
     qint64 m_projectId = 0;
     bool m_alsoLibrary = false;
+    QString m_answerModel;     // the models of the answer being written, as asked (Settings may change meanwhile)
+    QString m_embeddingModel;
     QString m_title;
     QList<Message> m_messages;
     int m_answering = -1;  // the row being answered

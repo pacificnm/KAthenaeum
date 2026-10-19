@@ -21,8 +21,17 @@ Kirigami.Dialog {
     preferredWidth: Kirigami.Units.gridUnit * 26
     standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
 
+    // a new project needs a name: OK did nothing (and closed) with an empty one (the review)
+    readonly property bool canAccept: combo.currentValue !== -1 || newTitle.text.trim() !== ""
+    onCanAcceptChanged: updateOk()
+    function updateOk() {
+        const ok = standardButton(Kirigami.Dialog.Ok);  // not there before the dialog is first shown
+        if (ok)
+            ok.enabled = canAccept;
+    }
+
     function choices() {
-        return projects.list().concat([{ projectId: -1, title: i18n("New project…") }]);
+        return projects.list().map(p => ({ projectId: p.projectId, title: Util.plain(p.title) })).concat([{ projectId: -1, title: i18n("New Project…") }]);
     }
 
     onOpened: {
@@ -33,6 +42,7 @@ Kirigami.Dialog {
         newTitle.text = "";
         if (combo.currentValue === -1)
             newTitle.forceActiveFocus();
+        updateOk();
     }
     onAccepted: {
         let id = combo.currentValue;
@@ -53,6 +63,7 @@ Kirigami.Dialog {
         spacing: Kirigami.Units.largeSpacing
 
         QQC2.Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.maximumWidth: Kirigami.Units.gridUnit * 26
             visible: dialog.preview !== ""
@@ -74,6 +85,7 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             visible: combo.currentValue === -1
             placeholderText: i18n("Name of the new project")
+            onAccepted: if (dialog.canAccept) dialog.accept()
         }
         QQC2.TextArea {
             id: note

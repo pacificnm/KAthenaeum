@@ -31,7 +31,7 @@ DraftController::DraftController(QObject *parent)
             const qint64 id = Projects::createDocument(m_projectId, title, markdown);
             Q_EMIT ProjectsNotifier::instance()->changed();
             if (id > 0)
-                Q_EMIT documentReady(id);
+                Q_EMIT documentReady(id, m_projectId, title);
             else
                 Q_EMIT failed(i18n("The draft could not be saved."));
         }

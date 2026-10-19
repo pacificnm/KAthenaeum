@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QTimeZone>
@@ -91,15 +92,45 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     if (!info)
         return std::nullopt;
 
+    // The id: the one it already has, the one it had before it was removed, or one never used (see removed_libraries)
+    qint64 id = 0;
+    {
+        QSqlQuery existing;
+        existing.prepare(QStringLiteral("SELECT id FROM libraries WHERE path = ?"));
+        existing.addBindValue(path);
+        if (existing.exec() && existing.next())
+            id = existing.value(0).toLongLong();
+    }
+    if (id == 0) {
+        QSqlQuery before;
+        before.prepare(QStringLiteral("SELECT id FROM removed_libraries WHERE ((uuid <> '' AND uuid = ?) OR path = ?) "
+                                      "AND id NOT IN (SELECT id FROM libraries) ORDER BY (uuid = ?) DESC, removed_at DESC LIMIT 1"));
+        before.addBindValue(Database::text(info->uuid));
+        before.addBindValue(path);
+        before.addBindValue(Database::text(info->uuid));
+        if (before.exec() && before.next())
+            id = before.value(0).toLongLong();
+    }
+    if (id == 0) {
+        QSqlQuery next(QStringLiteral("SELECT max(coalesce((SELECT max(id) FROM libraries), 0), coalesce((SELECT max(id) FROM removed_libraries), 0)) + 1"));
+        id = next.next() ? next.value(0).toLongLong() : 0;
+    }
+    if (id == 0) {
+        if (error)
+            *error = QStringLiteral("could not choose an id");
+        return std::nullopt;
+    }
+
     QSqlQuery q;
     q.prepare(QStringLiteral(
-        "INSERT INTO libraries (path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid,"
-        " article_count, size_bytes, has_fulltext, illustration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO libraries (id, path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid,"
+        " article_count, size_bytes, has_fulltext, illustration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT (path) DO UPDATE SET name = excluded.name, title = excluded.title, description = excluded.description,"
         " language = excluded.language, creator = excluded.creator, publisher = excluded.publisher, zim_date = excluded.zim_date,"
         " flavour = excluded.flavour, scraper = excluded.scraper, uuid = excluded.uuid, article_count = excluded.article_count,"
         " size_bytes = excluded.size_bytes, has_fulltext = excluded.has_fulltext, illustration = excluded.illustration"
         " RETURNING id"));
+    q.addBindValue(id);
     q.addBindValue(path);
     q.addBindValue(Database::text(info->name));
     q.addBindValue(info->title.isEmpty() ? QFileInfo(path).completeBaseName() : info->title);
@@ -120,7 +151,13 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
             *error = q.lastError().text();
         return std::nullopt;
     }
-    return q.value(0).toLongLong();
+    const qint64 added = q.value(0).toLongLong();
+    q.finish();
+    QSqlQuery back;
+    back.prepare(QStringLiteral("DELETE FROM removed_libraries WHERE id = ?"));  // it is installed again
+    back.addBindValue(added);
+    back.exec();
+    return added;
 }
 
 Library::ScanResult Library::scan(const QString &folder)
@@ -160,12 +197,29 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
             *error = QStringLiteral("could not delete %1").arg(record->path);
         return false;
     }
+    // deleted and remembered together, or neither
+    QSqlDatabase db = QSqlDatabase::database();
+    db.transaction();
     QSqlQuery q;
     q.prepare(QStringLiteral("DELETE FROM libraries WHERE id = ?"));
     q.addBindValue(id);
     if (!q.exec()) {
         if (error)
             *error = q.lastError().text();
+        db.rollback();
+        return false;
+    }
+    q.prepare(QStringLiteral("INSERT INTO removed_libraries (id, uuid, path, title) VALUES (?, ?, ?, ?) "
+                             "ON CONFLICT (id) DO UPDATE SET uuid = excluded.uuid, path = excluded.path, title = excluded.title, "
+                             "removed_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
+    q.addBindValue(id);
+    q.addBindValue(Database::text(record->uuid));
+    q.addBindValue(Database::text(record->path));
+    q.addBindValue(Database::text(record->title));
+    if (!q.exec() || !db.commit()) {
+        if (error)
+            *error = q.lastError().text();
+        db.rollback();
         return false;
     }
     Projects::forgetLibrary(id);  // its articles leave projects; saved excerpts stay

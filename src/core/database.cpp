@@ -135,6 +135,18 @@ const QList<QStringList> migrations = {
         QStringLiteral("ALTER TABLE chats ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL"),
         QStringLiteral("CREATE INDEX chats_project ON chats (project_id)"),
     },
+    {
+        // Libraries that were removed. Chats, excerpts and document links keep a library's id (no foreign key, so they
+        // outlive it); SQLite would hand that id to the next library added (max + 1, when the newest was removed), and they
+        // would then point at another ZIM. Removed ids are never given to another library, and the same ZIM added again
+        // (same uuid, else same path) gets its id back, so its chats and excerpts come back with it.
+        QStringLiteral("CREATE TABLE removed_libraries ("
+                       " id INTEGER PRIMARY KEY,"
+                       " uuid TEXT NOT NULL DEFAULT '',"
+                       " path TEXT NOT NULL DEFAULT '',"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " removed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)
@@ -179,26 +191,38 @@ bool Database::open(const QString &path, QString *error)
             *error = db.lastError().text();
         return false;
     }
-    if (!exec(db, QStringLiteral("PRAGMA foreign_keys = ON"), error) || !exec(db, QStringLiteral("PRAGMA journal_mode = WAL"), error))
+    // A database that cannot be used is closed, never left open half-usable: a newer build's database must not be written
+    // by this one, and a failed migration must not leave the app saving into a schema it does not expect (the review found
+    // both, 2026-10-19)
+    auto refuse = [&db]() {
+        db.close();
         return false;
+    };
+    if (!exec(db, QStringLiteral("PRAGMA foreign_keys = ON"), error) || !exec(db, QStringLiteral("PRAGMA journal_mode = WAL"), error))
+        return refuse();
 
     const int current = schemaVersion();
     if (current > latestVersion()) {
         if (error)
             *error = QStringLiteral("The database was made by a newer KAthenaeum (schema %1, this build knows %2)").arg(current).arg(latestVersion());
-        return false;
+        return refuse();
     }
     for (int v = current; v < latestVersion(); ++v) {
-        db.transaction();
-        bool ok = true;
+        bool ok = db.transaction();
+        if (!ok && error)
+            *error = db.lastError().text();
         for (const QString &sql : migrations[v])
             ok = ok && exec(db, sql, error);
         ok = ok && exec(db, QStringLiteral("PRAGMA user_version = %1").arg(v + 1), error);
+        if (ok && !db.commit()) {
+            ok = false;
+            if (error)
+                *error = db.lastError().text();
+        }
         if (!ok) {
             db.rollback();
-            return false;
+            return refuse();
         }
-        db.commit();
     }
     return true;
 }

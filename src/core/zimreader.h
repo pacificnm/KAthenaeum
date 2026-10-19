@@ -26,6 +26,15 @@ namespace ZimReader
 // Follows both kinds of redirect: the ZIM's own, and mwoffliner's tiny HTML pages that forward to a section of another
 // article with <meta http-equiv="refresh" content="0;URL='./Cry_(song)#Version'">
 std::optional<ZimContent> content(qint64 libraryId, const QString &path);
+// Entries larger than this are not read: a 29 KB ZIM held a 300 MB article (it compresses to nothing) that took 3 GB to
+// render and pushed libxml2 past its limits (the review, 2026-10-19). Real Wikipedia pages are a few MB at most.
+constexpr qint64 MaxHtmlBytes = 16 << 20;
+constexpr qint64 MaxOtherBytes = 32 << 20;
+// Too large to read safely?
+inline bool tooLarge(qint64 size, bool html)
+{
+    return size > (html ? MaxHtmlBytes : MaxOtherBytes);
+}
 
 // The target of an HTML redirect page ("Cry_(song)#Version"), or empty. `path` is the page's own path.
 QString htmlRedirectTarget(const QByteArray &html, const QString &path);

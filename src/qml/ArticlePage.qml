@@ -22,8 +22,9 @@ Kirigami.Page {
     property alias conversation: conversation
 
     signal openArticle(var libraryId, string path, string fragment)
+    signal openSettings()
 
-    title: info.title ?? i18n("Loading…")
+    title: info.title !== undefined ? Util.pageTitle(info.found === false && page.conversation.articleTitle !== "" ? page.conversation.articleTitle : info.title) : i18n("Loading…")
     padding: 0
 
     function jumpTo(id) {
@@ -81,7 +82,7 @@ Kirigami.Page {
             icon.name: "dialog-messages"
             checkable: true
             checked: page.asking
-            enabled: page.info.path !== undefined
+            enabled: page.info.found === true
             tooltip: i18n("Ask about this article")
             onTriggered: {
                 page.asking = !page.asking;
@@ -90,9 +91,9 @@ Kirigami.Page {
             }
         },
         Kirigami.Action {
-            text: i18n("Add to Project")
-            icon.name: "project-development"
-            enabled: page.info.path !== undefined
+            text: i18n("Add to Project…")
+            icon.name: "bookmark-new"
+            enabled: page.info.found === true
             tooltip: i18n("Add this article to a research project")
             onTriggered: {
                 articlePicker.already = projects.containing(page.info.libraryId, page.info.path);
@@ -153,7 +154,9 @@ Kirigami.Page {
             if (request.url.toString().startsWith("zim:"))
                 return;
             request.reject();
-            openOutside(request.url);
+            // only a link the reader clicked opens in the browser, never a page navigating by itself
+            if (request.navigationType === WebEngineNavigationRequest.LinkClickedNavigation)
+                openOutside(request.url);
         }
         onNewWindowRequested: function(request) {
             if (request.requestedUrl.toString().startsWith("zim:"))
@@ -189,6 +192,7 @@ Kirigami.Page {
             contentItem: RowLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Kirigami.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 4
                     text: conversation.chatId > 0 ? conversation.title : i18n("Ask about this article")
@@ -236,7 +240,7 @@ Kirigami.Page {
             Layout.fillHeight: true
             conversation: conversation
             onOpenArticle: (libraryId, path, fragment) => page.showSource(libraryId, path, fragment)
-            onOpenSettings: applicationWindow().pageStack.layers.push(Qt.resolvedUrl("SettingsPage.qml"))
+            onOpenSettings: page.openSettings()
         }
     }
     }
@@ -280,7 +284,7 @@ Kirigami.Page {
             delegate: QQC2.MenuItem {
                 required property var chatId
                 required property string title
-                text: title
+                text: Util.plain(title)
                 checkable: true
                 checked: chatId === conversation.chatId
                 onTriggered: conversation.chatId = chatId
@@ -300,7 +304,7 @@ Kirigami.Page {
         }
         QQC2.MenuItem {
             text: i18n("Save to Project…")
-            icon.name: "project-development"
+            icon.name: "bookmark-new"
             onTriggered: {
                 excerptPicker.preview = selectionMenu.selection;
                 excerptPicker.open();
@@ -339,7 +343,7 @@ Kirigami.Page {
             model: page.info.toc ?? []
             delegate: QQC2.MenuItem {
                 required property var modelData
-                text: (modelData.level === 3 ? "    " : "") + modelData.text
+                text: (modelData.level === 3 ? "    " : "") + Util.plain(modelData.text)
                 onTriggered: page.jumpTo(modelData.id)
             }
             onObjectAdded: (index, object) => tocMenu.insertItem(index, object)

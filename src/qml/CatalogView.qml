@@ -23,6 +23,8 @@ ColumnLayout {
             Kirigami.SearchField {
                 width: Kirigami.Units.gridUnit * 14
                 placeholderText: i18n("Search the catalog…")
+                // the filters live in the catalog model, which outlives this page: show what it filters on
+                Component.onCompleted: text = view.catalog.query
                 onTextChanged: view.catalog.query = text
             }
             QQC2.ComboBox {
@@ -52,6 +54,7 @@ ColumnLayout {
                     { value: "nopic", text: Util.flavourLabel("nopic") },
                     { value: "maxi", text: Util.flavourLabel("maxi") }
                 ]
+                currentIndex: Math.max(0, model.findIndex(m => m.value === view.catalog.flavour))
                 onActivated: view.catalog.flavour = currentValue
             }
             QQC2.ComboBox {
@@ -63,6 +66,7 @@ ColumnLayout {
                     { value: "smallest", text: i18n("Smallest first") },
                     { value: "largest", text: i18n("Largest first") }
                 ]
+                currentIndex: Math.max(0, model.findIndex(m => m.value === view.catalog.sort))
                 onActivated: view.catalog.sort = currentValue
             }
         }
@@ -130,6 +134,7 @@ ColumnLayout {
                         RowLayout {
                             Layout.fillWidth: true
                             Kirigami.Heading {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 level: 4
                                 text: row.model.title
@@ -146,6 +151,7 @@ ColumnLayout {
                             }
                         }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: row.model.summary
                             wrapMode: Text.Wrap
@@ -154,6 +160,7 @@ ColumnLayout {
                             visible: text !== ""
                         }
                         QQC2.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             opacity: 0.7
                             font: Kirigami.Theme.smallFont
@@ -181,6 +188,7 @@ ColumnLayout {
                         value: row.model.progress
                     }
                     QQC2.Label {
+                        textFormat: Text.PlainText
                         Layout.alignment: Qt.AlignTop
                         visible: row.model.state === "installed"
                         text: i18n("Installed")
@@ -206,6 +214,7 @@ ColumnLayout {
     }
 
     QQC2.Label {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         Layout.margins: Kirigami.Units.smallSpacing
         opacity: 0.7

@@ -1,11 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- placeholder icon: a classical library front -->
-  <rect x="4" y="4" width="56" height="56" rx="10" fill="#2a6f97"/>
-  <path d="M32 12 L52 22 H12 Z" fill="#f4f1de"/>
-  <rect x="12" y="24" width="40" height="3" fill="#f4f1de"/>
-  <rect x="15" y="29" width="5" height="18" fill="#f4f1de"/>
-  <rect x="24" y="29" width="5" height="18" fill="#f4f1de"/>
-  <rect x="35" y="29" width="5" height="18" fill="#f4f1de"/>
-  <rect x="44" y="29" width="5" height="18" fill="#f4f1de"/>
-  <rect x="10" y="49" width="44" height="4" fill="#f4f1de"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- KAthenaeum: a classical library front (an athenaeum) with a spark for the research assistant -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3daee9"/>
+      <stop offset="1" stop-color="#1a6fb0"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe3e8"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="42" height="42" rx="7" fill="url(#bg)"/>
+  <rect x="3" y="3" width="42" height="21" rx="7" fill="#fff" opacity="0.08"/>
+  <!-- long soft shadow of the building -->
+  <path d="M9 38 L39 38 L45 44 L45 38 Q45 45 38 45 L16 45 Z" fill="url(#shade)"/>
+  <!-- pediment, entablature, columns, steps -->
+  <path d="M24 9 L39 17 H9 Z" fill="url(#stone)"/>
+  <rect x="9" y="18" width="30" height="2.5" rx="0.5" fill="url(#stone)"/>
+  <rect x="11.5" y="22" width="4" height="12" rx="0.8" fill="url(#stone)"/>
+  <rect x="18.5" y="22" width="4" height="12" rx="0.8" fill="url(#stone)"/>
+  <rect x="25.5" y="22" width="4" height="12" rx="0.8" fill="url(#stone)"/>
+  <rect x="32.5" y="22" width="4" height="12" rx="0.8" fill="url(#stone)"/>
+  <rect x="9" y="35" width="30" height="2" rx="0.5" fill="url(#stone)"/>
+  <rect x="7" y="37.5" width="34" height="2.5" rx="0.6" fill="url(#stone)"/>
+  <!-- the spark -->
+  <path d="M38 5.5 Q38.9 9.1 42.5 10 Q38.9 10.9 38 14.5 Q37.1 10.9 33.5 10 Q37.1 9.1 38 5.5 Z" fill="#fdbc4b" stroke="#c9861a" stroke-width="0.4"/>
 </svg>

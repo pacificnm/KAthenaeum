@@ -6,12 +6,15 @@
 
 class Drafter;
 
-// An AI draft for a project page: runs it, shows progress, and saves the result as a new document of the project
+// AI drafts: runs one at a time, shows progress, and saves the result as a new document of its project. One for the
+// whole app, not one per project page: leaving the page during a draft threw the draft away (the review, 2026-10-19).
 class DraftController : public QObject
 {
     Q_OBJECT
     QML_NAMED_ELEMENT(Drafting)
+    QML_SINGLETON
     Q_PROPERTY(bool running READ running NOTIFY stateChanged)
+    Q_PROPERTY(qint64 projectId READ projectId NOTIFY stateChanged)  // the project being drafted for
     Q_PROPERTY(int step READ step NOTIFY stateChanged)
     Q_PROPERTY(int total READ total NOTIFY stateChanged)
     Q_PROPERTY(QString label READ label NOTIFY stateChanged)
@@ -19,6 +22,7 @@ class DraftController : public QObject
 
 public:
     explicit DraftController(QObject *parent = nullptr);
+    qint64 projectId() const { return m_projectId; }
 
     bool running() const;
     int step() const { return m_step; }
@@ -32,7 +36,7 @@ public:
 
 Q_SIGNALS:
     void stateChanged();
-    void documentReady(qint64 documentId);
+    void documentReady(qint64 documentId, qint64 projectId, const QString &title);
     void failed(const QString &message);
 
 private:

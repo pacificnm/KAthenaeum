@@ -72,6 +72,7 @@ private:
 
     OllamaClient *m_client;
     bool m_checking = false;
+    quint64 m_refresh = 0;  // a newer refresh (another Ollama address) makes an older one's replies stale
     bool m_checked = false;
     bool m_reachable = false;
     QString m_error;

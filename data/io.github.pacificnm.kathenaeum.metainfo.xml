@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.8.0" date="2026-10-19">
+      <description>
+        <p>A full review: the interface can no longer reach the network except the Kiwix catalog, oversized or hostile library files are refused, removing a library while searching no longer crashes, answers and drafts keep going when you leave their page, and many smaller fixes. A new icon.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-10-19">
       <description>
         <p>Projects: AI-drafted summaries and chat notes, saved passages highlighted in their articles, and your notes shown in a document's preview.</p>

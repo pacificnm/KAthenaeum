@@ -27,8 +27,8 @@ CatalogEntry readEntry(QXmlStreamReader &xml, const QUrl &feedUrl)
             if (rel == Acquisition) {
                 e.url = href;
                 e.size = xml.attributes().value(QLatin1String("length")).toLongLong();
-            } else if (rel == Thumbnail) {
-                e.illustration = href;
+            } else if (rel == Thumbnail && Catalog::isKiwixUrl(href)) {
+                e.illustration = href;  // shown by QML, which may fetch from kiwix.org only (see main.cpp)
             }
             xml.skipCurrentElement();
         } else if (tag == QLatin1String("author") || tag == QLatin1String("publisher")) {
@@ -123,11 +123,16 @@ bool Catalog::isValidFilename(const QString &filename)
     return re.match(filename).hasMatch();
 }
 
-QString Catalog::checkDownloadUrl(const QUrl &url, const QString &filename)
+bool Catalog::isKiwixUrl(const QUrl &url)
 {
     const QString host = url.host().toLower();
-    if (url.scheme() != QLatin1String("https") || !url.userInfo().isEmpty()
-        || !(host == QLatin1String("kiwix.org") || host.endsWith(QLatin1String(".kiwix.org"))))
+    return url.isValid() && url.scheme() == QLatin1String("https") && url.userInfo().isEmpty()
+        && (host == QLatin1String("kiwix.org") || host.endsWith(QLatin1String(".kiwix.org")));
+}
+
+QString Catalog::checkDownloadUrl(const QUrl &url, const QString &filename)
+{
+    if (!isKiwixUrl(url))
         return QStringLiteral("only https downloads from kiwix.org are allowed");
     if (!isValidFilename(filename))
         return QStringLiteral("not a valid ZIM file name: %1").arg(filename);

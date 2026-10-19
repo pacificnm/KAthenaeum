@@ -144,10 +144,9 @@ std::optional<Resolved> resolve(const zim::Archive &z, const QString &path, bool
     }
 }
 
-QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const QString &q, int limit)
+QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<zim::Archive> &archive, const QString &q, int limit)
 {
     using namespace ZimSearch;
-    const auto archive = ZimArchives::opened(libraryId);
     if (!archive)
         return {};
     const zim::Archive &z = *archive;
@@ -345,19 +344,30 @@ double aboutness(const QStringList &stems, const QString &title, const QString &
 
 QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
+    // One reference to each archive for the whole search: removing a library meanwhile drops it from the cache, and
+    // looking it up again later in the search found nothing and crashed on it (found by the review, 2026-10-19)
+    QHash<qint64, std::shared_ptr<zim::Archive>> archives;
+    for (qint64 id : libraryIds)
+        if (auto a = ZimArchives::opened(id))
+            archives.insert(id, std::move(a));
     QList<ZimSearch::Found> found;
     for (qint64 id : libraryIds)
-        found += libraryArticles(id, query, limit);
+        found += libraryArticles(id, archives.value(id), query, limit);
     QStringList stems;
     for (const QString &t : ZimSearch::terms(query))
         stems << ZimSearch::stem(t);
 
     QList<ZimSearch::Article> out;
     for (ZimSearch::Found &f : found) {
-        const auto archive = ZimArchives::opened(f.libraryId);
+        const auto archive = archives.value(f.libraryId);
+        if (!archive)
+            continue;
         QByteArray raw;
         try {
-            const zim::Blob blob = archive->getEntryByPath(f.path.toStdString()).getItem(true).getData();
+            const zim::Item item = archive->getEntryByPath(f.path.toStdString()).getItem(true);
+            if (ZimReader::tooLarge(qint64(item.getSize()), true))
+                continue;
+            const zim::Blob blob = item.getData();
             raw = QByteArray(blob.data(), qsizetype(blob.size()));
         } catch (const std::exception &) {
             continue;

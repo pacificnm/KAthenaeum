@@ -49,11 +49,11 @@ void ZimSchemeHandler::requestStarted(QWebEngineUrlRequestJob *job)
     }
     const auto content = ZimReader::content(libraryId, path);
     if (!content) {
-        reply("text/html;charset=utf-8", ArticleStore::notFoundPage(path, palette));
+        reply("text/html;charset=utf-8", ArticleStore::notFoundPage(libraryId, path, palette));
         return;
     }
     if (content->mimetype.startsWith(QLatin1String("text/html"))) {  // HTML that is not an article (a custom main page)
-        reply("text/html;charset=utf-8", ArticleStore::notFoundPage(path, palette));
+        reply("text/html;charset=utf-8", ArticleStore::notFoundPage(libraryId, path, palette));
         return;
     }
     if (content->mimetype.startsWith(QLatin1String("image/"))) {

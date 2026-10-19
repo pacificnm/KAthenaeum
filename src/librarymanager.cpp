@@ -265,10 +265,27 @@ QVariantMap LibraryManager::details(qint64 id) const
 
 QVariantList LibraryManager::libraryList() const
 {
-    QVariantList out;
+    QList<LibraryRecord> libraries;
+    QHash<QString, int> titles;
     for (const LibraryRecord &r : Library::all())
-        if (r.fileExists())
-            out.append(QVariantMap{{QStringLiteral("libraryId"), r.id}, {QStringLiteral("title"), r.title}});
+        if (r.fileExists()) {
+            libraries << r;
+            ++titles[r.title];
+        }
+    // two libraries with one title (Ray Charles, with and without pictures) are told apart by their flavour
+    auto flavour = [](const QString &f) {
+        return f == QLatin1String("mini") ? i18n("introductions only")
+            : f == QLatin1String("nopic") ? i18n("no pictures")
+            : f == QLatin1String("maxi")  ? i18n("with pictures")
+                                          : f;
+    };
+    QVariantList out;
+    for (const LibraryRecord &r : std::as_const(libraries)) {
+        QString title = r.title;
+        if (titles.value(r.title) > 1)
+            title = i18nc("library title (flavour)", "%1 (%2)", r.title, r.flavour.isEmpty() ? r.filename() : flavour(r.flavour));
+        out.append(QVariantMap{{QStringLiteral("libraryId"), r.id}, {QStringLiteral("title"), title}});
+    }
     return out;
 }
 

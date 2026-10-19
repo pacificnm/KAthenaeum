@@ -32,7 +32,7 @@ FormCard.FormCardPage {
                 : !Models.checked ? ""
                 : Models.reachable ? i18np("Running at %2 · %1 model installed", "Running at %2 · %1 models installed", Models.installed.length, Models.url)
                 : Models.error
-            icon.name: Models.reachable ? "dialog-ok" : "dialog-error"
+            icon.name: !Models.checked || Models.checking ? "view-refresh" : Models.reachable ? "dialog-ok" : "dialog-error"
             trailing: QQC2.Button {
                 text: i18n("Check Again")
                 icon.name: "view-refresh"

@@ -18,7 +18,7 @@ Kirigami.ScrollablePage {
 
     signal openArticle(var libraryId, string path)
 
-    title: label
+    title: Util.pageTitle(label)
 
     function reload() {
         titlesModel.clear();
