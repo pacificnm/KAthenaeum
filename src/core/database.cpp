@@ -298,6 +298,13 @@ const QList<QStringList> &migrations()
             QStringLiteral("CREATE INDEX quiz_attempts_quiz ON quiz_attempts (quiz_id, created_at)"),
             QStringLiteral("ALTER TABLE chats ADD COLUMN lesson_id INTEGER REFERENCES course_lessons (id) ON DELETE SET NULL"),
         },
+        // 12 -> 13: the map is drawn by Marble from KDE's server; the downloaded regions and their places index go
+        {
+            QStringLiteral("DROP TABLE IF EXISTS map_places_box"),
+            QStringLiteral("DROP TABLE IF EXISTS map_places"),
+            QStringLiteral("DROP TABLE IF EXISTS map_regions"),
+            QStringLiteral("DELETE FROM settings WHERE key = 'map.view'"),
+        },
     };
     return value;
 }

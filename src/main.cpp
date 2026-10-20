@@ -12,7 +12,7 @@
 #include <QQuickWebEngineProfile>
 #include <QQuickWindow>
 #include <QStandardPaths>
-#include <QtWebEngineQuick>
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #include <KAboutData>
 #include <KCrash>
@@ -24,6 +24,7 @@
 
 #include "appstate.h"
 #include "articlestore.h"
+#include "connectivity.h"
 #include "core/catalog.h"
 #include "core/database.h"
 #include "core/extract.h"
@@ -81,8 +82,7 @@ int main(int argc, char *argv[])
     initXmlParser(); // once, on the main thread, before any worker parses HTML
     ZimSchemeHandler::registerScheme(); // before any web engine profile exists
     QtWebEngineQuick::initialize(); // must run before the application object exists
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL); // MapLibre draws the map with OpenGL
-    QApplication app(argc, argv); // QApplication, not QGuiApplication: the desktop style needs widgets
+    QApplication app(argc, argv); // QApplication, not QGuiApplication: the desktop style and Marble need widgets
 
     // Follow Plasma's look when the user has not chosen a Qt Quick style themselves
     if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE"))
@@ -104,16 +104,11 @@ int main(int argc, char *argv[])
     about.addComponent(QStringLiteral("libzim"), i18n("Reads ZIM files"), QString(), QStringLiteral("https://github.com/openzim/libzim"));
     about.addComponent(QStringLiteral("Kiwix"), i18n("The library catalog and its ZIM files"), QString(), QStringLiteral("https://kiwix.org"));
     about.addComponent(QStringLiteral("Ollama"), i18n("Runs the language and embedding models"), QString(), QStringLiteral("https://ollama.com"));
-    about.addComponent(QStringLiteral("MapLibre Native"), i18n("Draws the maps"), QString(), QStringLiteral("https://maplibre.org"));
-    about.addComponent(QStringLiteral("Protomaps"), i18n("The map tiles and their style"), QString(), QStringLiteral("https://protomaps.com"));
+    about.addComponent(QStringLiteral("Marble"), i18n("Draws the map, from KDE's map server"), QString(), QStringLiteral("https://marble.kde.org"));
     about.addComponent(QStringLiteral("OpenStreetMap"),
                        i18n("Map data © OpenStreetMap contributors (ODbL)"),
                        QString(),
                        QStringLiteral("https://www.openstreetmap.org/copyright"));
-    about.addComponent(QStringLiteral("Geofabrik"),
-                       i18n("The regions and their OpenStreetMap extracts"),
-                       QString(),
-                       QStringLiteral("https://download.geofabrik.de"));
     about.addComponent(QStringLiteral("Athenaeum"),
                        i18n("The web application this one is based on"),
                        QString(),
@@ -140,6 +135,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     AppState::instance()->setDatabase(dbPath, dbError);
+    Connectivity::createInstance(&app); // before anything that may use the internet
     LibraryManager *libraries = LibraryManager::createInstance(&app);
     ModelSettings::createInstance(&app)->refresh(); // is Ollama there, with the models? (one quick local request)
     // an article caches its rendered page with its saved excerpts marked: a project change may change those
@@ -147,7 +143,7 @@ int main(int argc, char *argv[])
         ArticleStore::clear();
     });
     libraries->initialize();
-    MapManager::createInstance(&app)->initialize(); // resumes queued map downloads
+    MapManager::createInstance(&app)->initialize();
 
     // Articles come from zim:// only. Nothing the reader shows needs a disk cache or cookies.
     QQuickWebEngineProfile *profile = QQuickWebEngineProfile::defaultProfile();
@@ -159,8 +155,6 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&networkFactory);
     KLocalization::setupLocalizedContext(&engine);
-    // MapLibre's QML plugin, in the app's private folder (the build directory has the same layout)
-    engine.addImportPath(QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).filePath(QStringLiteral(KATHENAEUM_MAPLIBRE_QML)));
     engine.loadFromModule("KAthenaeum", "Main");
     if (engine.rootObjects().isEmpty())
         return 1;

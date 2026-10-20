@@ -18,33 +18,22 @@ sudo apt install extra-cmake-modules ninja-build \
   libkirigami-dev kirigami-addons-dev libkf6coreaddons-dev libkf6i18n-dev libkf6crash-dev \
   libkf6dbusaddons-dev libkf6iconthemes-dev libkf6texteditor-dev libkf6windowsystem-dev \
   libkf6qqc2desktopstyle-dev qml6-module-org-kde-desktop libkf6doctools-dev \
-  libzim-dev libxml2-dev libosmium2-dev zlib1g-dev aria2 sqlite3
+  libzim-dev libxml2-dev aria2 sqlite3 \
+  qml6-module-org-kde-marble marble-plugins
 ```
 
-`libkf6doctools-dev` is optional: without it the handbook is not built.
-
-MapLibre Native for Qt draws the maps. It is not packaged by Debian, so build it once and install it to a prefix
-(about 2.5 minutes on 16 cores):
-
-```bash
-git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/maplibre/maplibre-native-qt.git
-cmake -S maplibre-native-qt -B maplibre-native-qt/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_OPENGL=ON \
-      -DMLN_QT_WITH_LOCATION=OFF -DMLN_QT_WITH_WIDGETS=OFF -DCMAKE_INSTALL_PREFIX=$HOME/maplibre-qt
-cmake --build maplibre-native-qt/build && cmake --install maplibre-native-qt/build
-```
+`libkf6doctools-dev` is optional: without it the handbook is not built. Marble (the last two packages) is needed only
+to run the map, not to build: the Map page says what to install when it is missing.
 
 Then:
 
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$HOME/maplibre-qt
+cmake -S . -B build -G Ninja
 cmake --build build
 ctest --test-dir build                 # the tests
 ./build/bin/kathenaeum                 # run from the build directory
 cmake --build build --target package   # a .deb in build/
 ```
-
-The build directory is laid out like an installed prefix (`share/kathenaeum/map` and MapLibre's QML plugin are linked
-into it), so the program finds its files the same way in both places. No source paths are compiled in.
 
 KAthenaeum is single-instance: if an installed copy is already running, starting the build only raises that window.
 Quit it first, or run the build inside `dbus-run-session`.
@@ -60,8 +49,8 @@ XDG_DATA_HOME=/tmp/kath/data XDG_CONFIG_HOME=/tmp/kath/config XDG_CACHE_HOME=/tm
 
 ### Flatpak
 
-`.flatpak-manifest.json` builds KAthenaeum with libzim, Xapian, aria2, libosmium, KTextEditor, Kirigami Addons and
-MapLibre Native for Qt on KDE's runtime, for KDE's nightly Flatpak builds. **It has not been test-built yet**: run
+`.flatpak-manifest.json` builds KAthenaeum with libzim, Xapian, aria2, KTextEditor, Kirigami Addons and Marble on
+KDE's runtime, for KDE's nightly Flatpak builds. **It has not been test-built yet**: run
 `flatpak-builder --user --install build-flatpak .flatpak-manifest.json` and fix what fails before relying on it.
 Ollama cannot run inside the sandbox; the Flatpak reaches the one installed on the computer over `localhost`.
 
@@ -77,15 +66,13 @@ asked:
 | `KATHENAEUM_NETWORK_TESTS=1` | real downloads from kiwix.org (a 2 MB library; cancel and resume of a 22 MB one) |
 | `KATHENAEUM_OLLAMA_TESTS=1` | a check against the Ollama running on this computer |
 
-Two measuring tools are built with `-DBUILD_BENCHMARKS=ON`. They are not tests:
+A measuring tool is built with `-DBUILD_BENCHMARKS=ON`. It is not a test:
 
 - `askbench [--answer MODEL] [--embed MODEL] [--article PATH] library.zim… < questions.txt` runs Ask on real libraries
   and the local Ollama, one question per line (`+` starts a follow-up), and prints each step's time, the sources and
   the cited answer. Run it before changing a model, a threshold or a prompt, and compare.
-- `mapbench URL west south east north maxzoom out.pmtiles` cuts a region out of Protomaps' planet build and reports the
-  time and size (`DRY=1` only measures).
 
-Code that parses untrusted bytes with libxml2 or reads PMTiles should also be run under AddressSanitizer, in a separate
+Code that parses untrusted bytes with libxml2 should also be run under AddressSanitizer, in a separate
 build directory: `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"`.
 
 ## How the code is organised
@@ -94,14 +81,15 @@ build directory: `-DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-fram
   ZIM access (`zimreader`, `zimsearch`, `zimarchive`, `articlerenderer`, `extract`), the database (`database`,
   `settings`, `library`, `chats`, `projects`, `highlights`, `classroom`), the catalog and downloads (`catalog`,
   `downloads`), the assistant (`ollama`, `embedding`, `rag`, `answerer`, `drafts`, `teacher`), study tools (`citations`,
-  `dictionary`, `timeline`) and maps (`pmtiles`, `maptiling`, `mapextract`, `mvt`, `maplookup`, `mapplaces`,
-  `mapregions`). `network` holds the redirect and size guards every download uses.
+  `dictionary`, `timeline`) and the map's tiles and Wikipedia links (`maptiles`). `network` holds the redirect and
+  size guards every download uses.
 - `src/*.cpp` are the objects QML talks to: singletons such as `LibraryManager`, `LibraryBrowser`, `Search`, `Models`,
-  `Notes`, `Classroom`, `Drafting`, and models such as `Conversation`, `ProjectModel`, `TimelineModel`.
+  `Notes`, `Classroom`, `Drafting`, `MapManager`, `Connectivity`, and models such as `Conversation`, `ProjectModel`,
+  `TimelineModel`.
   `zimschemehandler` serves `zim://` pages to the web view; `documentwindow` is the Markdown editor window (KTextEditor).
 - `src/qml/` holds the pages, one file each, with `Main.qml` as the window and `Util.qml` for shared helpers.
-- `autotests/` are the QtTest tests, `doc/` the handbook, `data/` the desktop file, AppStream metadata, icon and map
-  assets, and `tools/map-style/` regenerates the map style from Protomaps' basemap (`npm ci && node generate.mjs`).
+  `MarbleMap.qml` is the only file that imports Marble, loaded by the Map page so a missing Marble is reported there.
+- `autotests/` are the QtTest tests, `doc/` the handbook, and `data/` the desktop file, AppStream metadata and icon.
 
 ### How a question is answered
 
@@ -129,7 +117,10 @@ can be used the moment it is downloaded.
   Kiwix catalog's illustrations (`Catalog::isIllustrationUrl`) and `data:` URLs. Article pages are sanitised
   (`ArticleRenderer`), run without JavaScript, carry a strict Content Security Policy and can only load `zim:` URLs.
 - **Downloads go through `Network::guarded()`**: https only, redirects checked against the allowed hosts, sizes capped.
-  Maps come only from Protomaps and Geofabrik (`MapCatalog::isAllowedUrl`), libraries only from Kiwix.
+  Map tiles come only from KDE's map server (`MapTiles::isAllowedUrl`), libraries only from Kiwix.
+- **The internet is optional.** `Connectivity` combines the "Use the internet" setting with the system's own report of
+  a connection; the catalog, downloads and the map ask it first, and work from what is on the computer when it says
+  no. Nothing else may use the network.
 - **Everything runs locally.** No hosted AI service is used or offered, and there is no telemetry.
 
 ### Correctness
@@ -168,18 +159,13 @@ can be used the moment it is downloaded.
 
 ## Known issues
 
-### MapLibre is bundled
+### The map needs KDE's map server
 
-MapLibre Native for Qt is not packaged by Debian (or most distributions), so the build needs it installed to a prefix,
-and the package ships its QML plugin and two libraries in a private folder (`<libdir>/kathenaeum`). That is a hurdle for
-distributions and for KDE's continuous integration. Options being considered:
-
-1. Make maps optional at build time (`-DWITH_MAPS=OFF`), so the rest of the application builds without MapLibre, and
-   ship maps as an add-on.
-2. Use a map library that distributions already package (for example Qt Location with a local tile plugin), at the
-   cost of rewriting the map page and its style.
-3. Keep MapLibre and build it as a dependency in KDE's CI and in the Flatpak manifest, as other KDE applications do
-   with libraries distributions lack.
+Marble draws the map from KDE's Vector OSM tiles (`maps.kde.org`), which it caches as areas are viewed; "Keep This Area
+Offline" fetches a town or city at street level ahead of time (up to `MapTiles::MaxSaveTiles` tiles, two at a time).
+Whole countries cannot be kept: the server makes deep tiles on request, about five a second. Before encouraging users
+to keep large areas, agree the load with KDE's sysadmins, or have Marble's own tile creator
+(`tools/vectorosm-tilecreator` in Marble's source) make tiles locally from an OpenStreetMap extract.
 
 ### The application id
 

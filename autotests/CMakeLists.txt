@@ -19,6 +19,7 @@ ecm_add_tests(
     draftstest.cpp
     highlightstest.cpp
     librarytest.cpp
+    maptilestest.cpp
     networktest.cpp
     ollamatest.cpp
     projectstest.cpp
@@ -45,18 +46,11 @@ ecm_add_test(documentwindowtest.cpp ../src/documentwindow.cpp ../src/documentmod
 target_include_directories(documentwindowtest PRIVATE ${CMAKE_SOURCE_DIR}/src)
 set_tests_properties(documentwindowtest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
-# Maps; writes a small OpenStreetMap file with libosmium, which reports errors by throwing
-ecm_add_test(maptest.cpp LINK_LIBRARIES kathenaeum_core kathenaeum_testmode Qt6::Test Qt6::Sql ZLIB::ZLIB Threads::Threads)
-target_include_directories(maptest SYSTEM PRIVATE ${OSMIUM_INCLUDE_DIR} ${PROTOZERO_INCLUDE_DIR})
-kde_target_enable_exceptions(maptest PRIVATE)
 
-# Not tests: askbench measures Ask on real libraries and the local Ollama, mapbench cuts a region out of Protomaps'
-# planet build (see the comment at the top of each file)
+# Not a test: askbench measures Ask on real libraries and the local Ollama (see the comment at the top of the file)
 if(BUILD_BENCHMARKS)
     add_executable(askbench askbench.cpp)
     target_link_libraries(askbench kathenaeum_core)
-    add_executable(mapbench mapbench.cpp)
-    target_link_libraries(mapbench kathenaeum_core Qt6::Network)
 endif()
 
 # a test that hangs (a fake server that never answers) fails instead of stopping the run

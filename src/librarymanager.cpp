@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "librarymanager.h"
 
+#include "connectivity.h"
+
 #include "articlestore.h"
 #include "core/catalog.h"
 #include "core/downloads.h"
@@ -116,10 +118,24 @@ void LibraryManager::setAutoCheckUpdates(bool on)
     Q_EMIT updatesChanged();
 }
 
+namespace
+{
+bool online()
+{
+    const Connectivity *c = Connectivity::instance();
+    return !c || c->online();
+}
+}
+
 void LibraryManager::checkForUpdates(bool quiet)
 {
     if (m_checkingUpdates)
         return;
+    if (!online()) {
+        if (!quiet)
+            Q_EMIT message(i18n("KAthenaeum is offline: library updates can be checked once it is online again."), true);
+        return;
+    }
     m_checkingUpdates = true;
     m_quietCheck = quiet;
     Q_EMIT updatesChanged();
@@ -185,11 +201,19 @@ bool LibraryManager::aria2Available() const
 
 void LibraryManager::loadCatalog()
 {
-    m_feed->load();
+    if (online())
+        m_feed->load();
+    else
+        m_feed->useCache(); // the copy fetched last time, which says how old it is
 }
 
 void LibraryManager::refreshCatalog()
 {
+    if (!online()) {
+        m_feed->useCache();
+        Q_EMIT message(i18n("KAthenaeum is offline: showing the catalog as it was last fetched."), false);
+        return;
+    }
     m_feed->refresh();
 }
 
@@ -215,6 +239,10 @@ void LibraryManager::updateLibrary(qint64 libraryId)
 
 void LibraryManager::startDownload(const CatalogEntry &entry)
 {
+    if (!online()) {
+        Q_EMIT message(i18n("Cannot download %1 while KAthenaeum is offline.", entry.title), true);
+        return;
+    }
     const QString problem = m_downloader->start(entry.url, entry.filename, entry.title, entry.size, folder());
     if (!problem.isEmpty()) {
         Q_EMIT message(i18n("Cannot download %1: %2", entry.title, problem), true);
@@ -230,6 +258,10 @@ void LibraryManager::cancelDownload(qint64 id)
 
 void LibraryManager::resumeDownload(qint64 id)
 {
+    if (!online()) {
+        Q_EMIT message(i18n("Cannot resume the download while KAthenaeum is offline."), true);
+        return;
+    }
     const QString problem = m_downloader->resume(id);
     if (!problem.isEmpty())
         Q_EMIT message(i18n("Cannot resume: %1", problem), true);

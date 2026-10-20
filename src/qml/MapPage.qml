@@ -4,168 +4,131 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import MapLibre 4.0
 import KAthenaeum
 
-// The offline map: the regions downloaded in Settings, drawn by MapLibre. A click on a place shows what it is and opens
-// its Wikipedia article from the installed libraries.
+// The map: OpenStreetMap drawn by Marble from KDE's server, cached as it is viewed, with any area kept for use offline.
+// A click on a place shows what it is and opens its Wikipedia article from the installed libraries.
 Kirigami.Page {
     id: page
 
     signal openArticle(var libraryId, string path)
     signal openSearch(string query)
-    signal openMapSettings()
 
     title: i18n("Map")
     padding: 0
 
-    readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
-    property var selected: ({})  // what placeAt() returned for the last click
-    // "Show on Map" from an article: where to open, and the card to show ({lat, lon, zoom, name, kindLabel, around, article})
-    property var target: null
+    // the clicked place: {name, address, lat, lon, article}
+    property var selected: ({})
     readonly property bool hasSelection: selected.name !== undefined
+    // "Show on Map" from an article: {lat, lon, zoom, name, article}
+    property var target: null
+    readonly property var map: loader.item
+    // the area shown, and how many tiles keeping it at street level takes
+    property var area: null
+    readonly property int areaTiles: area ? MapManager.tileCount(area.west, area.south, area.east, area.north) : 0
 
-    // the pixel of a coordinate on the map as it is now (the marker follows the map)
-    function pixelFor(lat, lon) {
-        const center = map.coordinate;
-        const scale = Math.pow(2, map.zoomLevel) * 512;
-        const x = (lon - center[1]) / 360 * scale;
-        const merc = l => Math.log(Math.tan(Math.PI / 4 + l * Math.PI / 360));
-        const y = -(merc(lat) - merc(center[0])) / (2 * Math.PI) * scale;
-        return Qt.point(map.width / 2 + x, map.height / 2 + y);
+    function select(place) {
+        page.selected = Object.assign({}, place, { article: MapManager.article(place.wikipedia ?? "", place.name) });
     }
-    function select(x, y) {
-        const c = MapManager.coordinateAt(map.coordinate[0], map.coordinate[1], map.zoomLevel, x - map.width / 2, y - map.height / 2);
-        page.selected = MapManager.placeAt(c[0], c[1], map.zoomLevel, Kirigami.Units.gridUnit * 1.5);
-    }
-    // set, not animated: after an animated easeTo() the item's coordinate and zoomLevel still say where it started (MapLibre
-    // Qt reads them back from the camera before the animation runs), and clicks were then placed ~100 px off
-    function flyTo(lat, lon, zoom) {
-        map.zoomLevel = zoom;
-        map.coordinate = [lat, lon];
-    }
-    function zoomBy(factor) {
-        map.scale(factor, Qt.point(map.width / 2, map.height / 2));
-    }
-
-    Component.onCompleted: {
-        const v = page.target ?? MapManager.startView();
-        map.coordinate = [v.lat, v.lon];
-        map.zoomLevel = v.zoom;
-        if (page.target)
-            page.selected = page.target;
-        restored = true;
-    }
-    Component.onDestruction: if (restored) MapManager.saveView(map.coordinate[0], map.coordinate[1], map.zoomLevel)
-    // where the map is, kept (a moment after it stops moving) so it opens there again
-    property bool restored: false
+    // a moment after the map stops moving: where it is (to open there again) and what is shown (to keep it)
     Timer {
-        id: saveView
+        id: viewTimer
         interval: 500
-        onTriggered: MapManager.saveView(map.coordinate[0], map.coordinate[1], map.zoomLevel)
+        onTriggered: {
+            if (!page.map)
+                return;
+            MapManager.saveView(page.map.latitude(), page.map.longitude(), page.map.zoom);
+            page.area = page.map.bounds();
+        }
     }
 
-    MapLibre {
-        id: map
-        anchors.fill: parent
-        visible: MapManager.hasMaps
-        // a new style when regions change or the colours do
-        style: MapManager.revision >= 0 ? MapManager.styleUrl(page.dark) : ""
-        onCoordinateChanged: if (page.restored) saveView.restart()
-        onZoomLevelChanged: if (page.restored) saveView.restart()
+    actions: [
+        Kirigami.Action {
+            text: i18n("Keep This Area Offline")
+            icon.name: "folder-download"
+            enabled: Connectivity.online && !MapManager.saving && page.area !== null && page.areaTiles <= MapManager.maxSaveTiles
+            tooltip: !Connectivity.online ? i18n("Needs the internet")
+                   : page.areaTiles > MapManager.maxSaveTiles ? i18n("Zoom in to a town or a city to keep it")
+                   : i18n("Keeps the streets and places shown, so they can be seen without the internet")
+            onTriggered: MapManager.saveArea(page.area.west, page.area.south, page.area.east, page.area.north)
+        }
+    ]
 
-        DragHandler {
-            id: drag
-            target: null
-            onTranslationChanged: delta => map.pan(delta)
+    Loader {
+        id: loader
+        anchors.fill: parent
+        source: Qt.resolvedUrl("MarbleMap.qml")
+        focus: true
+        onLoaded: {
+            const v = page.target ?? MapManager.startView();
+            if (v.lat !== undefined)
+                item.show(v.lat, v.lon, v.zoom);
+            if (page.target)
+                page.selected = page.target;
+            item.forceActiveFocus();
+            viewTimer.restart();
+            targetMarker.update();
         }
-        PinchHandler {
-            id: pinch
-            target: null
-            onScaleChanged: delta => map.scale(delta, pinch.centroid.position)
-            grabPermissions: PointerHandler.TakeOverForbidden
-        }
-        WheelHandler {
-            id: wheel
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-            onWheel: event => map.scale(Math.pow(2.0, event.angleDelta.y / 480), wheel.point.position)
-        }
-        TapHandler {
-            onTapped: eventPoint => page.select(eventPoint.position.x, eventPoint.position.y)
-            onDoubleTapped: eventPoint => map.scale(2, eventPoint.position)
+        Connections {
+            target: loader.item
+            ignoreUnknownSignals: true
+            function onPlaceSelected(place) { page.select(place); }
+            function onViewChanged() {
+                viewTimer.restart();
+                targetMarker.update();
+            }
         }
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) page.zoomBy(2);
-            else if (event.key === Qt.Key_Minus) page.zoomBy(0.5);
+            if (!page.map)
+                return;
+            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) page.map.zoomIn();
+            else if (event.key === Qt.Key_Minus) page.map.zoomOut();
             else if (event.key === Qt.Key_Escape) page.selected = {};
             else return;
             event.accepted = true;
         }
-        focus: true
     }
+    Component.onDestruction: if (page.map) MapManager.saveView(page.map.latitude(), page.map.longitude(), page.map.zoom)
 
-    // the clicked place
+    // where "Show on Map" opened (a place clicked on the map is marked by Marble itself)
     Rectangle {
-        visible: page.hasSelection && map.visible
-        readonly property point at: page.hasSelection ? page.pixelFor(page.selected.lat, page.selected.lon) : Qt.point(0, 0)
+        id: targetMarker
+        property point at: Qt.point(-100, -100)
+        function update() {
+            if (page.map && page.target && page.selected === page.target)
+                at = page.map.pixelFor(page.target.lat, page.target.lon);
+        }
+        visible: page.map !== null && page.target !== null && page.selected === page.target
         x: at.x - width / 2
         y: at.y - height / 2
-        width: Kirigami.Units.gridUnit * 0.9
+        width: Kirigami.Units.gridUnit
         height: width
         radius: width / 2
         color: Kirigami.Theme.highlightColor
-        border.color: Kirigami.Theme.highlightedTextColor  // a ring that stands out on any map colour
+        border.color: Kirigami.Theme.highlightedTextColor
         border.width: 2
     }
 
-    // search by place name
+    // offline, or keeping an area
     ColumnLayout {
-        visible: map.visible
-        anchors { top: parent.top; left: parent.left; margins: Kirigami.Units.largeSpacing }
-        width: Math.min(Kirigami.Units.gridUnit * 18, parent.width - 2 * Kirigami.Units.largeSpacing)
-        spacing: 0
-
-        Kirigami.SearchField {
-            id: search
+        anchors { top: parent.top; left: parent.left; right: parent.right; margins: Kirigami.Units.largeSpacing }
+        spacing: Kirigami.Units.smallSpacing
+        Kirigami.InlineMessage {
             Layout.fillWidth: true
-            placeholderText: i18n("Find a place…")
-            autoAccept: false
-            onTextChanged: results.model = text.length >= 2 ? MapManager.searchPlaces(text) : []
-            onAccepted: if (results.count > 0) results.itemAtIndex(0).clicked()
-            Keys.onDownPressed: results.forceActiveFocus()
+            visible: page.map !== null && !Connectivity.online
+            type: Kirigami.MessageType.Information
+            text: Connectivity.allowed ? i18n("Offline: the map shows the areas kept on this computer and those viewed before.")
+                                       : i18n("Internet use is off in Settings: the map shows the areas kept on this computer and those viewed before.")
         }
-        QQC2.Frame {
+        Kirigami.InlineMessage {
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(results.contentHeight + topPadding + bottomPadding, Kirigami.Units.gridUnit * 16)
-            visible: search.text.length >= 2 && search.activeFocus || results.activeFocus
-            padding: 1
-            background: Rectangle { color: Kirigami.Theme.backgroundColor; border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.2) }
-            ListView {
-                id: results
-                anchors.fill: parent
-                clip: true
-                keyNavigationEnabled: true
-                delegate: QQC2.ItemDelegate {
-                    required property var modelData
-                    width: ListView.view.width
-                    contentItem: ColumnLayout {
-                        spacing: 0
-                        QQC2.Label { textFormat: Text.PlainText; text: modelData.name; elide: Text.ElideRight; Layout.fillWidth: true }
-                        QQC2.Label { textFormat: Text.PlainText; text: modelData.kindLabel; opacity: 0.7; font: Kirigami.Theme.smallFont; visible: text !== "" }
-                    }
-                    onClicked: {
-                        page.flyTo(modelData.lat, modelData.lon, modelData.zoom);
-                        search.text = "";
-                        map.forceActiveFocus();
-                    }
-                }
-                QQC2.Label {
-                    anchors.centerIn: parent
-                    visible: results.count === 0
-                    textFormat: Text.PlainText
-                    text: i18n("No place by that name in the downloaded regions")
-                    opacity: 0.7
-                }
+            visible: MapManager.saving
+            type: Kirigami.MessageType.Information
+            text: i18n("Keeping this area for use offline: %1 of %2 parts", MapManager.saveDone, MapManager.saveTotal)
+            actions: Kirigami.Action {
+                text: i18n("Stop")
+                icon.name: "process-stop"
+                onTriggered: MapManager.cancelSave()
             }
         }
     }
@@ -173,9 +136,8 @@ Kirigami.Page {
     // what was clicked, and its article
     QQC2.Pane {
         id: card
-        visible: page.hasSelection && map.visible
-        // on the right, where it covers neither the search box nor (usually) what was clicked
-        anchors { right: parent.right; top: parent.top; margins: Kirigami.Units.largeSpacing }
+        visible: page.hasSelection && page.map !== null
+        anchors { right: parent.right; bottom: attribution.top; margins: Kirigami.Units.largeSpacing }
         width: Math.min(Kirigami.Units.gridUnit * 20, parent.width - 2 * Kirigami.Units.largeSpacing)
         padding: Kirigami.Units.largeSpacing
         background: Kirigami.ShadowedRectangle {
@@ -204,8 +166,10 @@ Kirigami.Page {
                 }
             }
             QQC2.Label {
+                Layout.fillWidth: true
                 textFormat: Text.PlainText
-                text: page.selected.kindLabel ?? ""
+                text: page.selected.address ?? ""
+                wrapMode: Text.Wrap
                 opacity: 0.7
                 visible: text !== ""
             }
@@ -213,70 +177,47 @@ Kirigami.Page {
                 kind: "primary"
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                visible: page.selected.article !== undefined
+                visible: page.selected.article?.path !== undefined
                 icon.name: "document-open"
-                text: page.selected.article ? i18n("Read “%1”", Util.plain(page.selected.article.title)) : ""
+                text: page.selected.article?.path ? i18n("Read “%1”", Util.plain(page.selected.article.title)) : ""
                 onClicked: page.openArticle(page.selected.article.libraryId, page.selected.article.path)
-                QQC2.ToolTip.text: page.selected.article
+                QQC2.ToolTip.text: page.selected.article?.path
                     ? (page.selected.article.exact ? i18n("The article OpenStreetMap links to this place, in %1", Util.plain(page.selected.article.library))
                                                   : i18n("An article with this place's name, in %1", Util.plain(page.selected.article.library))) : ""
                 QQC2.ToolTip.visible: hovered
                 QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
             }
             AppButton {
-                kind: page.selected.article !== undefined ? "flat" : "primary"  // the main thing to do when there is no article
+                kind: page.selected.article?.path !== undefined ? "flat" : "primary" // the main thing to do when there is no article
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 icon.name: "search"
                 text: i18n("Search the Libraries for “%1”", Util.plain(page.selected.name ?? ""))
                 onClicked: page.openSearch(page.selected.name)
             }
-            QQC2.Label {
-                Layout.topMargin: Kirigami.Units.smallSpacing
-                visible: (page.selected.around ?? []).length > 0
-                textFormat: Text.PlainText
-                text: i18n("In")
-                font.bold: true
-            }
-            Repeater {
-                model: page.selected.around ?? []
-                delegate: QQC2.ItemDelegate {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    leftPadding: 0
-                    enabled: modelData.article !== undefined
-                    contentItem: RowLayout {
-                        QQC2.Label {
-                            textFormat: Text.PlainText
-                            text: modelData.name
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                            color: modelData.article ? Kirigami.Theme.linkColor : Kirigami.Theme.textColor
-                        }
-                        QQC2.Label { textFormat: Text.PlainText; text: modelData.kindLabel; opacity: 0.7 }
-                    }
-                    onClicked: page.openArticle(modelData.article.libraryId, modelData.article.path)
-                }
-            }
         }
     }
 
     // zoom
     ColumnLayout {
-        visible: map.visible
-        anchors { right: parent.right; bottom: attribution.top; margins: Kirigami.Units.largeSpacing }
+        visible: page.map !== null
+        anchors { left: parent.left; bottom: attribution.top; margins: Kirigami.Units.largeSpacing; bottomMargin: Kirigami.Units.gridUnit * 3 }
         spacing: Kirigami.Units.smallSpacing
         QQC2.RoundButton {
             icon.name: "zoom-in"
-            onClicked: page.zoomBy(2)
-            QQC2.ToolTip.text: i18n("Zoom In")
+            text: i18n("Zoom In")
+            display: QQC2.AbstractButton.IconOnly
+            onClicked: page.map.zoomIn()
+            QQC2.ToolTip.text: text
             QQC2.ToolTip.visible: hovered
             QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
         }
         QQC2.RoundButton {
             icon.name: "zoom-out"
-            onClicked: page.zoomBy(0.5)
-            QQC2.ToolTip.text: i18n("Zoom Out")
+            text: i18n("Zoom Out")
+            display: QQC2.AbstractButton.IconOnly
+            onClicked: page.map.zoomOut()
+            QQC2.ToolTip.text: text
             QQC2.ToolTip.visible: hovered
             QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
         }
@@ -285,11 +226,11 @@ Kirigami.Page {
     // the map data's licence asks for this
     QQC2.Label {
         id: attribution
-        visible: map.visible
+        visible: page.map !== null
         anchors { right: parent.right; bottom: parent.bottom }
         padding: Kirigami.Units.smallSpacing
         textFormat: Text.PlainText
-        text: i18n("© OpenStreetMap contributors · Protomaps · MapLibre")
+        text: i18n("© OpenStreetMap contributors · Marble")
         font: Kirigami.Theme.smallFont
         background: Rectangle { color: Kirigami.Theme.backgroundColor; opacity: 0.8 }
     }
@@ -297,14 +238,9 @@ Kirigami.Page {
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.gridUnit * 4
-        visible: !MapManager.hasMaps
+        visible: loader.status === Loader.Error
         icon.name: "map-flat"
-        text: !MapManager.available ? i18n("The map's style is not installed") : i18n("No maps downloaded")
-        explanation: i18n("Download the world overview and the regions you want in Settings. Click a place on the map to read about it in your libraries.")
-        helpfulAction: Kirigami.Action {
-            text: i18n("Download Maps…")
-            icon.name: "folder-download"
-            onTriggered: page.openMapSettings()
-        }
+        text: i18n("The map needs Marble")
+        explanation: i18n("Install Marble's QML module and plugins (on Debian and Ubuntu: qml6-module-org-kde-marble and marble-plugins), then open the map again.")
     }
 }

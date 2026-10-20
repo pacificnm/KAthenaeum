@@ -23,6 +23,9 @@ QString embeddingModel(); // default nomic-embed-text
 
 // Library updates: checked against the Kiwix catalog once a week (on by default), and when that last happened
 bool autoCheckLibraryUpdates();
+// Whether the app may use the internet (the catalog, downloads, maps); on unless switched off in Settings
+bool onlineAllowed();
+bool setOnlineAllowed(bool on);
 bool setAutoCheckLibraryUpdates(bool on);
 QDateTime lastLibraryUpdateCheck(); // invalid if never
 bool setLastLibraryUpdateCheck(const QDateTime &when);

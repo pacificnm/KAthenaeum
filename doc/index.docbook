@@ -35,7 +35,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 <para>
 &kathenaeum; is a private, offline Wikipedia library with an AI research assistant. It reads &kiwix; ZIM files,
 searches them, answers questions from them with a small language model running on your own computer, keeps research
-projects with your notes and documents, and shows offline maps whose places open their Wikipedia articles.
+projects with your notes and documents, and shows a map whose places open their Wikipedia articles.
 </para>
 </abstract>
 
@@ -68,8 +68,8 @@ article it came from.
 
 <para>
 Nothing you read, search for or ask leaves your computer. There is no account and no cloud service. The only things
-&kathenaeum; fetches from the Internet are those you ask for: the &kiwix; catalog of libraries and the libraries you
-download, map regions, and a weekly check for newer versions of your libraries, which you can turn off.
+&kathenaeum; fetches from the Internet are the &kiwix; catalog of libraries and the libraries you download, a weekly
+check for newer versions of your libraries, and the map; you can turn the Internet off entirely in the settings.
 </para>
 
 <para>What you can do with it:</para>
@@ -80,7 +80,7 @@ download, map regions, and a weekly check for newer versions of your libraries, 
 <listitem><para>Learn in the <link linkend="classroom">Classroom</link>: an AI teacher plans a course in any subject, at your level, from your own libraries.</para></listitem>
 <listitem><para><link linkend="ask">Ask</link> questions and get answers with citations, from all your libraries or from one article.</para></listitem>
 <listitem><para>Keep <link linkend="projects">research projects</link>: articles, saved passages, notes, chats, and documents written in &kate;'s editor, with AI drafts.</para></listitem>
-<listitem><para>Browse <link linkend="maps">offline maps</link>, and click a city, a building or a lake to read about it.</para></listitem>
+<listitem><para>Browse <link linkend="maps">the map</link>, and click a city, a neighbourhood or a park to read about it.</para></listitem>
 <listitem><para>Manage your libraries in the <link linkend="library-manager">Library Manager</link>: download, update, add and remove them.</para></listitem>
 </itemizedlist>
 
@@ -119,7 +119,7 @@ A ZIM file you already have can be added with <guibutton>Add File…</guibutton>
 <sect1 id="ollama">
 <title>Setting Up the AI Assistant</title>
 <para>
-Reading, searching and maps work without anything else. Asking questions needs &ollama;, which runs language models on
+Reading and searching work without anything else. Asking questions needs &ollama;, which runs language models on
 your computer. It is not part of Debian: install it from <ulink url="https://ollama.com">ollama.com</ulink>, then download
 the two models &kathenaeum; uses by default:
 </para>
@@ -685,67 +685,51 @@ sources.
 
 <!-- ================================================================== -->
 <chapter id="maps">
-<title>Maps</title>
-
-<sect1 id="map-regions">
-<title>Downloading Regions</title>
-<para>
-Maps are downloaded once and then work offline. In
-<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>, choose
-<guibutton>Add a region…</guibutton>. Start with the world overview (about 45 MB: every country's coasts, borders, cities
-and main roads), then add the countries, states or regions you want: each card shows the region's shape, and
-<guibutton>Show Its Parts</guibutton> leads to the regions inside it (North America, then the United States, then
-Oregon).
-</para>
-<screenshot>
-<screeninfo>Choosing a region</screeninfo>
-<mediaobject>
-<imageobject><imagedata fileref="map-regions.png" format="PNG"/></imageobject>
-<textobject><phrase>The continents, each card showing its shape</phrase></textobject>
-</mediaobject>
-</screenshot>
-<para>
-A region offers two levels of detail, each with its size: <guilabel>Streets and buildings</guilabel>, or
-<guilabel>Roads and towns</guilabel>, about a fifth of the size. To know which places have Wikipedia articles,
-&kathenaeum; also downloads the region's OpenStreetMap data, reads it once and deletes it. Settings shows each region's
-progress, and lets you update a region to the newest map or remove it.
-</para>
-</sect1>
+<title>The Map</title>
 
 <sect1 id="map-page">
 <title>Exploring the Map</title>
 <para>
-Choose <guilabel>Map</guilabel> in the sidebar. Drag to move, scroll or use the <guibutton>+</guibutton> and
-<guibutton>−</guibutton> buttons to zoom, double-click to zoom in. <guilabel>Find a place…</guilabel> finds places by name
-in the regions you have.
+Choose <guilabel>Map</guilabel> in the sidebar. The map is OpenStreetMap, drawn by Marble, &kde;'s map library, from
+&kde;'s map server. Drag to move, scroll or use the <guibutton>+</guibutton> and <guibutton>−</guibutton> buttons to
+zoom. The map opens where you left it.
 </para>
 <para>
-Click a place (a city, a building, a park, a lake) to see what it is. <guibutton>Read</guibutton> opens its Wikipedia
-article from your libraries: OpenStreetMap often records which article describes a place, so <quote>Portland</quote>
-opens <quote>Portland, Oregon</quote>. <guilabel>In</guilabel> lists what the place lies within (its park, town, county,
-state), each with its article. When no article is known, <guibutton>Search the Libraries</guibutton> searches for the
-place's name.
+Click a place (a city, a neighbourhood, a park, a museum) to see what it is. <guibutton>Read</guibutton> opens its
+Wikipedia article from your libraries: OpenStreetMap often records which article describes a place, so
+<quote>Pearl District</quote> opens <quote>Pearl District, Portland, Oregon</quote>. When no article is known,
+<guibutton>Search the Libraries</guibutton> searches for the place's name.
 </para>
 <screenshot>
 <screeninfo>A place on the map</screeninfo>
 <mediaobject>
 <imageobject><imagedata fileref="map.png" format="PNG"/></imageobject>
-<textobject><phrase>Crater Lake clicked on the map, with its article and the areas it lies within</phrase></textobject>
+<textobject><phrase>Portland's Pearl District clicked on the map, with its article</phrase></textobject>
 </mediaobject>
 </screenshot>
+</sect1>
+
+<sect1 id="map-offline">
+<title>The Map Without the Internet</title>
 <para>
-The map opens where you left it. Map data © OpenStreetMap contributors, drawn with tiles from Protomaps.
+The map needs the Internet for areas you have not seen before. Everything you view is kept on your computer as you go,
+so it can be seen again without a connection. To keep a whole town or city, show it and choose
+<guibutton>Keep This Area Offline</guibutton> in the map's header: its streets, shops, stops and parks are fetched once
+(a few hundred to a few thousand small parts, a minute or two). Larger areas cannot be kept at street level; zoom in
+first.
+</para>
+<para>
+Without a connection, or with <guilabel>Use the internet</guilabel> turned off in the settings, the map says so and shows
+what is kept. <menuchoice><guimenu>Settings</guimenu><guisubmenu>Map</guisubmenu></menuchoice> shows how much is kept and
+can forget it. The kept map is shared with the Marble application.
 </para>
 </sect1>
 
 <sect1 id="show-on-map">
 <title>From an Article to the Map</title>
 <para>
-An article about a place that your maps show has <guibutton>Show on Map</guibutton> in its header. It opens the map on the
-place, with what it lies within, and the back arrow returns to the article. &kathenaeum; finds the place OpenStreetMap
-links to the article (a city's boundary, a park's outline) or, failing that, the coordinates the article gives: so a
-mountain or a battlefield anywhere in the world can be shown on the world overview, and closely in a region you have
-downloaded.
+An article about a place has <guibutton>Show on Map</guibutton> in its header when the article gives the place's
+coordinates. It opens the map on the place, marked, and the back arrow returns to the article.
 </para>
 </sect1>
 </chapter>
@@ -822,8 +806,14 @@ model loaded, so that every question waits while it swaps them, Settings says so
 exported documents.</para></listitem>
 </varlistentry>
 <varlistentry>
-<term><guilabel>Maps</guilabel></term>
-<listitem><para>The regions you have, adding more, and the folder they are kept in.</para></listitem>
+<term><guilabel>Network</guilabel></term>
+<listitem><para><guilabel>Use the internet</guilabel> (on unless you turn it off), and whether there is a connection now.
+With it off, the catalog, downloads and update checks wait, and the map shows only what is kept on the computer.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Map</guilabel></term>
+<listitem><para>How much of the map is kept on the computer, and <guibutton>Forget the Kept Map…</guibutton> to free the
+space.</para></listitem>
 </varlistentry>
 <varlistentry>
 <term><guilabel>Storage</guilabel></term>
@@ -841,7 +831,7 @@ exported documents.</para></listitem>
 <tbody>
 <row><entry>&Ctrl;<keycap>F</keycap></entry><entry>Go to the search box in the sidebar</entry></row>
 <row><entry><keycap>F1</keycap></entry><entry>Open this handbook</entry></row>
-<row><entry>&Tab; / &Shift;&Tab;</entry><entry>Move between buttons, fields and cards (libraries, courses, subjects, map regions)</entry></row>
+<row><entry>&Tab; / &Shift;&Tab;</entry><entry>Move between buttons, fields and cards (libraries, courses, subjects)</entry></row>
 <row><entry>&Enter; or &Space;</entry><entry>Press the button or open the card that has the focus</entry></row>
 <row><entry>&Enter;</entry><entry>Ask the question, or search for the text, that you have typed</entry></row>
 <row><entry><keycap>+</keycap> / <keycap>−</keycap></entry><entry>Zoom the map in or out</entry></row>
@@ -863,7 +853,7 @@ to the Internet only:
 </para>
 <itemizedlist>
 <listitem><para>to the &kiwix; catalog and its downloads, when you open the Library Manager, download a library, or check for library updates (by default once a week);</para></listitem>
-<listitem><para>to Protomaps and Geofabrik, when you add or update a map region.</para></listitem>
+<listitem><para>to KDE's map server (<literal>maps.kde.org</literal>), for parts of the map you view that are not kept on the computer yet, and when you keep an area for use offline.</para></listitem>
 </itemizedlist>
 <para>
 Links to web sites in articles open in your browser, only when you click them.
@@ -907,11 +897,11 @@ TED) may open, but their articles cannot be searched or used for answers.
 </para></answer>
 </qandaentry>
 <qandaentry>
-<question><para>The map is empty.</para></question>
+<question><para>The map is empty, or says it needs Marble.</para></question>
 <answer><para>
-Download the world overview and a region in
-<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>. The map shows only what has been
-downloaded.
+The map is drawn by Marble, &kde;'s map library: install its QML module and plugins (on Debian and Ubuntu,
+<literal>qml6-module-org-kde-marble</literal> and <literal>marble-plugins</literal>). Without the Internet, the map shows
+only the areas viewed before or kept with <guibutton>Keep This Area Offline</guibutton>.
 </para></answer>
 </qandaentry>
 <qandaentry>
@@ -941,9 +931,8 @@ in Wikipedia rather than the dictionary: search for them instead.
 <qandaentry>
 <question><para>An article about a place has no <guibutton>Show on Map</guibutton>.</para></question>
 <answer><para>
-It appears when your maps show the place: download the world overview, or the region the place is in, in
-<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>. An article that gives no coordinates,
-such as one about a battle or an event, cannot be placed.
+It appears when the article gives the place's coordinates. An article without them, such as one about a battle or an
+event, cannot be placed.
 </para></answer>
 </qandaentry>
 <qandaentry>
@@ -971,8 +960,7 @@ have it. <guibutton>Search the Libraries</guibutton> searches for the place's na
 <para>
 Articles come from Wikipedia through &kiwix; ZIM files and are under their own licence (Wikipedia: CC BY-SA 4.0), as do
 definitions from Wiktionary (CC BY-SA 4.0). Map data
-© OpenStreetMap contributors (ODbL), with tiles and style from Protomaps and region outlines and extracts from Geofabrik;
-maps are drawn with MapLibre Native. Answers are written by models running on your computer through &ollama;.
+© OpenStreetMap contributors (ODbL), from &kde;'s map server; the map is drawn by Marble. Answers are written by models running on your computer through &ollama;.
 </para>
 <para>Documentation Copyright 2026 Jaimie Garner.</para>
 <para>

@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include <QFile>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QTemporaryDir>
@@ -30,6 +31,9 @@ private Q_SLOTS:
             tables << q.value(0).toString();
         QVERIFY(tables.contains(QStringLiteral("settings")));
         QVERIFY(tables.contains(QStringLiteral("libraries")));
+        // the map regions and places from before Marble are gone (schema 13)
+        for (const QString &old : {QStringLiteral("map_regions"), QStringLiteral("map_places"), QStringLiteral("map_places_box")})
+            QVERIFY2(!tables.contains(old), qPrintable(old));
     }
 
     void reopeningKeepsData()
@@ -75,9 +79,10 @@ private Q_SLOTS:
         const QString path = dir.filePath(QStringLiteral("test.sqlite"));
         QString error;
         QVERIFY2(Database::open(path, &error), qPrintable(error));
-        // pretend the last migration has not run, with a table in its way so it fails
+        // pretend the last migration has not run, and make the file read-only so running it fails
         QVERIFY(QSqlQuery().exec(QStringLiteral("PRAGMA user_version = %1").arg(Database::latestVersion() - 1)));
         Database::close();
+        QVERIFY(QFile::setPermissions(path, QFileDevice::ReadOwner));
         QVERIFY(!Database::open(path, &error));
         QVERIFY(!error.isEmpty());
         QVERIFY(!QSqlQuery().exec(QStringLiteral("SELECT 1 FROM settings")));

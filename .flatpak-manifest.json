@@ -7,7 +7,9 @@
     "base": "io.qt.qtwebengine.BaseApp",
     "base-version": "6.9",
     "command": "kathenaeum",
-    "tags": ["nightly"],
+    "tags": [
+        "nightly"
+    ],
     "desktop-file-name-suffix": " (Nightly)",
     "finish-args": [
         "--share=ipc",
@@ -19,11 +21,21 @@
         "--filesystem=xdg-download:ro",
         "--talk-name=org.kde.khelpcenter"
     ],
-    "cleanup": ["/include", "/lib/pkgconfig", "/lib/cmake", "/share/man", "*.a", "*.la"],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/lib/cmake",
+        "/share/man",
+        "*.a",
+        "*.la"
+    ],
     "modules": [
         {
             "name": "xapian-core",
-            "config-opts": ["--disable-documentation", "--disable-backend-remote"],
+            "config-opts": [
+                "--disable-documentation",
+                "--disable-backend-remote"
+            ],
             "sources": [
                 {
                     "type": "archive",
@@ -31,12 +43,20 @@
                     "sha256": "0c99dfdd817571cb5689bc412a7e021407938313f38ea3a70fa3bf86410608ee"
                 }
             ],
-            "cleanup": ["/bin", "/share/doc", "/share/xapian-core"]
+            "cleanup": [
+                "/bin",
+                "/share/doc",
+                "/share/xapian-core"
+            ]
         },
         {
             "name": "libzim",
             "buildsystem": "meson",
-            "config-opts": ["-Dexamples=false", "-Dtests=false", "-Ddoc=false"],
+            "config-opts": [
+                "-Dexamples=false",
+                "-Dtests=false",
+                "-Ddoc=false"
+            ],
             "sources": [
                 {
                     "type": "archive",
@@ -46,32 +66,13 @@
             ]
         },
         {
-            "name": "protozero",
-            "buildsystem": "simple",
-            "build-commands": ["cp -r include/protozero /app/include/"],
-            "sources": [
-                {
-                    "type": "archive",
-                    "url": "https://github.com/mapbox/protozero/archive/refs/tags/v1.8.1.tar.gz",
-                    "sha256": "6c7a896f1dc08435e8cd4f3780ff688cd0bfce6890599b755f6f3cb36398dc25"
-                }
-            ]
-        },
-        {
-            "name": "libosmium",
-            "buildsystem": "simple",
-            "build-commands": ["cp -r include/osmium /app/include/"],
-            "sources": [
-                {
-                    "type": "archive",
-                    "url": "https://github.com/osmcode/libosmium/archive/refs/tags/v2.22.0.tar.gz",
-                    "sha256": "8f74e3f6ba295baa7325ae5606e8f74ad9056f1d6ab4555c50bff6aa8246f366"
-                }
-            ]
-        },
-        {
             "name": "aria2",
-            "config-opts": ["--without-gnutls", "--with-openssl", "--without-libssh2", "--without-sqlite3"],
+            "config-opts": [
+                "--without-gnutls",
+                "--with-openssl",
+                "--without-libssh2",
+                "--without-sqlite3"
+            ],
             "sources": [
                 {
                     "type": "archive",
@@ -79,12 +80,17 @@
                     "sha256": "60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b"
                 }
             ],
-            "cleanup": ["/share/doc", "/share/locale"]
+            "cleanup": [
+                "/share/doc",
+                "/share/locale"
+            ]
         },
         {
             "name": "ktexteditor",
             "buildsystem": "cmake-ninja",
-            "config-opts": ["-DBUILD_TESTING=OFF"],
+            "config-opts": [
+                "-DBUILD_TESTING=OFF"
+            ],
             "sources": [
                 {
                     "type": "archive",
@@ -96,7 +102,9 @@
         {
             "name": "kirigami-addons",
             "buildsystem": "cmake-ninja",
-            "config-opts": ["-DBUILD_TESTING=OFF"],
+            "config-opts": [
+                "-DBUILD_TESTING=OFF"
+            ],
             "sources": [
                 {
                     "type": "archive",
@@ -106,28 +114,34 @@
             ]
         },
         {
-            "name": "maplibre-native-qt",
+            "name": "marble",
             "buildsystem": "cmake-ninja",
             "config-opts": [
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-DMLN_WITH_OPENGL=ON",
-                "-DMLN_QT_WITH_LOCATION=OFF",
-                "-DMLN_QT_WITH_WIDGETS=OFF",
-                "-DCMAKE_INSTALL_PREFIX=/app/maplibre"
+                "-DBUILD_TESTING=OFF",
+                "-DBUILD_MARBLE_APPS=OFF",
+                "-DBUILD_MARBLE_TOOLS=OFF",
+                "-DBUILD_MARBLE_EXAMPLES=OFF",
+                "-DWITH_DESIGNER_PLUGIN=OFF",
+                "-DBUILD_WITH_DBUS=OFF"
             ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/maplibre/maplibre-native-qt.git",
-                    "commit": "c3485f3a9590081c7be8edbc542341e688f6663d"
+                    "type": "archive",
+                    "url": "https://download.kde.org/stable/release-service/25.04.0/src/marble-25.04.0.tar.xz",
+                    "sha256": "27bdf174215a66136795ef3d0a7a2f3e09d21b12d2c83ec3309d84389dd52909"
                 }
             ],
-            "cleanup": ["/maplibre"]
+            "cleanup": [
+                "/share/doc",
+                "/share/locale/*/LC_MESSAGES/marble_qt.qm"
+            ]
         },
         {
             "name": "kathenaeum",
             "buildsystem": "cmake-ninja",
-            "config-opts": ["-DBUILD_TESTING=OFF", "-DCMAKE_PREFIX_PATH=/app/maplibre"],
+            "config-opts": [
+                "-DBUILD_TESTING=OFF"
+            ],
             "sources": [
                 {
                     "type": "dir",

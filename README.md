@@ -29,7 +29,7 @@ There is nothing to build before you can use a library: it is searchable and rea
 - **Citations**: cite any article in MLA (9th), APA (7th) or Chicago (17th) style, copied with its italics. A Wikipedia article is cited as the Wikipedia page it copies, with its address, as read in a dated offline copy. Each project has a bibliography, and documents get a works-cited list in your style when exported (or where you insert it).
 - **Timelines**: an article's or a project's dated sentences in date order, grouped by period, each opening its article; read from the text (full dates, BC and AD, decades, centuries, "years ago"), not written by the model. Keep one in a project or export it.
 - **Dictionary**: select a word, right-click, Define: its meaning, pronunciation and an example from an installed Wiktionary (the 31 MB Simple English one, or the full one). "Molecules" leads to "molecule".
-- **Maps**: download the world overview and the countries, states or regions you want (in Settings), then browse them offline. Click a city, a building, a park or a lake to see what it is and open its Wikipedia article from your libraries; OpenStreetMap's own link to the article is used when it has one, so "Portland" opens "Portland, Oregon". Also lists what the place is in (its park, town, county), and finds places by name. An article about a place has "Show on Map", from OpenStreetMap's link or the article's own coordinates.
+- **Map**: OpenStreetMap drawn by Marble, KDE's map library. Click a city, a neighbourhood, a park or a building to see what it is and open its Wikipedia article from your libraries; OpenStreetMap's own link to the article is used, so "Pearl District" opens "Pearl District, Portland, Oregon". Areas you view are kept as you go, and Keep This Area Offline keeps a whole town or city for use without the internet. An article about a place has "Show on Map".
 - **Library manager**: browse the Kiwix catalog (also offline, from a saved copy), download with progress, cancel and resume, verify every download, spot newer versions, add a ZIM file you already have, see each library's details, choose the download folder, remove safely.
 - **Models**: see whether Ollama is running and has the models, switch the answer or embedding model without restarting, and get told (with the fix) when Ollama is set to unload one model to load the other.
 
@@ -45,19 +45,19 @@ The KAthenaeum Handbook (`doc/`) opens in KDE's Help Center, from "Handbook" in 
 KDE / Qt UI  -->  ZIM files via libzim (C++)   (article text, images, title and word search)
      |
      +--------->  Ollama on this machine       (embeddings and the answer model)
-     +--------->  SQLite                       (chats, projects, excerpts, notes, settings, map places)
-     +--------->  MapLibre                     (maps cut from Protomaps' OpenStreetMap build, one file per region)
+     +--------->  SQLite                       (chats, projects, excerpts, notes, settings)
+     +--------->  Marble                       (the map, from KDE's map server, cached on this computer)
 ```
 
 An answer is made in four steps: **find** the best articles through the ZIM's own indexes, **read** their best passages (ranked by meaning with a small embedding model) with a small local answer model, **cite** by matching each answer sentence to the passages by embedding similarity, and **check** for figures or topics the sources do not contain. With the default models on a laptop iGPU, the first words appear after about 5 seconds and a whole answer takes 9 to 19.
 
 ## Privacy
 
-KAthenaeum has no account, no telemetry and no hosted AI service. Questions, chats, notes and projects stay in one SQLite file in your home folder. It connects to the internet only for these, and only over https:
+KAthenaeum has no account, no telemetry and no hosted AI service. Questions, chats, notes and projects stay in one SQLite file in your home folder. Reading, search, Ask and the Classroom never use the internet. KAthenaeum connects to it only for these, only over https, and not at all when "Use the internet" is off in Settings (or there is no connection):
 
 - the Kiwix catalog (`opds.library.kiwix.org`), when the Library Manager is open, when you check for updates, and once a week if update checks are on (Settings);
 - library downloads from Kiwix's mirrors, when you start one;
-- map downloads from Protomaps (`build.protomaps.com`) and Geofabrik (`download.geofabrik.de`), when you add a region.
+- the map, from KDE's map server (`maps.kde.org`), for areas you view that are not kept on this computer yet, and when you keep an area for use offline.
 
 Ollama is reached at the address set in Settings (`http://localhost:11434` by default).
 
@@ -66,7 +66,7 @@ Ollama is reached at the address set in Settings (`http://localhost:11434` by de
 | | |
 |---|---|
 | Desktop | KDE Plasma 6 (other Linux desktops work with the Qt and KDE libraries installed) |
-| Libraries | Qt 6.8, KDE Frameworks 6.13, Kirigami, Kirigami Addons, libzim 9, libxml2, SQLite, MapLibre Native for Qt |
+| Libraries | Qt 6.8, KDE Frameworks 6.13, Kirigami, Kirigami Addons, libzim 9, libxml2, SQLite; Marble's QML module and plugins for the map |
 | [Ollama](https://ollama.com) | Installed on the same machine, with a small answer model (default `qwen3.5:2b`) and an embedding model (`nomic-embed-text`). Without it, reading and searching still work. |
 | aria2 | `aria2c`, for downloading libraries |
 | GPU | Not required. Built for laptop iGPUs and small models. |
@@ -85,4 +85,4 @@ Athenaeum is the web version: a FastAPI server with a React UI and a PostgreSQL 
 
 ## License
 
-KAthenaeum is free software, released under the [GNU General Public License v3.0 or later](LICENSES/GPL-3.0-or-later.txt). The handbook is under CC BY-SA 4.0, and the bundled map assets and MapLibre under their own licences; `REUSE.toml` and `data/copyright` say which applies to what. Wikipedia text and images in ZIM files have their own licences (mostly CC BY-SA 4.0); map data is © OpenStreetMap contributors (ODbL).
+KAthenaeum is free software, released under the [GNU General Public License v3.0 or later](LICENSES/GPL-3.0-or-later.txt). The handbook is under CC BY-SA 4.0; `REUSE.toml` and `data/copyright` say which licence applies to what. Wikipedia text and images in ZIM files have their own licences (mostly CC BY-SA 4.0); map data is © OpenStreetMap contributors (ODbL).

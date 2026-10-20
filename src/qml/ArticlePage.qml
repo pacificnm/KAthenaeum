@@ -90,7 +90,7 @@ Kirigami.Page {
         page.highlights = page.info.found ? Notes.forArticle(page.info.libraryId, page.info.path) : [];
     }
     function locate() {
-        page.location = page.info.found ? MapManager.locate(page.info.libraryId, page.info.title, page.info.hasCoordinates ?? false, page.info.lat ?? 0, page.info.lon ?? 0) : {};
+        page.location = page.info.found && page.info.hasCoordinates ? MapManager.locate(page.info.title, page.info.lat, page.info.lon) : {};
     }
     // a highlight in the page: shown (the panel closed first on a narrow window, as for a citation)
     function showHighlight(id) {
@@ -243,12 +243,6 @@ Kirigami.Page {
             page.refreshNotes();
             if (JSON.stringify(page.highlights.map(h => [h.id, h.color, h.note])) !== before)
                 view.reload();
-        }
-    }
-    Connections {
-        target: MapManager
-        function onRegionsChanged() {
-            page.locate();
         }
     }
 

@@ -19,15 +19,9 @@ add_library(kathenaeum_core STATIC
     core/highlights.cpp core/highlights.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h
-    core/mapextract.cpp core/mapextract.h
-    core/maplookup.cpp core/maplookup.h
-    core/mapplaces.cpp core/mapplaces.h
-    core/mapregions.cpp core/mapregions.h
-    core/maptiling.cpp core/maptiling.h
-    core/mvt.cpp core/mvt.h
+    core/maptiles.cpp core/maptiles.h
     core/network.cpp core/network.h
     core/ollama.cpp core/ollama.h
-    core/pmtiles.cpp core/pmtiles.h
     core/projects.cpp core/projects.h
     core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
@@ -39,8 +33,7 @@ add_library(kathenaeum_core STATIC
     core/zimsearch.cpp core/zimsearch.h
 )
 target_include_directories(kathenaeum_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(kathenaeum_core SYSTEM PRIVATE ${OSMIUM_INCLUDE_DIR} ${PROTOZERO_INCLUDE_DIR})
-target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE KF6::I18n Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2 ZLIB::ZLIB Threads::Threads)
+target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE KF6::I18n Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2 Threads::Threads)
 target_compile_definitions(kathenaeum_core PRIVATE TRANSLATION_DOMAIN="kathenaeum")
 kde_target_enable_exceptions(kathenaeum_core PRIVATE)  # libzim reports errors by throwing; KDE builds with -fno-exceptions
 
@@ -50,6 +43,7 @@ add_executable(kathenaeum
     articlestore.cpp articlestore.h
     chatlist.cpp chatlist.h
     classroomcontroller.cpp classroomcontroller.h
+    connectivity.cpp connectivity.h
     conversation.cpp conversation.h
     documentmodel.cpp documentmodel.h
     documentwindow.cpp documentwindow.h
@@ -67,10 +61,7 @@ add_executable(kathenaeum
     zimschemehandler.cpp zimschemehandler.h
 )
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-# install paths relative to the prefix (bin/..), the same in the build directory (see the top-level CMakeLists.txt)
-target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}"
-    KATHENAEUM_MAP_ASSETS="${KDE_INSTALL_DATADIR}/kathenaeum/map"
-    KATHENAEUM_MAPLIBRE_QML="${KATHENAEUM_PRIVATE_DIR}/qml")
+target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}")
 
 set_source_files_properties(qml/Util.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
@@ -114,8 +105,7 @@ qt_add_qml_module(kathenaeum
         qml/ProjectPage.qml
         qml/SourceRow.qml
         qml/MapPage.qml
-        qml/MapRegionsPage.qml
-        qml/RegionSilhouette.qml
+        qml/MarbleMap.qml
         qml/Sidebar.qml
         qml/ArticleChip.qml
         qml/AppButton.qml

@@ -70,6 +70,16 @@ bool AppSettings::autoCheckLibraryUpdates()
     return value(QStringLiteral("library.autoUpdateCheck"), QStringLiteral("on")) == QLatin1String("on");
 }
 
+bool AppSettings::onlineAllowed()
+{
+    return value(QStringLiteral("network.online"), QStringLiteral("on")) == QLatin1String("on");
+}
+
+bool AppSettings::setOnlineAllowed(bool on)
+{
+    return setValue(QStringLiteral("network.online"), on ? QStringLiteral("on") : QStringLiteral("off"));
+}
+
 bool AppSettings::setAutoCheckLibraryUpdates(bool on)
 {
     return setValue(QStringLiteral("library.autoUpdateCheck"), on ? QStringLiteral("on") : QStringLiteral("off"));

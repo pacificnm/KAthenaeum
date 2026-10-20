@@ -135,131 +135,56 @@ FormCard.FormCardPage {
         }
     }
 
-    FormCard.FormHeader { title: i18n("Maps") }
+    FormCard.FormHeader { title: i18n("Network") }
     FormCard.FormCard {
-        FormCard.FormButtonDelegate {
-            text: i18n("Add a region…")
-            description: i18n("Maps are downloaded once and work offline. Click a place on the map to read about it in your libraries.")
-            icon.name: "list-add"
-            onClicked: applicationWindow().pageStack.push(Qt.resolvedUrl("MapRegionsPage.qml"))
-        }
-        Repeater {
-            model: MapManager.regions
-            delegate: ColumnLayout {
-                id: region
-                required property var modelData
-                readonly property bool active: modelData.status === "queued" || modelData.status === "downloading" || modelData.status === "indexing"
-                Layout.fillWidth: true
-                spacing: 0
-
-                FormCard.FormDelegateSeparator {}
-                FormCard.FormTextDelegate {
-                    Layout.fillWidth: true
-                    text: region.modelData.parentName !== "" ? i18nc("region, in its parent", "%1, %2", region.modelData.name, region.modelData.parentName) : region.modelData.name
-                    icon.name: region.modelData.status === "failed" ? "dialog-error" : region.active ? "folder-download" : "map-flat"
-                    description: page.regionStatus(region.modelData)
-                    textItem.textFormat: Text.PlainText
-                    descriptionItem.textFormat: Text.PlainText
-                    descriptionItem.color: region.modelData.status === "failed" ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
-                    trailing: RowLayout {
-                        AppButton {
-                            kind: "danger"
-                            visible: region.active
-                            text: i18n("Cancel")
-                            icon.name: "dialog-cancel"
-                            onClicked: MapManager.cancel(region.modelData.id)
-                        }
-                        AppButton {
-                            kind: "secondary"
-                            visible: region.modelData.status === "failed" || region.modelData.status === "cancelled"
-                            text: i18n("Retry")
-                            icon.name: "view-refresh"
-                            onClicked: MapManager.retry(region.modelData.id)
-                        }
-                        AppButton {
-                            kind: "secondary"
-                            visible: region.modelData.status === "complete"
-                            text: i18n("Update")
-                            icon.name: "update-none"
-                            QQC2.ToolTip.text: i18n("Download it again from the newest map (OpenStreetMap changes every day)")
-                            QQC2.ToolTip.visible: hovered
-                            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-                            onClicked: MapManager.retry(region.modelData.id)
-                        }
-                        QQC2.ToolButton {
-                            icon.name: "edit-delete"
-                            display: QQC2.AbstractButton.IconOnly
-                            text: i18n("Remove…")
-                            QQC2.ToolTip.text: text
-                            QQC2.ToolTip.visible: hovered
-                            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-                            onClicked: removeMapDialog.ask(region.modelData)
-                        }
-                    }
-                }
-                QQC2.ProgressBar {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.largeSpacing
-                    Layout.rightMargin: Kirigami.Units.largeSpacing
-                    Layout.bottomMargin: Kirigami.Units.smallSpacing
-                    visible: region.active && region.modelData.status !== "queued"
-                    indeterminate: region.modelData.total <= 0
-                    value: region.modelData.total > 0 ? region.modelData.done / region.modelData.total : 0
-                }
-            }
+        FormCard.FormSwitchDelegate {
+            text: i18n("Use the internet")
+            description: i18n("For the library catalog and downloads, update checks and the map. Reading, search, Ask, the Classroom, notes and projects never need it.")
+            checked: Connectivity.allowed
+            onToggled: Connectivity.allowed = checked
         }
         FormCard.FormDelegateSeparator {}
         FormCard.FormTextDelegate {
-            text: i18n("Folder for maps")
-            description: i18n("%1 · %2 free", MapManager.folder, KCoreAddons.Format.formatByteSize(MapManager.freeSpace, 1))
-            descriptionItem.textFormat: Text.PlainText
+            text: i18n("Connection")
+            description: !Connectivity.allowed ? i18n("Not used: KAthenaeum is working offline")
+                       : Connectivity.reachable ? i18n("Online") : i18n("No connection: KAthenaeum is working offline until there is one")
+            icon.name: Connectivity.online ? "network-connect" : "network-disconnect"
         }
     }
 
-    function regionStatus(r) {
-        const size = KCoreAddons.Format.formatByteSize(r.size, 1);
-        const detail = r.maxZoom >= 15 ? i18n("streets") : r.maxZoom >= 13 ? i18n("roads and towns") : i18n("overview");
-        switch (r.status) {
-        case "queued":
-            return i18n("Waiting to download");
-        case "downloading":
-            if (r.step === "places")
-                return r.total > 0 ? i18n("Downloading OpenStreetMap data: %1 of %2", KCoreAddons.Format.formatByteSize(r.done, 1), KCoreAddons.Format.formatByteSize(r.total, 1))
-                                   : i18n("Downloading OpenStreetMap data…");
-            return r.total > 0 ? i18n("Downloading the map: %1 of %2", KCoreAddons.Format.formatByteSize(r.done, 1), KCoreAddons.Format.formatByteSize(r.total, 1))
-                               : i18n("Finding the region's map tiles…");
-        case "indexing":
-            return i18n("Finding places with Wikipedia articles…");
-        case "failed":
-            return r.error;
-        case "cancelled":
-            return r.hasMap ? i18n("Update cancelled · the earlier map is kept") : i18n("Cancelled");
-        default:
-            return r.region === "world" ? i18n("%1 · %2 · map of %3", size, detail, Util.buildDate(r.build))
-                                        : i18np("%2 · %3 · %1 place · map of %4", "%2 · %3 · %1 places · map of %4", r.places, size, detail, Util.buildDate(r.build));
+    FormCard.FormHeader { title: i18n("Map") }
+    FormCard.FormCard {
+        FormCard.FormTextDelegate {
+            text: i18n("Kept on this computer")
+            description: i18n("%1 of map, shared with the Marble application. Areas you view are kept as you go; on the map, Keep This Area Offline keeps a whole town or city.",
+                              KCoreAddons.Format.formatByteSize(MapManager.cacheBytes, 1))
+            Component.onCompleted: MapManager.measureCache()
+        }
+        FormCard.FormDelegateSeparator {}
+        FormCard.FormButtonDelegate {
+            text: i18n("Forget the Kept Map…")
+            icon.name: "edit-clear-history"
+            enabled: MapManager.cacheBytes > 0
+            onClicked: clearMapDialog.open()
         }
     }
 
     Kirigami.PromptDialog {
-        id: removeMapDialog
-        property var region: ({})
-        function ask(r) {
-            region = r;
-            open();
-        }
-        title: i18n("Remove the map of %1?", Util.plain(region.name ?? ""))
-        subtitle: i18n("Its map file (%1) and its places are deleted. You can download it again later.", KCoreAddons.Format.formatByteSize(region.size ?? 0, 1))
+        id: clearMapDialog
+        title: i18n("Forget the kept map?")
+        subtitle: i18n("The %1 of map kept on this computer is deleted, for Marble too. Areas are fetched again when viewed online.",
+                       KCoreAddons.Format.formatByteSize(MapManager.cacheBytes, 1))
         standardButtons: Kirigami.Dialog.NoButton
         customFooterActions: [
             Kirigami.Action {
-                text: i18n("Remove")
-                icon.name: "edit-delete"
+                text: i18n("Forget")
+                icon.name: "edit-clear-history"
                 onTriggered: {
-                    MapManager.remove(removeMapDialog.region.id);
-                    removeMapDialog.close();
+                    MapManager.clearCache();
+                    clearMapDialog.close();
                 }
             },
-            Kirigami.Action { text: i18n("Cancel"); icon.name: "dialog-cancel"; onTriggered: removeMapDialog.close() }
+            Kirigami.Action { text: i18n("Cancel"); icon.name: "dialog-cancel"; onTriggered: clearMapDialog.close() }
         ]
     }
 

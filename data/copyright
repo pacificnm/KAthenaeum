@@ -21,24 +21,3 @@ License: CC0-1.0
 Files: usr/share/icons/*
 Copyright: 2026 Jaimie Garner <pacificnm@gmail.com>
 License: CC-BY-SA-4.0
-
-Files: usr/share/kathenaeum/map/layers-*.json
-Copyright: 2019-2023 Protomaps LLC, Kelso Cartography
-License: BSD-3-Clause
-Comment: Generated from https://github.com/protomaps/basemaps. The visual design is CC0-1.0.
-
-Files: usr/share/kathenaeum/map/fonts/*
-Copyright: 2022 The Noto Project Authors (https://github.com/notofonts)
-License: OFL-1.1
-Comment: Glyphs from https://github.com/protomaps/basemaps-assets
-
-Files: usr/share/kathenaeum/map/sprites/*
-Copyright: 2017 Mapzen, Protomaps LLC
-License: MIT
-Comment: From https://github.com/protomaps/basemaps-assets, derived from https://github.com/tangrams/icons
-
-Files: usr/lib/*/kathenaeum/*
-Copyright: 2021-2023 MapLibre contributors, 2018-2021 MapTiler.com, 2014-2020 Mapbox, Inc.
-License: BSD-2-Clause
-Comment: MapLibre Native for Qt (https://github.com/maplibre/maplibre-native-qt) and MapLibre Native, bundled
- privately. Its licence and MapLibre Native's own third-party notices are in maplibre/ beside this file.

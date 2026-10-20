@@ -328,7 +328,6 @@ Kirigami.ApplicationWindow {
         MapPage {
             onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
             onOpenSearch: query => root.openSearch(query, -1)
-            onOpenMapSettings: root.show(settingsPage)
         }
     }
     Component { id: libraryManagerPage; LibraryManagerPage {} }
