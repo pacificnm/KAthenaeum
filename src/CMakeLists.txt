@@ -89,6 +89,7 @@ qt_add_qml_module(kathenaeum
         qml/SourceRow.qml
         qml/MapPage.qml
         qml/MapRegionsPage.qml
+        qml/RegionSilhouette.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE

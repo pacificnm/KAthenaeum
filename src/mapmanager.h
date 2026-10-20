@@ -4,6 +4,7 @@
 #include "core/mapregions.h"
 
 #include <QHash>
+#include <QPointer>
 #include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
@@ -65,6 +66,8 @@ public:
     Q_INVOKABLE QVariantList catalogChildren(const QString &parent) const;  // "" for the continents
     Q_INVOKABLE QVariantList searchCatalog(const QString &text) const;
     Q_INVOKABLE QVariantMap catalogRegion(const QString &id) const;
+    // The region's outline for drawing it: {aspect: width / height, paths: [[point 0..1, …], …]} in Web Mercator
+    Q_INVOKABLE QVariantMap regionShape(const QString &id) const;
     // How big the region's map would be at this detail: answered by estimated()
     Q_INVOKABLE void estimate(const QString &id, int maxZoom);
     Q_INVOKABLE void download(const QString &id, int maxZoom);
@@ -107,7 +110,7 @@ private:
     QHash<QString, qsizetype> m_catalogIndex;
     bool m_catalogLoading = false;
     QString m_catalogError;
-    MapExtract *m_estimate = nullptr;
+    QHash<QString, QPointer<MapExtract>> m_estimates;  // "region@zoom" being measured
     QHash<QString, std::shared_ptr<PMTiles::Archive>> m_archives;
     int m_revision = 0;
 };

@@ -410,6 +410,60 @@ QVariantList MapManager::searchCatalog(const QString &text) const
     return (starts + contains).mid(0, 50);
 }
 
+QVariantMap MapManager::regionShape(const QString &id) const
+{
+    const auto r = info(id);
+    if (!r)
+        return {};
+    // in Web Mercator, so it looks as it does on the map; fitted into a unit box, its aspect kept separately
+    // a region across the 180° meridian (Alaska, Russia, Oceania) is drawn whole: cut where its longitudes have their
+    // widest gap, not at 180°, and move what is west of the cut round to the east (Antarctica has no gap: left as is)
+    std::vector<double> lons;
+    for (const MapTiling::Polygon &polygon : r->shape)
+        for (const MapTiling::Ring &ring : polygon)
+            for (const QPointF &p : ring)
+                lons.push_back(p.x());
+    std::sort(lons.begin(), lons.end());
+    double cut = -INFINITY;  // points at or west of it move east
+    if (!lons.empty()) {
+        double widest = lons.front() + 360 - lons.back();  // the gap across 180°
+        for (size_t i = 0; i + 1 < lons.size(); ++i)
+            if (lons[i + 1] - lons[i] > widest && lons[i + 1] - lons[i] < 350) {  // 350+: a band round the globe (Antarctica)
+                widest = lons[i + 1] - lons[i];
+                cut = lons[i];
+            }
+    }
+    QList<QList<QPointF>> rings;
+    double minX = INFINITY, minY = INFINITY, maxX = -INFINITY, maxY = -INFINITY;
+    for (const MapTiling::Polygon &polygon : r->shape)
+        for (const MapTiling::Ring &ring : polygon) {
+            QList<QPointF> projected;
+            for (const QPointF &p : ring) {
+                const double lon = p.x() <= cut ? p.x() + 360 : p.x();
+                const QPointF q(MapTiling::lonToX(lon, 0), MapTiling::latToY(p.y(), 0));
+                projected.append(q);
+                minX = std::min(minX, q.x());
+                maxX = std::max(maxX, q.x());
+                minY = std::min(minY, q.y());
+                maxY = std::max(maxY, q.y());
+            }
+            rings.append(projected);
+        }
+    const double w = maxX - minX, h = maxY - minY;
+    if (rings.isEmpty() || w <= 0 || h <= 0)
+        return {};
+    const double size = std::max(w, h);
+    QVariantList paths;
+    for (const QList<QPointF> &ring : std::as_const(rings)) {
+        QVariantList points;
+        for (const QPointF &p : MapPlaces::simplify(ring, size / 300))  // a silhouette: a few hundred points at most
+            points.append(QPointF((p.x() - minX) / w, (p.y() - minY) / h));
+        if (points.size() >= 3)
+            paths.append(QVariant(points));
+    }
+    return {{QStringLiteral("aspect"), w / h}, {QStringLiteral("paths"), paths}};
+}
+
 QVariantMap MapManager::catalogRegion(const QString &id) const
 {
     const auto r = info(id);
@@ -427,9 +481,17 @@ void MapManager::estimate(const QString &id, int maxZoom)
                          i18n("This region is too large to download at this detail. Choose less detail, or one of its parts."));
         return;
     }
-    if (m_estimate) {
-        m_estimate->cancel();
-        m_estimate->deleteLater();
+    // both detail levels of one region are measured at once; measuring another region stops the earlier ones
+    for (auto it = m_estimates.begin(); it != m_estimates.end();) {
+        if (it.key().section(QLatin1Char('@'), 0, 0) != id || it.key() == id + QLatin1Char('@') + QString::number(maxZoom)) {
+            if (*it) {
+                (*it)->cancel();
+                (*it)->deleteLater();
+            }
+            it = m_estimates.erase(it);
+        } else {
+            ++it;
+        }
     }
     // the size of the map: the planet build's directories for the region (a second or two)
     QNetworkReply *builds = m_network->get(QNetworkRequest(MapCatalog::buildsUrl()));
@@ -443,11 +505,11 @@ void MapManager::estimate(const QString &id, int maxZoom)
         auto *extract = new MapExtract(nullptr, shape, maxZoom, QString(), this);
         extract->setSource(new HttpRangeReader(MapCatalog::buildUrl(build), m_network, extract));  // goes with it
         extract->setEstimateOnly(true);
-        m_estimate = extract;
-        connect(extract, &MapExtract::finished, this, [this, extract, id, maxZoom, pbf](const QString &error) {
+        const QString key = id + QLatin1Char('@') + QString::number(maxZoom);
+        m_estimates.insert(key, extract);
+        connect(extract, &MapExtract::finished, this, [this, extract, key, id, maxZoom, pbf](const QString &error) {
             extract->deleteLater();
-            if (m_estimate == extract)
-                m_estimate = nullptr;
+            m_estimates.remove(key);
             const double mapBytes = double(extract->totalBytes());
             const int tiles = int(extract->tileCount());
             if (!error.isEmpty() || pbf.isEmpty()) {
