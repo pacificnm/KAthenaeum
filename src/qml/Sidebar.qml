@@ -10,7 +10,7 @@ import KAthenaeum
 Kirigami.OverlayDrawer {
     id: drawer
 
-    // the section shown ("libraries", "map", "ask", "chats", "projects", "manager", "settings", "about", "search")
+    // the section shown ("libraries", "map", "ask", "chats", "projects", "notes", "manager", "settings", "about", "search")
     property string current
     property int activeDownloads: 0
     property int updates: 0
@@ -144,6 +144,7 @@ Kirigami.OverlayDrawer {
             Place { section: "ask"; text: i18n("Ask"); icon.name: "dialog-messages" }
             Place { section: "chats"; text: i18n("Chats"); icon.name: "view-history" }
             Place { section: "projects"; text: i18n("Projects"); icon.name: "folder-bookmark" }
+            Place { section: "notes"; text: i18n("Notes"); icon.name: "draw-highlight" }
 
             Item { Layout.fillHeight: true }
 

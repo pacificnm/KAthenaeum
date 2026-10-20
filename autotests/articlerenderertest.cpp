@@ -225,6 +225,38 @@ private Q_SLOTS:
         QVERIFY(out.html.contains(QLatin1String("<mark class=\"excerpt-hl\">Water   is a POLAR\nmolecule</mark>.")));
     }
 
+    void aHighlightHasItsColourAndAnAnchorOnItsFirstMark()
+    {
+        Highlight h;
+        h.text = QStringLiteral("frozen water that floats. It is less dense.");
+        h.cssClass = QStringLiteral("hl hl-green");
+        h.anchor = QStringLiteral("hl-12");
+        const auto out = marked(QStringLiteral("<p>Ice is <a href=\"Water\">frozen water</a> that floats.</p><p>It is less dense.</p>"), {h});
+        QCOMPARE(out.highlighted, 1);
+        QCOMPARE(out.html.count(QLatin1String("<mark class=\"hl hl-green\"")), 3);
+        QCOMPARE(out.html.count(QLatin1String("id=\"hl-12\"")), 1);  // the first piece only: where "Show in Article" jumps
+        QVERIFY2(out.html.contains(QLatin1String("<mark class=\"hl hl-green\" id=\"hl-12\">frozen water</mark>")), qPrintable(out.html));
+        QVERIFY(!out.html.contains(QLatin1String("title=")));  // no note, no tooltip
+    }
+
+    void theArticlesCoordinatesAreRead()
+    {
+        // as Wikipedia writes them: degrees shown, decimals hidden in <span class="geo">, the first being the subject's
+        const auto out = marked(QStringLiteral("<table class='infobox'><tr><td>Coordinates: <span class='geo-inline'><span class='geo-dms'>45°31′N</span>"
+                                               "<span style='display:none'> / <span class='geo'>45.52000; -122.68194</span></span></span></td></tr></table>"
+                                               "<p>Text. <span class='geo'>45.55873; -122.77854</span></p>"),
+                                {});
+        QVERIFY(out.hasCoordinates);
+        QCOMPARE(out.lat, 45.52);
+        QCOMPARE(out.lon, -122.68194);
+        QVERIFY(!marked(QStringLiteral("<p>No place at all.</p>"), {}).hasCoordinates);
+        QVERIFY(!ArticleRenderer::parseGeo(QStringLiteral("91; 10")));
+        QVERIFY(!ArticleRenderer::parseGeo(QStringLiteral("10; 181")));
+        QVERIFY(!ArticleRenderer::parseGeo(QStringLiteral("north; west")));
+        QVERIFY(!ArticleRenderer::parseGeo(QStringLiteral("nan; 1")));
+        QCOMPARE(ArticleRenderer::parseGeo(QStringLiteral(" -33.86; 151.21 "))->second, 151.21);
+    }
+
     void aPassageNoLongerInTheTextIsNotShown()
     {
         const auto out = marked(QStringLiteral("<p>Water is wet.</p>"), {{QStringLiteral("Something the article never said."), QString()},

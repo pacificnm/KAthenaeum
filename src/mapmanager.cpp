@@ -5,6 +5,7 @@
 #include "core/mapextract.h"
 #include "core/maplookup.h"
 #include "core/mapplaces.h"
+#include "core/maptiling.h"
 #include "core/pmtiles.h"
 #include "core/settings.h"
 #include "core/zimreader.h"
@@ -596,7 +597,7 @@ QVariantMap MapManager::articleFor(const QString &name, const QString &nameEn, c
     // the region it is in, for titles like "Salem, Oregon"
     QStringList regionNames;
     for (const MapRegionRecord &r : MapRegions::ready())
-        if (r.region != QLatin1String("world") && r.bounds.contains(QPointF(lon, lat)))
+        if (r.region != QLatin1String("world") && MapTiling::contains(r.shape, lon, lat))
             regionNames.append(r.name);
 
     for (const LibraryRecord &lib : Library::all()) {
@@ -647,7 +648,7 @@ QVariantMap MapManager::placeAt(double lat, double lon, double zoom, double radi
 
     QVariantMap out;
     std::optional<MapPlace> place;
-    QList<MapPlace> around = MapPlaces::around(lat, lon, 6);
+    QList<MapPlace> around = feature ? QList<MapPlace>() : MapPlaces::around(lat, lon, 6);
     if (feature) {
         place = feature->osm.isEmpty() ? std::nullopt : MapPlaces::byOsm(feature->osm);
         out.insert(QStringLiteral("name"), feature->name);
@@ -673,11 +674,17 @@ QVariantMap MapManager::placeAt(double lat, double lon, double zoom, double radi
         return {};
     }
     // and what it is in: its park, its town, its county
+    out.insert(QStringLiteral("around"), aroundList(lat, lon, place ? &*place : nullptr, out.value(QStringLiteral("name")).toString()));
+    return out;
+}
+
+QVariantList MapManager::aroundList(double lat, double lon, const MapPlace *place, const QString &name) const
+{
     QVariantList inside;
-    for (const MapPlace &p : std::as_const(around)) {
+    for (const MapPlace &p : MapPlaces::around(lat, lon, 6)) {
         if (place && (p.osm == place->osm || (!p.wikipedia.isEmpty() && p.wikipedia == place->wikipedia)))
             continue;
-        if (p.name == out.value(QStringLiteral("name")).toString())
+        if (p.name == name)
             continue;
         QVariantMap a{{QStringLiteral("name"), p.name}, {QStringLiteral("kindLabel"), kindLabel(p.kind)}};
         const QVariantMap article = articleFor(p.name, p.nameEn, &p, p.lat, p.lon);
@@ -685,7 +692,45 @@ QVariantMap MapManager::placeAt(double lat, double lon, double zoom, double radi
             a.insert(QStringLiteral("article"), article);
         inside.append(a);
     }
-    out.insert(QStringLiteral("around"), inside);
+    return inside;
+}
+
+QVariantMap MapManager::locate(qint64 libraryId, const QString &title, bool hasCoordinates, double lat, double lon) const
+{
+    const QList<MapRegionRecord> ready = MapRegions::ready();
+    if (ready.isEmpty())
+        return {};
+    const auto library = Library::byId(libraryId);
+    const QString language = library ? twoLetter(library->language) : QString();
+    auto regionAt = [&ready](double la, double lo) -> std::optional<MapRegionRecord> {
+        std::optional<MapRegionRecord> best;
+        for (const MapRegionRecord &r : ready)
+            if ((r.region == QLatin1String("world") || MapTiling::contains(r.shape, lo, la)) && (!best || r.maxZoom > best->maxZoom))
+                best = r;
+        return best;
+    };
+
+    QVariantMap out;
+    std::optional<MapPlace> place = MapPlaces::byArticle(language, title);
+    std::optional<MapRegionRecord> region = place ? regionAt(place->lat, place->lon) : std::nullopt;
+    if (place && region) {
+        // the place OpenStreetMap links to this article: zoomed to fit it
+        const double span = std::max(place->east - place->west, place->north - place->south);
+        const double zoom = span > 0 ? std::clamp(std::log2(360.0 / span) - 0.5, 4.0, 16.0) : 15.0;
+        out = {{QStringLiteral("lat"), place->lat}, {QStringLiteral("lon"), place->lon}, {QStringLiteral("zoom"), std::min(zoom, double(region->maxZoom) + 1)},
+               {QStringLiteral("name"), place->name}, {QStringLiteral("kindLabel"), kindLabel(place->kind)}};
+        lat = place->lat;
+        lon = place->lon;
+    } else if (hasCoordinates && (region = regionAt(lat, lon))) {
+        // the article's own coordinates: close in on a detailed region, the whole country on the world overview
+        place.reset();
+        const bool world = region->region == QLatin1String("world");
+        out = {{QStringLiteral("lat"), lat}, {QStringLiteral("lon"), lon}, {QStringLiteral("zoom"), world ? 5.0 : 12.0},
+               {QStringLiteral("name"), title}, {QStringLiteral("kindLabel"), QString()}};
+    } else {
+        return {};
+    }
+    out.insert(QStringLiteral("around"), aroundList(lat, lon, place ? &*place : nullptr, out.value(QStringLiteral("name")).toString()));
     return out;
 }
 

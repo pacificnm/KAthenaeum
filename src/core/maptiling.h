@@ -21,6 +21,9 @@ double xToLon(double x, int z);
 double yToLat(double y, int z);
 
 QRectF bounds(const MultiPolygon &shape);  // x = west, y = south, width and height in degrees
+// Is the point inside the shape (holes left out)? Not its bounding box: a region across the 180° meridian (the US
+// Pacific islands) has a box round the whole world.
+bool contains(const MultiPolygon &shape, double lon, double lat);
 
 // The PMTiles ids of every tile from minZoom to maxZoom that the shape touches, sorted
 std::vector<quint64> tileIds(const MultiPolygon &shape, int minZoom, int maxZoom);

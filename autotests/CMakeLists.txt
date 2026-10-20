@@ -4,10 +4,13 @@ ecm_add_tests(
     articlerenderertest.cpp
     catalogtest.cpp
     chatstest.cpp
+    citationstest.cpp
     databasetest.cpp
+    dictionarytest.cpp
     extracttest.cpp
     downloadstest.cpp
     draftstest.cpp
+    highlightstest.cpp
     librarytest.cpp
     ollamatest.cpp
     projectstest.cpp

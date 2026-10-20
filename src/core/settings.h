@@ -29,4 +29,7 @@ bool setLastLibraryUpdateCheck(const QDateTime &when);
 // Articles across the whole window (the default), or in a column of comfortable reading width
 bool articleFullWidth();
 bool setArticleFullWidth(bool full);
+// how articles are cited: "mla" (the default), "apa" or "chicago" (Citations::styleNames)
+QString citationStyle();
+bool setCitationStyle(const QString &style);
 }

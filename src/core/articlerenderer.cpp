@@ -5,6 +5,7 @@
 
 #include <QRegularExpression>
 #include <QSet>
+#include <cmath>
 #include <QUrl>
 
 #include <libxml/HTMLparser.h>
@@ -138,6 +139,18 @@ void forEachElement(xmlNodePtr root, F &&f)
 }
 }
 
+std::optional<std::pair<double, double>> ArticleRenderer::parseGeo(const QString &text)
+{
+    const QStringList parts = text.split(QLatin1Char(';'));
+    if (parts.size() != 2)
+        return std::nullopt;
+    bool a = false, b = false;
+    const double lat = parts.at(0).trimmed().toDouble(&a), lon = parts.at(1).trimmed().toDouble(&b);
+    if (!a || !b || !std::isfinite(lat) || !std::isfinite(lon) || std::abs(lat) > 90 || std::abs(lon) > 180)
+        return std::nullopt;
+    return std::pair{lat, lon};
+}
+
 QString ArticleRenderer::resolve(const QString &basePath, const QString &href)
 {
     QString target = href;
@@ -191,15 +204,17 @@ QString contentOf(xmlNodePtr n)
 // Wraps [from, to) of a text node in <mark>. The node keeps the text before it. libxml2 merges a text node added next to
 // another text node into that node (xmlAddPrevSibling put the "before" part into the original node, which was then
 // freed: the text after every mark vanished), so only the mark, an element, is added next to the original.
-void wrap(xmlNodePtr node, qsizetype from, qsizetype to, const QString &label)
+void wrap(xmlNodePtr node, qsizetype from, qsizetype to, const Highlight &h, bool first)
 {
     const QString text = contentOf(node);
     const QByteArray before = text.left(from).toUtf8();
     xmlNodeSetContentLen(node, reinterpret_cast<const xmlChar *>(before.constData()), int(before.size()));
     xmlNodePtr mark = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("mark"));
-    xmlNewProp(mark, reinterpret_cast<const xmlChar *>("class"), reinterpret_cast<const xmlChar *>("excerpt-hl"));
-    if (!label.isEmpty())
-        xmlNewProp(mark, reinterpret_cast<const xmlChar *>("title"), reinterpret_cast<const xmlChar *>(label.toUtf8().constData()));
+    xmlNewProp(mark, reinterpret_cast<const xmlChar *>("class"), reinterpret_cast<const xmlChar *>(h.cssClass.toUtf8().constData()));
+    if (first && !h.anchor.isEmpty())
+        xmlNewProp(mark, reinterpret_cast<const xmlChar *>("id"), reinterpret_cast<const xmlChar *>(h.anchor.toUtf8().constData()));
+    if (!h.label.isEmpty())
+        xmlNewProp(mark, reinterpret_cast<const xmlChar *>("title"), reinterpret_cast<const xmlChar *>(h.label.toUtf8().constData()));
     xmlAddChild(mark, xmlNewText(reinterpret_cast<const xmlChar *>(text.mid(from, to - from).toUtf8().constData())));
     xmlAddNextSibling(node, mark);
     if (to < text.size())  // may merge into a text node after the mark: the same text, in the same place
@@ -243,7 +258,7 @@ bool highlight(xmlNodePtr root, const Highlight &h)
             ranges.append({nodes.at(i), from, to});
     }
     for (auto it = ranges.crbegin(); it != ranges.crend(); ++it)
-        wrap(std::get<0>(*it), std::get<1>(*it), std::get<2>(*it), h.label);
+        wrap(std::get<0>(*it), std::get<1>(*it), std::get<2>(*it), h, it == std::prev(ranges.crend()));
     return true;
 }
 }
@@ -291,6 +306,15 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
     }
     if (!root)
         return fail(QStringLiteral("not an article page"));
+
+    // the subject's coordinates, before anything is dropped: Wikipedia keeps the decimal ones in a hidden span
+    for (xmlNodePtr g : xpath(d.doc, root, ".//span[@class='geo']")->nodes())
+        if (const auto ll = parseGeo(textOf(g))) {
+            out.hasCoordinates = true;
+            out.lat = ll->first;
+            out.lon = ll->second;
+            break;
+        }
 
     {
         // Drop only the outermost matches: freeing a node frees what it contains, so dropping a match that sits inside

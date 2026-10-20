@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "documentmodel.h"
 
+#include "core/settings.h"
+
 #include "core/projects.h"
 #include "projectlist.h"
 #include "projectmodel.h"
@@ -84,7 +86,7 @@ void DocumentModel::save()
 
 QString DocumentModel::exportTo(const QUrl &file) const
 {
-    return writeTextFile(file, QStringLiteral("# %1\n\n%2").arg(m_title, Projects::exportMarkdown(m_content).trimmed()) + QLatin1Char('\n'));
+    return writeTextFile(file, QStringLiteral("# %1\n\n%2").arg(m_title, Projects::exportMarkdown(m_content, Citations::style(AppSettings::citationStyle())).trimmed()) + QLatin1Char('\n'));
 }
 
 QString DocumentModel::exportName() const

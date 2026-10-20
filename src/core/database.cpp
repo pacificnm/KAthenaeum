@@ -188,6 +188,25 @@ const QList<QStringList> migrations = {
         // the places' extents, for "what is here" (an R*Tree has no foreign keys: rows are deleted with their place)
         QStringLiteral("CREATE VIRTUAL TABLE map_places_box USING rtree (id, west, east, south, north)"),
     },
+    {
+        // Highlights: passages the reader marked in an article, in a colour, with an optional note. Not tied to a project
+        // (an excerpt is). No foreign key, as for excerpts: a highlight outlives its library and comes back with it.
+        QStringLiteral("CREATE TABLE highlights ("
+                       " id INTEGER PRIMARY KEY,"
+                       " library_id INTEGER NOT NULL,"
+                       " path TEXT NOT NULL,"
+                       " title TEXT NOT NULL DEFAULT '',"
+                       " text TEXT NOT NULL,"
+                       " color TEXT NOT NULL DEFAULT 'yellow',"  // yellow | green | blue | pink
+                       " note TEXT NOT NULL DEFAULT '',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX highlights_article ON highlights (library_id, path)"),
+        QStringLiteral("CREATE INDEX highlights_recent ON highlights (updated_at DESC)"),
+        // "Show on Map" from an article: the places that name it
+        QStringLiteral("CREATE INDEX map_places_wikipedia ON map_places (wikipedia)"),
+        QStringLiteral("CREATE INDEX map_places_wikipedia_en ON map_places (wikipedia_en)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

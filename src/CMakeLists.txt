@@ -6,11 +6,14 @@ add_library(kathenaeum_core STATIC
     core/articlerenderer.cpp core/articlerenderer.h
     core/catalog.cpp core/catalog.h
     core/chats.cpp core/chats.h
+    core/citations.cpp core/citations.h
     core/database.cpp core/database.h
+    core/dictionary.cpp core/dictionary.h
     core/downloads.cpp core/downloads.h
     core/drafts.cpp core/drafts.h
     core/embedding.cpp core/embedding.h
     core/extract.cpp core/extract.h
+    core/highlights.cpp core/highlights.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h
     core/mapextract.cpp core/mapextract.h
@@ -48,6 +51,7 @@ add_executable(kathenaeum
     librarymodels.cpp librarymodels.h
     mapmanager.cpp mapmanager.h
     modelsettings.cpp modelsettings.h
+    notes.cpp notes.h
     projectlist.cpp projectlist.h
     projectmodel.cpp projectmodel.h
     searchcontroller.cpp searchcontroller.h
@@ -66,6 +70,10 @@ qt_add_qml_module(kathenaeum
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/CitationDialog.qml
+        qml/DefinitionPopup.qml
+        qml/HighlightCard.qml
+        qml/NotesPage.qml
         qml/LibrariesPage.qml
         qml/AskPage.qml
         qml/ChatView.qml

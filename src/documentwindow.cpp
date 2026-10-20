@@ -2,6 +2,7 @@
 #include "documentwindow.h"
 
 #include "core/projects.h"
+#include "core/settings.h"
 #include "documentmodel.h"
 #include "projectlist.h"
 
@@ -160,6 +161,16 @@ void DocumentWindow::refreshPreview()
 void DocumentWindow::fillCiteMenu()
 {
     m_cite->clear();
+    // the articles this document links to, cited in the chosen style (Settings › Reading), at the cursor
+    const Citations::Style style = Citations::style(AppSettings::citationStyle());
+    QAction *list = m_cite->addAction(QIcon::fromTheme(QStringLiteral("format-list-unordered")),
+                                      i18n("Insert %1 (%2)", Citations::listHeading(style), Citations::label(style)));
+    list->setToolTip(i18n("A list of the articles this document links to; Export then keeps it instead of adding its own"));
+    list->setEnabled(!Projects::citedSources(m_document->text()).isEmpty());
+    connect(list, &QAction::triggered, this, [this, style] {
+        insert(QStringLiteral("\n\n") + Projects::sourceList(m_document->text(), style));
+    });
+    m_cite->addSeparator();
     const QList<ProjectItem> items = Projects::items(m_model->projectId());
     auto shorten = [](QString s, int n) {
         s = s.simplified();

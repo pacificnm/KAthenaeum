@@ -23,3 +23,7 @@ compile_commands.json
 
 # The map style generator's packages (tools/map-style)
 node_modules/
+
+# meinproc6 --check writes the handbook as HTML where it is run; the build makes the real one
+/*.html
+/doc/*.html

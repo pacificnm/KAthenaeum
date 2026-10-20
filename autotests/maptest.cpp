@@ -230,6 +230,23 @@ private Q_SLOTS:
         QVERIFY(!PMTiles::gunzip(PMTiles::gzip(text).left(20)));  // cut short
     }
 
+    void aPointInAShape()
+    {
+        // a square with a square hole, and an island across the 180° meridian (as Geofabrik gives the US Pacific: two
+        // polygons, one each side), whose box would be the whole world
+        const MapTiling::MultiPolygon shape = {{{{0, 0}, {10, 0}, {10, 10}, {0, 10}, {0, 0}}, {{4, 4}, {6, 4}, {6, 6}, {4, 6}, {4, 4}}},
+                                               {{{179, -1}, {180, -1}, {180, 1}, {179, 1}, {179, -1}}},
+                                               {{{-180, -1}, {-179, -1}, {-179, 1}, {-180, 1}, {-180, -1}}}};
+        QVERIFY(MapTiling::contains(shape, 2, 2));
+        QVERIFY(!MapTiling::contains(shape, 5, 5));  // the hole
+        QVERIFY(!MapTiling::contains(shape, 20, 2));
+        QVERIFY(MapTiling::contains(shape, 179.5, 0));
+        QVERIFY(MapTiling::contains(shape, -179.5, 0));
+        QVERIFY(!MapTiling::contains(shape, 86.9, 27.9));  // Mount Everest is not in the Pacific
+        QVERIFY(MapTiling::bounds(shape).contains(QPointF(86.9, 0)));  // though the box says so
+        QVERIFY(!MapTiling::contains({}, 0, 0));
+    }
+
     void regionTiles()
     {
         // a square: at zoom 10 every tile whose square meets it, and nothing else
@@ -589,6 +606,12 @@ private Q_SLOTS:
         QCOMPARE(MapPlaces::search(QStringLiteral("port")).first().name, QStringLiteral("Portland"));
         QCOMPARE(MapPlaces::search(QStringLiteral("park")).first().name, QStringLiteral("Forest Park"));
         QVERIFY(MapPlaces::search(QStringLiteral("100%_")).isEmpty());  // LIKE's wildcards are only letters
+        // "Show on Map": the place an article is about, from the tag OpenStreetMap gives it
+        QCOMPARE(MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Forest Park (Portland, Oregon)"))->osm, QStringLiteral("w3"));
+        QCOMPARE(MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Portland, Oregon"))->name, QStringLiteral("Portland"));
+        QVERIFY(!MapPlaces::byArticle(QStringLiteral("de"), QStringLiteral("Portland, Oregon")));  // another language's article
+        QVERIFY(!MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Portland")));
+        QVERIFY(!MapPlaces::byArticle(QString(), QStringLiteral("Portland, Oregon")));
 
         // storing again replaces; removing the region removes its places (and their boxes)
         QVERIFY(MapPlaces::store(id, {places[0]}, &error));

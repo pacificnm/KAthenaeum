@@ -12,6 +12,8 @@ Kirigami.Page {
     title: i18n("Library Manager")
     padding: 0
 
+    property int startTab: 0  // 1: the catalog (the dictionary popup sends the reader there)
+
     actions: [
         Kirigami.Action {
             visible: tabs.currentIndex === 0
@@ -44,7 +46,10 @@ Kirigami.Page {
     ]
 
     // The catalog comes from kiwix.org: fetch it only once someone opens the manager, not at every start
-    Component.onCompleted: LibraryManager.loadCatalog()
+    Component.onCompleted: {
+        tabs.currentIndex = startTab;
+        LibraryManager.loadCatalog();
+    }
 
     header: QQC2.ToolBar {
         padding: 0

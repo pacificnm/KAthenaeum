@@ -81,3 +81,13 @@ bool AppSettings::setLastLibraryUpdateCheck(const QDateTime &when)
 {
     return setValue(QStringLiteral("library.lastUpdateCheck"), when.toUTC().toString(Qt::ISODate));
 }
+
+QString AppSettings::citationStyle()
+{
+    return value(QStringLiteral("citation.style"), QStringLiteral("mla"));
+}
+
+bool AppSettings::setCitationStyle(const QString &style)
+{
+    return setValue(QStringLiteral("citation.style"), style);
+}

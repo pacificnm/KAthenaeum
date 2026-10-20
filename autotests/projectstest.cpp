@@ -27,7 +27,7 @@ private Q_SLOTS:
         QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error),
                  qPrintable(error));
         // two installed libraries for the articles to point at
-        QVERIFY(QSqlQuery().exec(QStringLiteral("INSERT INTO libraries (id, path, title) VALUES (1, '/x/chem.zim', 'Chemistry'), (2, '/x/ray.zim', 'Ray Charles')")));
+        QVERIFY(QSqlQuery().exec(QStringLiteral("INSERT INTO libraries (id, path, name, title, zim_date) VALUES (1, '/x/chem.zim', 'wikipedia_en_chemistry', 'Chemistry', '2026-08-02'), (2, '/x/ray.zim', 'wikipedia_en_ray-charles', 'Ray Charles', '2026-08-02')")));
     }
     void cleanup() { Database::close(); }
 
@@ -205,10 +205,21 @@ private Q_SLOTS:
     {
         const QString md = QStringLiteral("See [the film](zim://lib2/Ray_%28film%29) and [Water](zim://lib1/Water), again [water](zim://lib1/Water). "
                                           "A [web link](https://example.org) stays.");
-        QCOMPARE(Projects::exportMarkdown(md),
+        const QDate today(2026, 10, 20);
+        // each article cited once, in the style asked for, in alphabetical order
+        QCOMPARE(Projects::exportMarkdown(md, Citations::Style::Mla, today),
                  QStringLiteral("See the film and Water, again water. A [web link](https://example.org) stays.\n\n"
-                                "## References\n\n- Ray (film). Ray Charles.\n- Water. Chemistry.\n"));
+                                "## Works Cited\n\n"
+                                "“Ray (film).” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Ray_(film). Offline copy via Kiwix. Accessed 20 Oct. 2026.\n\n"
+                                "“Water.” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Water. Offline copy via Kiwix. Accessed 20 Oct. 2026.\n"));
+        QVERIFY(Projects::exportMarkdown(md, Citations::Style::Apa, today).contains(QLatin1String("\n\n## References\n\nRay (film). (2026, August 2). In *Wikipedia*.")));
+        QVERIFY(Projects::exportMarkdown(md, Citations::Style::Chicago, today).contains(QStringLiteral("\n\n## Bibliography\n\nWikipedia. “Ray (film).”")));
         QCOMPARE(Projects::exportMarkdown(QStringLiteral("No links.")), QStringLiteral("No links."));
+        // a document with its own list keeps it, and gets no second one
+        const QString own = md + QStringLiteral("\n\n## Works Cited\n\nMy own list.");
+        QVERIFY(!Projects::exportMarkdown(own, Citations::Style::Mla, today).contains(QLatin1String("Offline copy")));
+        QCOMPARE(Projects::sourceList(md, Citations::Style::Mla, today).count(QLatin1String("Offline copy via Kiwix")), 2);
+        QCOMPARE(Projects::sourceList(QStringLiteral("No links."), Citations::Style::Mla, today), QString());
     }
 
     void thePreviewShowsTheNotesOfCitedSources()
@@ -247,10 +258,17 @@ private Q_SLOTS:
         Projects::createDocument(p, QStringLiteral("Second"), QStringLiteral("More."));
         Projects::addArticle(p, {1, QStringLiteral("Water"), QStringLiteral("Water")}, QStringLiteral("start here"));
         Projects::addClip(p, QStringLiteral("Water is polar."), {{1, QStringLiteral("Water"), QStringLiteral("Water")}}, {}, QStringLiteral("key"));
-        const QString out = Projects::exportProject(p);
-        QVERIFY2(out.startsWith(QLatin1String("# Water\n\nWhy is water a good solvent?\n\n---\n\n## First\n\nAbout Water.\n\n## References\n\n- Water. Chemistry.")), qPrintable(out));
+        const QString out = Projects::exportProject(p, Citations::Style::Apa, QDate(2026, 10, 20));
+        QVERIFY2(out.startsWith(QLatin1String("# Water\n\nWhy is water a good solvent?\n\n---\n\n## First\n\nAbout Water.\n\n## References\n\n"
+                                              "Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from https://en.wikipedia.org/wiki/Water")),
+                 qPrintable(out));
         QVERIFY(out.indexOf(QLatin1String("## First")) < out.indexOf(QLatin1String("## Second")));
-        QVERIFY(out.contains(QStringLiteral("## Sources\n\n- Water (Chemistry) — start here")));
+        QVERIFY2(out.contains(QStringLiteral("## Sources\n\n- Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from "
+                                             "https://en.wikipedia.org/wiki/Water\n  Note: start here")),
+                 qPrintable(out));
+        QCOMPARE(Projects::bibliography(p, Citations::Style::Chicago, QDate(2026, 10, 20)),
+                 QStringList{QStringLiteral("Wikipedia. “Water.” Wikimedia Foundation. Offline copy of August 2, 2026, via Kiwix. Accessed October 20, 2026. "
+                                            "https://en.wikipedia.org/wiki/Water.")});
         QVERIFY(out.contains(QStringLiteral("## Saved excerpts\n\n> Water is polar.\n>\n> — Water\n\nNote: key")));
         QVERIFY(out.endsWith(QLatin1Char('\n')));
         QCOMPARE(Projects::slug(QStringLiteral("Why is water polar?")), QStringLiteral("why-is-water-polar"));

@@ -20,6 +20,8 @@ Kirigami.Page {
 
     readonly property bool dark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     property var selected: ({})  // what placeAt() returned for the last click
+    // "Show on Map" from an article: where to open, and the card to show ({lat, lon, zoom, name, kindLabel, around, article})
+    property var target: null
     readonly property bool hasSelection: selected.name !== undefined
 
     // the pixel of a coordinate on the map as it is now (the marker follows the map)
@@ -46,9 +48,11 @@ Kirigami.Page {
     }
 
     Component.onCompleted: {
-        const v = MapManager.startView();
+        const v = page.target ?? MapManager.startView();
         map.coordinate = [v.lat, v.lon];
         map.zoomLevel = v.zoom;
+        if (page.target)
+            page.selected = page.target;
         restored = true;
     }
     Component.onDestruction: if (restored) MapManager.saveView(map.coordinate[0], map.coordinate[1], map.zoomLevel)

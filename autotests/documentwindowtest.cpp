@@ -78,13 +78,22 @@ private Q_SLOTS:
         for (QAction *a : cite->actions())
             if (!a->isSeparator())
                 actions << a;
-        QCOMPARE(actions.size(), 2);
-        QCOMPARE(actions[0]->text(), QStringLiteral("Acid (has a note)"));
-        actions[0]->trigger();
+        QCOMPARE(actions.size(), 3);
+        // the list of works cited: nothing to list yet, the document links to no article
+        QVERIFY(actions[0]->text().startsWith(QLatin1String("Insert Works Cited")));
+        QVERIFY(!actions[0]->isEnabled());
+        QCOMPARE(actions[1]->text(), QStringLiteral("Acid (has a note)"));
+        actions[1]->trigger();
         QCOMPARE(view->document()->text(), QStringLiteral("First line.[Acid](zim://lib1/Acid)"));
-        actions[1]->trigger();  // a quotation goes on lines of its own
+        actions[2]->trigger();  // a quotation goes on lines of its own
         QVERIFY2(view->document()->text().contains(QStringLiteral("[Acid](zim://lib1/Acid)\n\n> An acid donates a proton.\n>\n> — Acid\n\n")),
                  qPrintable(view->document()->text()));
+        // now it links to an article: the list can be inserted, in the chosen style
+        Q_EMIT cite->aboutToShow();
+        QAction *list = cite->actions().first();
+        QVERIFY(list->isEnabled());
+        list->trigger();
+        QVERIFY2(view->document()->text().contains(QStringLiteral("## Works Cited\n\n“Acid.”")), qPrintable(view->document()->text()));
         // the preview shows the article's note beside the link, and never loads images
         w.findChild<QTextBrowser *>()->setMarkdown(QString());
         QTRY_VERIFY(w.findChild<QTextBrowser *>()->toPlainText().contains(QLatin1String("(note: start here)")));

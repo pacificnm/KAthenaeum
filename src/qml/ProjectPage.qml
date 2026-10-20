@@ -35,6 +35,16 @@ Kirigami.Page {
             }
         },
         Kirigami.Action {
+            text: i18n("Bibliography")
+            icon.name: "format-text-blockquote"
+            enabled: project.articles.length > 0
+            tooltip: i18n("The project's articles cited in MLA, APA or Chicago style, to copy into your work")
+            onTriggered: {
+                bibliographyDialog.citations = project.bibliography();
+                bibliographyDialog.open();
+            }
+        },
+        Kirigami.Action {
             text: i18n("Export…")
             icon.name: "document-export"
             tooltip: i18n("Save the whole project as one Markdown file")
@@ -64,6 +74,13 @@ Kirigami.Page {
 
     ProjectList {
         id: projects
+    }
+
+    CitationDialog {
+        id: bibliographyDialog
+        title: i18n("Bibliography")
+        explanation: i18np("%1 article, in alphabetical order. A document's Export lists only the articles it links to.",
+                           "%1 articles, in alphabetical order. A document's Export lists only the articles it links to.", project.articles.length)
     }
 
     // the app's one drafting job (Main.qml opens what it writes); this page shows it when it is for this project

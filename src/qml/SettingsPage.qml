@@ -122,6 +122,16 @@ FormCard.FormCardPage {
             checked: LibraryBrowser.fullWidth
             onToggled: LibraryBrowser.fullWidth = checked
         }
+        FormCard.FormDelegateSeparator {}
+        FormCard.FormComboBoxDelegate {
+            text: i18n("Citation style")
+            description: i18n("How Cite, a project's Bibliography and exported documents cite articles.")
+            textRole: "label"
+            valueRole: "style"
+            model: LibraryBrowser.citationStyles
+            currentIndex: Math.max(0, LibraryBrowser.citationStyles.findIndex(s => s.style === LibraryBrowser.citationStyle))
+            onActivated: LibraryBrowser.citationStyle = currentValue
+        }
     }
 
     FormCard.FormHeader { title: i18n("Maps") }

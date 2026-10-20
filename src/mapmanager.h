@@ -82,6 +82,10 @@ public:
     // What is at (lat, lon): {name, kindLabel, lat, lon, article: {libraryId, path, title, exact} | absent, around: [...]}
     // or an empty map if nothing is
     Q_INVOKABLE QVariantMap placeAt(double lat, double lon, double zoom, double radiusPx);
+    // Where an article's subject is on the downloaded maps, for "Show on Map": the place OpenStreetMap links to the
+    // article, else the coordinates the article gives (hasCoordinates, lat, lon). {lat, lon, zoom, name, kindLabel, around}
+    // or an empty map when no downloaded map shows it.
+    Q_INVOKABLE QVariantMap locate(qint64 libraryId, const QString &title, bool hasCoordinates, double lat, double lon) const;
     // Places by name, for the map's search box: [{name, kindLabel, region, lat, lon, zoom}]
     Q_INVOKABLE QVariantList searchPlaces(const QString &text) const;
     // Where the map opens: where it was left (this session or the last), else the region downloaded last, else the world.
@@ -103,6 +107,7 @@ private:
     std::optional<MapRegionInfo> info(const QString &id) const;
     QString parentName(const MapRegionInfo &r) const;
     QVariantMap toVariant(const MapRegionInfo &r) const;
+    QVariantList aroundList(double lat, double lon, const MapPlace *place, const QString &name) const;
     QVariantMap articleFor(const QString &name, const QString &nameEn, const MapPlace *place, double lat, double lon) const;
     PMTiles::Archive *archive(const QString &path);
     QString assetsFolder() const;

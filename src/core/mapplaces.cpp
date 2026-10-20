@@ -549,6 +549,23 @@ QList<MapPlace> around(double lat, double lon, int limit)
     return out;
 }
 
+std::optional<MapPlace> byArticle(const QString &language, const QString &title)
+{
+    if (language.isEmpty() || title.trimmed().isEmpty())
+        return std::nullopt;
+    QSqlQuery q(db());
+    // the tag names the article in its own language; wikipedia:en names the English one beside another language's
+    q.prepare(QStringLiteral("SELECT %1 FROM map_places p WHERE p.wikipedia = ? OR (? = 'en' AND p.wikipedia_en = ?) "
+                             "ORDER BY (p.east - p.west) * (p.north - p.south) DESC, p.population DESC LIMIT 1")
+                  .arg(Columns));
+    q.addBindValue(QString(language + QLatin1Char(':') + title.trimmed()));
+    q.addBindValue(language);
+    q.addBindValue(title.trimmed());
+    if (q.exec() && q.next())
+        return fromRow(q);
+    return std::nullopt;
+}
+
 QList<MapPlace> search(const QString &text, int limit)
 {
     const QString t = text.simplified();

@@ -51,6 +51,8 @@ public:
     // The whole project as one Markdown file; an error message, or empty on success
     Q_INVOKABLE QString exportTo(const QUrl &file) const;
     Q_INVOKABLE QString exportName() const;  // "water.md"
+    // The project's articles cited in each style, sorted: [{style, label, text, html}], one entry per paragraph
+    Q_INVOKABLE QVariantList bibliography() const;
     // A document's Markdown for its preview, with the notes of the sources it cites
     Q_INVOKABLE QString preview(const QString &markdown) const;
 

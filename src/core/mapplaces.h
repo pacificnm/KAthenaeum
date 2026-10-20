@@ -54,6 +54,8 @@ int count(qint64 regionId);
 std::optional<MapPlace> byOsm(const QString &osm);
 // Areas around the point, smallest first (a building, its park, its town, its county)
 QList<MapPlace> around(double lat, double lon, int limit = 6);
+// The place OpenStreetMap links to this article (its wikipedia tag, "en:Portland, Oregon"), the biggest if several do
+std::optional<MapPlace> byArticle(const QString &language, const QString &title);
 // Places whose name starts with (then contains) the text, the most important first
 QList<MapPlace> search(const QString &text, int limit = 20);
 }

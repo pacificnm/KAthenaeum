@@ -24,8 +24,8 @@
 </copyright>
 <legalnotice>&FDLNotice;</legalnotice>
 
-<date>2026-10-19</date>
-<releaseinfo>0.12.0</releaseinfo>
+<date>2026-10-20</date>
+<releaseinfo>0.13.0</releaseinfo>
 
 <abstract>
 <para>
@@ -46,6 +46,8 @@ projects with your notes and documents, and shows offline maps whose places open
 <keyword>education</keyword>
 <keyword>research</keyword>
 <keyword>map</keyword>
+<keyword>citation</keyword>
+<keyword>dictionary</keyword>
 </keywordset>
 </bookinfo>
 
@@ -69,6 +71,7 @@ download, map regions, and a weekly check for newer versions of your libraries, 
 <para>What you can do with it:</para>
 <itemizedlist>
 <listitem><para><link linkend="reading">Read</link> any Wikipedia library, with its pictures, in your desktop's colours.</para></listitem>
+<listitem><para><link linkend="highlights">Highlight</link> passages and write notes on them, <link linkend="citing">cite</link> articles in MLA, APA or Chicago style, and <link linkend="dictionary">look up words</link>.</para></listitem>
 <listitem><para><link linkend="search">Search</link> every library at once, by title or by the text of every article.</para></listitem>
 <listitem><para><link linkend="ask">Ask</link> questions and get answers with citations, from all your libraries or from one article.</para></listitem>
 <listitem><para>Keep <link linkend="projects">research projects</link>: articles, saved passages, notes, chats, and documents written in &kate;'s editor, with AI drafts.</para></listitem>
@@ -130,7 +133,7 @@ shows whether &ollama; is running and has them, and lets you choose others.
 <para>
 The sidebar on the left holds a search box and the places of the application, grouped as <guilabel>Read</guilabel>
 (<guilabel>Libraries</guilabel>, <guilabel>Search</guilabel>, <guilabel>Map</guilabel>) and <guilabel>Research</guilabel>
-(<guilabel>Ask</guilabel>, <guilabel>Chats</guilabel>, <guilabel>Projects</guilabel>), with the
+(<guilabel>Ask</guilabel>, <guilabel>Chats</guilabel>, <guilabel>Projects</guilabel>, <guilabel>Notes</guilabel>), with the
 <guilabel>Library Manager</guilabel>, <guilabel>Settings</guilabel>, this handbook and <guilabel>About</guilabel> at the
 bottom. The place you are in is highlighted; a number beside <guilabel>Library Manager</guilabel> counts downloads in
 progress or library updates available.
@@ -188,11 +191,18 @@ turn off <guilabel>Use the Whole Window</guilabel> in the article's menu (<guibu
 <guilabel>Use the whole window for articles</guilabel> in <menuchoice><guimenu>Settings</guimenu><guisubmenu>Reading</guisubmenu></menuchoice>.
 </para>
 <para>
-Select text and right-click it for <guimenuitem>Copy</guimenuitem>, <guimenuitem>Save to Project…</guimenuitem> (keep the
-passage in a <link linkend="projects">research project</link>) and <guimenuitem>Ask About This</guimenuitem> (ask the
-assistant what the article means by it). <guibutton>Ask</guibutton> opens a <link linkend="ask-article">chat about the
-article</link> beside it; <guibutton>Add to Project…</guibutton> adds it to a research project. Passages you have saved
-are highlighted in the article, with your note when you point at them.
+Select text and right-click it for <guimenuitem>Copy</guimenuitem>, <guimenuitem>Define</guimenuitem> (a word or two: see
+<link linkend="dictionary">Looking Up a Word</link>), <guisubmenu>Highlight</guisubmenu> and
+<guimenuitem>Highlight with Note…</guimenuitem> (see <link linkend="highlights">Highlights and Notes</link>),
+<guimenuitem>Save to Project…</guimenuitem> (keep the passage in a <link linkend="projects">research project</link>) and
+<guimenuitem>Ask About This</guimenuitem> (ask the assistant what the article means by it).
+</para>
+<para>
+The header's buttons: <guibutton>Ask</guibutton> opens a <link linkend="ask-article">chat about the article</link> beside it;
+<guibutton>Notes</guibutton> shows your highlights in it; <guibutton>Cite</guibutton> gives a <link linkend="citing">citation</link>;
+<guibutton>Show on Map</guibutton>, for a place, shows it on your <link linkend="show-on-map">maps</link>;
+<guibutton>Add to Project…</guibutton> adds it to a research project. Passages saved to a project are underlined in the
+article, with your note when you point at them.
 </para>
 <screenshot>
 <screeninfo>An article</screeninfo>
@@ -201,6 +211,89 @@ are highlighted in the article, with your note when you point at them.
 <textobject><phrase>The article Crater Lake, with its infobox</phrase></textobject>
 </mediaobject>
 </screenshot>
+</sect1>
+
+<sect1 id="highlights">
+<title>Highlights and Notes</title>
+<para>
+Mark what matters as you read, as you would with a highlighter. Select a passage, right-click it and choose a colour under
+<guisubmenu>Highlight</guisubmenu> (yellow, green, blue or pink: use them as you like, for example one for facts, one
+for questions, one for quotations). <guimenuitem>Highlight with Note…</guimenuitem> also asks for a note: why the passage
+matters, or a question it raises. Highlight a few words at least; a single short word could not be found again in the
+article.
+</para>
+<para>
+<guibutton>Notes</guibutton> in the article's header opens a panel beside it with the article's highlights. There you can
+write or change a note (it is kept when you leave the field), change a colour, jump to the passage
+(<guibutton>Show in Article</guibutton>), save it to a research project as a passage with its note, or remove it
+(<guibutton>Undo</guibutton> brings it back).
+</para>
+<screenshot>
+<screeninfo>Highlights in an article</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="notes.png" format="PNG"/></imageobject>
+<textobject><phrase>The article Portland, Oregon with two highlights, and the Notes panel beside it</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+<guilabel>Notes</guilabel> in the sidebar gathers every highlight and note, by article, the most recent first. Search them,
+or show one colour. <guibutton>New Project Document…</guibutton> turns the notes shown into a document of a research
+project to write from; <guibutton>Export…</guibutton> saves them as a Markdown file, with the articles they come from
+cited.
+</para>
+</sect1>
+
+<sect1 id="citing">
+<title>Citing an Article</title>
+<para>
+<guibutton>Cite</guibutton> in an article's header shows the article cited in the three styles schools ask for most:
+<guilabel>MLA</guilabel> (9th edition), <guilabel>APA</guilabel> (7th edition) and <guilabel>Chicago</guilabel> (17th
+edition, bibliography). <guibutton>Copy</guibutton> copies it, keeping the italics when you paste it into a word processor.
+The style you use most is shown first; choose it in
+<menuchoice><guimenu>Settings</guimenu><guisubmenu>Reading</guisubmenu></menuchoice>, or with <guibutton>Use … by
+Default</guibutton> in the dialog.
+</para>
+<screenshot>
+<screeninfo>A citation</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="cite.png" format="PNG"/></imageobject>
+<textobject><phrase>The article Portland, Oregon cited in MLA style</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+A Wikipedia article is cited as the page on Wikipedia it is a copy of, with its address there, and the citation says that it
+was read in an offline copy, dated by when your library was made. Other libraries are cited by their own title.
+Teachers' rules differ (some want the date you read it, some do not want Wikipedia at all): check them.
+</para>
+<para>
+A research project's <guibutton>Bibliography</guibutton> lists all its articles, in alphabetical order, in the same
+styles. In a document, <menuchoice><guimenu>Cite</guimenu><guimenuitem>Insert Works Cited</guimenuitem></menuchoice>
+(<guimenuitem>References</guimenuitem> in APA, <guimenuitem>Bibliography</guimenuitem> in Chicago) inserts the list of the
+articles it links to, and <guibutton>Export…</guibutton> adds that list by itself when the document has none.
+</para>
+</sect1>
+
+<sect1 id="dictionary">
+<title>Looking Up a Word</title>
+<para>
+Select a word (or two or three, such as <quote>carbon dioxide</quote>), right-click it and choose
+<guimenuitem>Define</guimenuitem>. Its meaning appears beside it: how it is said, and the first senses of each part of
+speech with an example. A form of a word leads to the word itself (<quote>molecules</quote> shows <quote>molecule</quote>),
+and <guibutton>Full Entry</guibutton> opens the whole dictionary page.
+</para>
+<screenshot>
+<screeninfo>A word looked up</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="define.png" format="PNG"/></imageobject>
+<textobject><phrase>The meaning of “molecules” beside an article</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+The dictionary is Wiktionary, installed like any library from the <link linkend="catalog">catalog</link>
+(<guibutton>Get a Dictionary…</guibutton> takes you there). <emphasis>Wiktionary in Simple English</emphasis> is small (31 MB)
+and written in plain words; the full English Wiktionary (9 GB) knows far more words. With both installed, the full one is
+asked first.
+</para>
 </sect1>
 </chapter>
 
@@ -306,6 +399,9 @@ project has three views: <guilabel>Sources</guilabel>, <guilabel>Chat</guilabel>
 </itemizedlist>
 <para>
 Each source can have a note. Notes appear beside the source, on the passage in its article, and in your documents' preview.
+A <link linkend="highlights">highlight</link> can be saved to a project too, with its note, from the
+<guilabel>Notes</guilabel> panel or page. <guibutton>Bibliography</guibutton> in the project's header
+<link linkend="citing">cites</link> all its articles.
 </para>
 </sect1>
 
@@ -326,9 +422,10 @@ project.
 beside a live preview. The document is saved as you type.
 </para>
 <para>
-<guibutton>Cite</guibutton> inserts a link to one of the project's articles, or quotes a saved passage with its source.
-Links in the preview open the article in the main window. <guibutton>Export…</guibutton> saves the document as a Markdown
-file, with a reference list in place of the links (which mean nothing outside &kathenaeum;);
+<guibutton>Cite</guibutton> inserts a link to one of the project's articles, quotes a saved passage with its source, or
+inserts the list of works cited. Links in the preview open the article in the main window. <guibutton>Export…</guibutton>
+saves the document as a Markdown file: the links become plain text (they mean nothing outside &kathenaeum;) and the
+articles they pointed to are listed at the end in your <link linkend="citing">citation style</link>.
 <guibutton>Export…</guibutton> in the project's header exports the whole project.
 </para>
 </sect1>
@@ -418,6 +515,17 @@ place's name.
 The map opens where you left it. Map data © OpenStreetMap contributors, drawn with tiles from Protomaps.
 </para>
 </sect1>
+
+<sect1 id="show-on-map">
+<title>From an Article to the Map</title>
+<para>
+An article about a place that your maps show has <guibutton>Show on Map</guibutton> in its header. It opens the map on the
+place, with what it lies within, and the back arrow returns to the article. &kathenaeum; finds the place OpenStreetMap
+links to the article (a city's boundary, a park's outline) or, failing that, the coordinates the article gives: so a
+mountain or a battlefield anywhere in the world can be shown on the world overview, and closely in a region you have
+downloaded.
+</para>
+</sect1>
 </chapter>
 
 <!-- ================================================================== -->
@@ -487,7 +595,9 @@ model loaded, so that every question waits while it swaps them, Settings says so
 </varlistentry>
 <varlistentry>
 <term><guilabel>Reading</guilabel></term>
-<listitem><para>Articles across the whole window, or in a column of comfortable reading width.</para></listitem>
+<listitem><para>Articles across the whole window, or in a column of comfortable reading width; and the
+<link linkend="citing">citation style</link> (MLA, APA or Chicago) for <guibutton>Cite</guibutton>, bibliographies and
+exported documents.</para></listitem>
 </varlistentry>
 <varlistentry>
 <term><guilabel>Maps</guilabel></term>

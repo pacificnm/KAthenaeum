@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "projectmodel.h"
 
+#include "core/settings.h"
+
 #include "core/chats.h"
 #include "core/library.h"
 #include "core/projects.h"
@@ -163,7 +165,7 @@ QString ProjectModel::quote(qint64 itemId) const
 
 QString ProjectModel::exportTo(const QUrl &file) const
 {
-    return writeTextFile(file, Projects::exportProject(m_id));
+    return writeTextFile(file, Projects::exportProject(m_id, Citations::style(AppSettings::citationStyle())));
 }
 
 QString ProjectModel::preview(const QString &markdown) const
@@ -174,4 +176,24 @@ QString ProjectModel::preview(const QString &markdown) const
 QString ProjectModel::exportName() const
 {
     return Projects::slug(m_title, QStringLiteral("project")) + QStringLiteral(".md");
+}
+
+QVariantList ProjectModel::bibliography() const
+{
+    const QList<Citations::Source> sources = Projects::articleSources(m_id);
+    const QDate today = QDate::currentDate();
+    QVariantList out;
+    for (const QString &name : Citations::styleNames()) {
+        const Citations::Style style = Citations::style(name);
+        QStringList text, html;
+        for (const Citations::Source &s : Citations::sortedSources(style, sources, today)) {
+            text << Citations::format(style, s, today);
+            html << QStringLiteral("<p>%1</p>").arg(Citations::html(style, s, today));
+        }
+        out.append(QVariantMap{{QStringLiteral("style"), name},
+                               {QStringLiteral("label"), Citations::label(style)},
+                               {QStringLiteral("text"), text.join(QStringLiteral("\n\n"))},
+                               {QStringLiteral("html"), html.join(QString())}});
+    }
+    return out;
 }

@@ -3,12 +3,18 @@
 
 #include "core/settings.h"
 
+#include "core/citations.h"
+#include "core/dictionary.h"
+
 #include "articlestore.h"
 #include "core/history.h"
 #include "core/library.h"
 #include "core/zimarchive.h"
 #include "core/zimreader.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QMimeData>
 #include <QQmlEngine>
 
 #include <KLocalizedString>
@@ -134,6 +140,9 @@ QVariantMap LibraryBrowser::articleInfo(const QUrl &url) const
         toc.append(QVariantMap{{QStringLiteral("id"), t.id}, {QStringLiteral("text"), t.text}, {QStringLiteral("level"), t.level}});
     out.insert(QStringLiteral("toc"), toc);
     out.insert(QStringLiteral("excerpts"), article->rendered.highlighted);
+    out.insert(QStringLiteral("hasCoordinates"), article->rendered.hasCoordinates);
+    out.insert(QStringLiteral("lat"), article->rendered.lat);
+    out.insert(QStringLiteral("lon"), article->rendered.lon);
     History::record(libraryId, article->path, article->rendered.title);
     return out;
 }
@@ -149,4 +158,120 @@ void LibraryBrowser::setFullWidth(bool full)
         return;
     AppSettings::setArticleFullWidth(full);
     Q_EMIT fullWidthChanged();
+}
+
+QString LibraryBrowser::citationStyle() const
+{
+    return Citations::name(Citations::style(AppSettings::citationStyle()));
+}
+
+void LibraryBrowser::setCitationStyle(const QString &style)
+{
+    if (style == citationStyle() || !Citations::styleNames().contains(style))
+        return;
+    AppSettings::setCitationStyle(style);
+    Q_EMIT citationStyleChanged();
+}
+
+QVariantList LibraryBrowser::citationStyles() const
+{
+    QVariantList out;
+    for (const QString &name : Citations::styleNames())
+        out.append(QVariantMap{{QStringLiteral("style"), name}, {QStringLiteral("label"), Citations::label(Citations::style(name))}});
+    return out;
+}
+
+QVariantList LibraryBrowser::cite(qint64 libraryId, const QString &path, const QString &title) const
+{
+    const auto library = Library::byId(libraryId);
+    if (!library)
+        return {};
+    const Citations::Source source = Citations::source(*library, path, title);
+    const QDate today = QDate::currentDate();
+    QStringList order = Citations::styleNames();
+    order.removeAll(citationStyle());
+    order.prepend(citationStyle());
+    QVariantList out;
+    for (const QString &name : std::as_const(order)) {
+        const Citations::Style style = Citations::style(name);
+        out.append(QVariantMap{{QStringLiteral("style"), name},
+                               {QStringLiteral("label"), Citations::label(style)},
+                               {QStringLiteral("text"), Citations::format(style, source, today)},
+                               {QStringLiteral("html"), Citations::html(style, source, today)}});
+    }
+    return out;
+}
+
+void LibraryBrowser::copyCitation(const QString &text, const QString &html) const
+{
+    auto *data = new QMimeData;
+    data->setText(text);
+    if (!html.isEmpty())
+        data->setHtml(html);
+    QGuiApplication::clipboard()->setMimeData(data);
+}
+
+bool LibraryBrowser::hasDictionary() const
+{
+    const QList<LibraryRecord> libraries = Library::all();
+    return std::any_of(libraries.cbegin(), libraries.cend(), [](const LibraryRecord &l) {
+        return Dictionary::isDictionary(l) && l.fileExists();
+    });
+}
+
+QVariantMap LibraryBrowser::define(const QString &word) const
+{
+    const QStringList candidates = Dictionary::candidates(word);
+    QVariantMap out{{QStringLiteral("found"), false}, {QStringLiteral("word"), candidates.value(0, word.simplified())}};
+    // the biggest dictionary first: the full Wiktionary knows more words than the Simple English one
+    QList<LibraryRecord> dictionaries;
+    for (const LibraryRecord &l : Library::all())
+        if (Dictionary::isDictionary(l) && l.fileExists())
+            dictionaries << l;
+    std::sort(dictionaries.begin(), dictionaries.end(), [](const LibraryRecord &a, const LibraryRecord &b) {
+        return a.sizeBytes > b.sizeBytes;
+    });
+    out.insert(QStringLiteral("hasDictionary"), !dictionaries.isEmpty());
+    for (const QString &candidate : candidates) {
+        QString path = candidate;
+        path.replace(QLatin1Char(' '), QLatin1Char('_'));
+        for (const LibraryRecord &dictionary : std::as_const(dictionaries)) {
+            const auto content = ZimReader::content(dictionary.id, path);
+            if (!content || !content->mimetype.startsWith(QLatin1String("text/html")))
+                continue;
+            auto entry = Dictionary::parse(content->data);
+            if (!entry)
+                continue;
+            // "molecules": the plural of molecule, and what a molecule is
+            QString formOf;
+            const QString base = Dictionary::baseForm(*entry);
+            if (!base.isEmpty() && base.compare(candidate, Qt::CaseInsensitive) != 0) {
+                QString basePath = base;
+                basePath.replace(QLatin1Char(' '), QLatin1Char('_'));
+                if (const auto baseContent = ZimReader::content(dictionary.id, basePath)) {
+                    if (auto baseEntry = Dictionary::parse(baseContent->data)) {
+                        formOf = entry->parts.first().senses.first().definition;
+                        entry = baseEntry;
+                    }
+                }
+            }
+            QVariantList parts;
+            for (const Dictionary::PartOfSpeech &p : entry->parts) {
+                QVariantList senses;
+                for (const Dictionary::Sense &sense : p.senses)
+                    senses.append(QVariantMap{{QStringLiteral("definition"), sense.definition}, {QStringLiteral("example"), sense.example}});
+                parts.append(QVariantMap{{QStringLiteral("name"), p.name}, {QStringLiteral("senses"), senses}});
+            }
+            return {{QStringLiteral("found"), true},
+                    {QStringLiteral("word"), formOf.isEmpty() ? candidate : base},
+                    {QStringLiteral("asked"), candidate},
+                    {QStringLiteral("formOf"), formOf},
+                    {QStringLiteral("pronunciation"), entry->pronunciation},
+                    {QStringLiteral("parts"), parts},
+                    {QStringLiteral("libraryId"), dictionary.id},
+                    {QStringLiteral("path"), formOf.isEmpty() ? content->path : base},
+                    {QStringLiteral("library"), dictionary.title}};
+        }
+    }
+    return out;
 }

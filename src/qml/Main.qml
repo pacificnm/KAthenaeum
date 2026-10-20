@@ -18,11 +18,11 @@ Kirigami.ApplicationWindow {
     property string section: "libraries"
     function sectionOf(component) {
         return component === librariesPage ? "libraries" : component === searchPage ? "search" : component === mapPage ? "map"
-             : component === askPage ? "ask" : component === chatsPage ? "chats" : component === projectsPage ? "projects"
+             : component === askPage ? "ask" : component === chatsPage ? "chats" : component === projectsPage ? "projects" : component === notesPage ? "notes"
              : component === libraryManagerPage ? "manager" : component === settingsPage ? "settings" : component === aboutPage ? "about" : section;
     }
     function componentOf(name) {
-        return { libraries: librariesPage, search: searchPage, map: mapPage, ask: askPage, chats: chatsPage, projects: projectsPage,
+        return { libraries: librariesPage, search: searchPage, map: mapPage, ask: askPage, chats: chatsPage, projects: projectsPage, notes: notesPage,
                  manager: libraryManagerPage, settings: settingsPage, about: aboutPage }[name];
     }
 
@@ -34,6 +34,18 @@ Kirigami.ApplicationWindow {
     }
     function showLibraryManager() {
         show(libraryManagerPage);
+    }
+    // the catalog, showing the dictionaries (from a word looked up with none installed)
+    function findDictionaries() {
+        LibraryManager.catalog.category = "";
+        LibraryManager.catalog.flavour = "";
+        LibraryManager.catalog.query = "Wiktionary";
+        show(libraryManagerPage, { startTab: 1 });
+    }
+    // an article's subject on the map; Back returns to the article
+    function showOnMap(location, libraryId, path, title) {
+        const target = Object.assign({}, location, { article: { libraryId: libraryId, path: path, title: title, library: location.libraryTitle ?? "", exact: true } });
+        pageStack.push(mapPage, { target: target });
     }
     function openProject(projectId) {
         section = "projects";
@@ -139,6 +151,13 @@ Kirigami.ApplicationWindow {
     }
 
     Connections {
+        target: Notes
+        function onMessage(text) {
+            root.showPassiveNotification(text, "long");
+        }
+    }
+
+    Connections {
         target: LibraryManager
         function onMessage(text, isError) {
             root.showPassiveNotification(text, isError ? "long" : "short");
@@ -177,6 +196,8 @@ Kirigami.ApplicationWindow {
         ArticlePage {
             onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
             onOpenSettings: root.show(settingsPage)
+            onShowOnMap: (location, libraryId, path, title) => root.showOnMap(location, libraryId, path, title)
+            onOpenLibraryManager: root.findDictionaries()
         }
     }
     Component {
@@ -205,6 +226,13 @@ Kirigami.ApplicationWindow {
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onClosed: root.show(projectsPage)
+        }
+    }
+    Component {
+        id: notesPage
+        NotesPage {
+            onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
+            onOpenProject: projectId => root.openProject(projectId)
         }
     }
     Component {

@@ -131,6 +131,20 @@ double yToLat(double y, int z)
     return 180.0 / M_PI * std::atan(std::sinh(n));
 }
 
+bool contains(const MultiPolygon &shape, double lon, double lat)
+{
+    // even-odd: an odd number of edges crossed going east is inside; a hole's edges count too, which leaves it out
+    bool inside = false;
+    for (const Polygon &polygon : shape)
+        for (const Ring &ring : polygon)
+            for (qsizetype i = 0, j = ring.size() - 1; i < ring.size(); j = i++) {
+                const QPointF &a = ring.at(i), &b = ring.at(j);
+                if ((a.y() > lat) != (b.y() > lat) && lon < (b.x() - a.x()) * (lat - a.y()) / (b.y() - a.y()) + a.x())
+                    inside = !inside;
+            }
+    return inside;
+}
+
 QRectF bounds(const MultiPolygon &shape)
 {
     double w = INFINITY, s = INFINITY, e = -INFINITY, n = -INFINITY;

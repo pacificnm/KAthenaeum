@@ -4,6 +4,7 @@
 #include "core/zimreader.h"
 
 #include "core/library.h"
+#include "core/highlights.h"
 #include "core/projects.h"
 #include "core/settings.h"
 
@@ -32,10 +33,15 @@ QString css(const QPalette &p)
     const QColor text = p.color(QPalette::Text);
     const bool dark = bg.lightness() < 128;
     QString vars = QStringLiteral(":root { --bg: %1; --text: %2; --muted: %3; --border: %4; --surface: %5; --surface-2: %6;"
-                                  " --link: %7; --link-visited: %8; --accent-soft: %9; color-scheme: %10; }")
+                                  " --link: %7; --link-visited: %8; --accent-soft: %9; color-scheme: %10; %11 }")
                        .arg(bg.name(), text.name(), mix(text, bg, 0.4).name(), mix(text, bg, 0.82).name(), mix(text, bg, 0.97).name(),
                             mix(text, bg, 0.92).name(), p.color(QPalette::Link).name(), p.color(QPalette::LinkVisited).name(),
-                            mix(p.color(QPalette::Highlight), bg, 0.85).name(), dark ? QStringLiteral("dark") : QStringLiteral("light"));
+                            mix(p.color(QPalette::Highlight), bg, 0.85).name(), dark ? QStringLiteral("dark") : QStringLiteral("light"),
+                            // highlighter colours: see-through, so the text keeps its own colour in light and dark pages
+                            dark ? QStringLiteral("--hl-yellow: rgba(250, 204, 21, 0.38); --hl-green: rgba(74, 222, 128, 0.32);"
+                                                  " --hl-blue: rgba(96, 165, 250, 0.38); --hl-pink: rgba(244, 114, 182, 0.38);")
+                                 : QStringLiteral("--hl-yellow: rgba(253, 224, 71, 0.6); --hl-green: rgba(134, 239, 172, 0.6);"
+                                                  " --hl-blue: rgba(147, 197, 253, 0.6); --hl-pink: rgba(249, 168, 212, 0.6);"));
     QString rules = QStringLiteral(R"(
 html { background: var(--bg); color: var(--text); }
 body { margin: 0; padding: 24px 32px 64px; font: 17px/1.72 "Noto Serif", "Source Serif Pro", Georgia, serif; overflow-wrap: anywhere; }
@@ -50,6 +56,10 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 .article a.wl-ext::after { content: '\2197'; font-size: 0.7em; margin-left: 2px; opacity: 0.6; }
 .article .wl-missing { color: inherit; }
 .article mark.excerpt-hl { background: var(--accent-soft); color: inherit; border-bottom: 2px solid var(--link); border-radius: 2px; cursor: help; }
+.article mark.hl { color: inherit; border-radius: 2px; padding: 0 1px; scroll-margin-top: 30vh; }
+.article mark.hl[title] { cursor: help; border-bottom: 2px dotted currentColor; }
+.article mark.hl-yellow { background: var(--hl-yellow); } .article mark.hl-green { background: var(--hl-green); }
+.article mark.hl-blue { background: var(--hl-blue); } .article mark.hl-pink { background: var(--hl-pink); }
 .article ul, .article ol { padding-left: 1.5em; margin: 0.8em 0; }
 .article li { margin: 0.25em 0; }
 .article .plainlist ul, .article .plainlist ol, .article ul.plainlist { list-style: none; padding-left: 0; }
@@ -123,13 +133,14 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
     const auto content = ZimReader::content(libraryId, path);
     if (!content || !content->mimetype.startsWith(QLatin1String("text/html")))
         return std::nullopt;
-    // saved excerpts are marked in the page (cleared from the cache whenever a project changes)
+    // highlights and saved excerpts are marked in the page (cleared from the cache whenever either changes)
+    const QList<Highlight> marks = Highlights::marksFor(libraryId, content->path) + Projects::highlightsFor(libraryId, content->path);
     auto rendered = ArticleRenderer::render(
         content->data, content->path, QStringLiteral("zim://lib%1/").arg(libraryId),
         [libraryId](const QString &p) {
             return ZimReader::hasEntry(libraryId, p);
         },
-        nullptr, Projects::highlightsFor(libraryId, content->path));
+        nullptr, marks);
     if (!rendered)
         return std::nullopt;
     auto *a = new Article{libraryId, content->path, std::move(*rendered)};

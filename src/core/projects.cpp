@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "projects.h"
 
+#include "citations.h"
 #include "database.h"
 #include "library.h"
 
@@ -419,32 +420,84 @@ QString Projects::quote(const ProjectItem &clip)
     return lines.join(QLatin1Char('\n'));
 }
 
-QString Projects::exportMarkdown(const QString &markdown)
+namespace
+{
+Citations::Source citationFor(qint64 libraryId, const QString &path, const QString &title)
+{
+    const QString shown = title.isEmpty() ? QString(path).replace(QLatin1Char('_'), QLatin1Char(' ')) : title;
+    if (const auto library = Library::byId(libraryId))
+        return Citations::source(*library, path, shown);
+    Citations::Source s;  // its library is gone: cite what is known
+    s.title = shown;
+    s.path = path;
+    return s;
+}
+
+// A heading that names a list of sources: the user's own, or one inserted with "Insert Works Cited"
+bool hasSourceList(const QString &markdown)
+{
+    static const QRegularExpression heading(QStringLiteral("^#{1,3}\\s*(Works Cited|References|Bibliography)\\s*$"),
+                                            QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    return heading.match(markdown).hasMatch();
+}
+}
+
+QList<Citations::Source> Projects::citedSources(const QString &markdown)
+{
+    QList<Citations::Source> out;
+    QSet<QString> seen;
+    auto it = zimLink().globalMatch(markdown);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        const qint64 libraryId = m.captured(2).toLongLong();
+        const QString path = QUrl::fromPercentEncoding(m.captured(3).toUtf8());
+        const QString key = m.captured(2) + QLatin1Char('/') + path;
+        if (seen.contains(key))
+            continue;
+        seen.insert(key);
+        out << citationFor(libraryId, path, {});
+    }
+    return out;
+}
+
+QString Projects::sourceList(const QString &markdown, Citations::Style style, const QDate &accessed)
+{
+    const QStringList entries = Citations::sorted(style, citedSources(markdown), accessed, true);
+    if (entries.isEmpty())
+        return {};
+    return QStringLiteral("## ") + Citations::listHeading(style) + QStringLiteral("\n\n") + entries.join(QStringLiteral("\n\n")) + QLatin1Char('\n');
+}
+
+QList<Citations::Source> Projects::articleSources(qint64 projectId)
+{
+    QList<Citations::Source> sources;
+    for (const ProjectItem &a : items(projectId, QStringLiteral("article")))
+        sources << citationFor(a.article.libraryId, a.article.path, a.article.title);
+    return sources;
+}
+
+QStringList Projects::bibliography(qint64 projectId, Citations::Style style, const QDate &accessed)
+{
+    return Citations::sorted(style, articleSources(projectId), accessed, true);
+}
+
+QString Projects::exportMarkdown(const QString &markdown, Citations::Style style, const QDate &accessed)
 {
     QString out;
-    QStringList references;
-    QSet<QString> seen;
     qsizetype last = 0;
     auto it = zimLink().globalMatch(markdown);
     while (it.hasNext()) {
         const auto m = it.next();
         out += markdown.mid(last, m.capturedStart() - last) + m.captured(1);
         last = m.capturedEnd();
-        const qint64 libraryId = m.captured(2).toLongLong();
-        const QString path = QUrl::fromPercentEncoding(m.captured(3).toUtf8());
-        if (seen.contains(m.captured(2) + QLatin1Char('/') + path))
-            continue;
-        seen.insert(m.captured(2) + QLatin1Char('/') + path);
-        const auto library = Library::byId(libraryId);
-        const QString title = QString(path).replace(QLatin1Char('_'), QLatin1Char(' '));
-        references << (library && !library->title.isEmpty() ? QStringLiteral("- %1. %2.").arg(title, library->title) : QStringLiteral("- %1.").arg(title));
     }
     out += markdown.mid(last);
-    if (references.isEmpty())
+    // the articles it links to, cited in the chosen style; a list the document already has (the user's own, or one
+    // inserted with "Insert Works Cited") is kept instead
+    if (hasSourceList(markdown))
         return out;
-    // an existing References section (the user's own) is kept; ours goes after it
-    out = out.trimmed() + QStringLiteral("\n\n## References\n\n") + references.join(QLatin1Char('\n')) + QLatin1Char('\n');
-    return out;
+    const QString list = sourceList(markdown, style, accessed);
+    return list.isEmpty() ? out : out.trimmed() + QStringLiteral("\n\n") + list;
 }
 
 namespace
@@ -512,7 +565,7 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
     return out.join(QLatin1Char('\n'));
 }
 
-QString Projects::exportProject(qint64 projectId)
+QString Projects::exportProject(qint64 projectId, Citations::Style style, const QDate &accessed)
 {
     const auto p = byId(projectId);
     if (!p)
@@ -522,17 +575,15 @@ QString Projects::exportProject(qint64 projectId)
         out << p->description << QString();
     const auto docs = documents(projectId);
     for (auto it = docs.crbegin(); it != docs.crend(); ++it)  // oldest first, as they were written
-        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content).trimmed() << QString();
+        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content, style, accessed).trimmed() << QString();
     const auto articles = items(projectId, QStringLiteral("article"));
     if (!articles.isEmpty()) {
         out << QStringLiteral("---") << QString() << QStringLiteral("## Sources") << QString();
         for (const ProjectItem &a : articles) {
-            const auto library = Library::byId(a.article.libraryId);
-            QString line = QStringLiteral("- ") + a.article.title;
-            if (library)
-                line += QStringLiteral(" (%1)").arg(library->title);
+            // each one cited as the chosen style has it, with the note under it
+            QString line = QStringLiteral("- ") + Citations::format(style, citationFor(a.article.libraryId, a.article.path, a.article.title), accessed, true);
             if (!a.note.isEmpty())
-                line += QStringLiteral(" — ") + a.note;
+                line += QStringLiteral("\n  Note: ") + a.note;
             out << line;
         }
         out << QString();
