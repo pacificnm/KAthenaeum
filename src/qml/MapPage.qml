@@ -49,6 +49,15 @@ Kirigami.Page {
         const v = MapManager.startView();
         map.coordinate = [v.lat, v.lon];
         map.zoomLevel = v.zoom;
+        restored = true;
+    }
+    Component.onDestruction: if (restored) MapManager.saveView(map.coordinate[0], map.coordinate[1], map.zoomLevel)
+    // where the map is, kept (a moment after it stops moving) so it opens there again
+    property bool restored: false
+    Timer {
+        id: saveView
+        interval: 500
+        onTriggered: MapManager.saveView(map.coordinate[0], map.coordinate[1], map.zoomLevel)
     }
 
     MapLibre {
@@ -57,6 +66,8 @@ Kirigami.Page {
         visible: MapManager.hasMaps
         // a new style when regions change or the colours do
         style: MapManager.revision >= 0 ? MapManager.styleUrl(page.dark) : ""
+        onCoordinateChanged: if (page.restored) saveView.restart()
+        onZoomLevelChanged: if (page.restored) saveView.restart()
 
         DragHandler {
             id: drag

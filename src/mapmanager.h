@@ -84,8 +84,11 @@ public:
     Q_INVOKABLE QVariantMap placeAt(double lat, double lon, double zoom, double radiusPx);
     // Places by name, for the map's search box: [{name, kindLabel, region, lat, lon, zoom}]
     Q_INVOKABLE QVariantList searchPlaces(const QString &text) const;
-    // The region to show first: the last one downloaded ({lat, lon, zoom}), or the world
+    // Where the map opens: where it was left (this session or the last), else the region downloaded last, else the world.
+    // {lat, lon, zoom}
     Q_INVOKABLE QVariantMap startView() const;
+    // Where the map is now, kept for the next time the map page opens (and the next start)
+    Q_INVOKABLE void saveView(double lat, double lon, double zoom);
 
 Q_SIGNALS:
     void regionsChanged();

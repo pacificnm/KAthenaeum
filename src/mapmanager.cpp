@@ -6,6 +6,7 @@
 #include "core/maplookup.h"
 #include "core/mapplaces.h"
 #include "core/pmtiles.h"
+#include "core/settings.h"
 #include "core/zimreader.h"
 
 #include <KLocalizedString>
@@ -704,8 +705,23 @@ QVariantList MapManager::searchPlaces(const QString &text) const
     return out;
 }
 
+void MapManager::saveView(double lat, double lon, double zoom)
+{
+    if (!std::isfinite(lat) || !std::isfinite(lon) || !std::isfinite(zoom))
+        return;
+    AppSettings::setValue(QStringLiteral("map.view"), QStringLiteral("%1,%2,%3").arg(lat, 0, 'f', 6).arg(lon, 0, 'f', 6).arg(zoom, 0, 'f', 2));
+}
+
 QVariantMap MapManager::startView() const
 {
+    // where it was left: the page is made anew when it is opened from the sidebar, and it opened zoomed out every time
+    const QStringList saved = AppSettings::value(QStringLiteral("map.view")).split(QLatin1Char(','));
+    if (saved.size() == 3 && hasMaps()) {
+        bool a = false, b = false, c = false;
+        const double lat = saved[0].toDouble(&a), lon = saved[1].toDouble(&b), zoom = saved[2].toDouble(&c);
+        if (a && b && c)
+            return {{QStringLiteral("lat"), lat}, {QStringLiteral("lon"), lon}, {QStringLiteral("zoom"), zoom}};
+    }
     std::optional<MapRegionRecord> latest;
     for (const MapRegionRecord &r : MapRegions::ready())
         if (r.region != QLatin1String("world") && (!latest || r.updated > latest->updated))
