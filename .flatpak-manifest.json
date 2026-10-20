@@ -1,0 +1,139 @@
+{
+    "id": "io.github.pacificnm.kathenaeum",
+    "branch": "master",
+    "runtime": "org.kde.Platform",
+    "runtime-version": "6.9",
+    "sdk": "org.kde.Sdk",
+    "base": "io.qt.qtwebengine.BaseApp",
+    "base-version": "6.9",
+    "command": "kathenaeum",
+    "tags": ["nightly"],
+    "desktop-file-name-suffix": " (Nightly)",
+    "finish-args": [
+        "--share=ipc",
+        "--share=network",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--filesystem=xdg-documents",
+        "--filesystem=xdg-download:ro",
+        "--talk-name=org.kde.khelpcenter"
+    ],
+    "cleanup": ["/include", "/lib/pkgconfig", "/lib/cmake", "/share/man", "*.a", "*.la"],
+    "modules": [
+        {
+            "name": "xapian-core",
+            "config-opts": ["--disable-documentation", "--disable-backend-remote"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://oligarchy.co.uk/xapian/1.4.25/xapian-core-1.4.25.tar.xz",
+                    "sha256": "0c99dfdd817571cb5689bc412a7e021407938313f38ea3a70fa3bf86410608ee"
+                }
+            ],
+            "cleanup": ["/bin", "/share/doc", "/share/xapian-core"]
+        },
+        {
+            "name": "libzim",
+            "buildsystem": "meson",
+            "config-opts": ["-Dexamples=false", "-Dtests=false", "-Ddoc=false"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/openzim/libzim/archive/refs/tags/9.2.3.tar.gz",
+                    "sha256": "7c6e7fcaf5bc82447edb12c6c573779af6d77b3b79227da57586e81c4e13f1bf"
+                }
+            ]
+        },
+        {
+            "name": "protozero",
+            "buildsystem": "simple",
+            "build-commands": ["cp -r include/protozero /app/include/"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mapbox/protozero/archive/refs/tags/v1.8.1.tar.gz",
+                    "sha256": "6c7a896f1dc08435e8cd4f3780ff688cd0bfce6890599b755f6f3cb36398dc25"
+                }
+            ]
+        },
+        {
+            "name": "libosmium",
+            "buildsystem": "simple",
+            "build-commands": ["cp -r include/osmium /app/include/"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/osmcode/libosmium/archive/refs/tags/v2.22.0.tar.gz",
+                    "sha256": "8f74e3f6ba295baa7325ae5606e8f74ad9056f1d6ab4555c50bff6aa8246f366"
+                }
+            ]
+        },
+        {
+            "name": "aria2",
+            "config-opts": ["--without-gnutls", "--with-openssl", "--without-libssh2", "--without-sqlite3"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/aria2/aria2/releases/download/release-1.37.0/aria2-1.37.0.tar.xz",
+                    "sha256": "60a420ad7085eb616cb6e2bdf0a7206d68ff3d37fb5a956dc44242eb2f79b66b"
+                }
+            ],
+            "cleanup": ["/share/doc", "/share/locale"]
+        },
+        {
+            "name": "ktexteditor",
+            "buildsystem": "cmake-ninja",
+            "config-opts": ["-DBUILD_TESTING=OFF"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.kde.org/stable/frameworks/6.13/ktexteditor-6.13.0.tar.xz",
+                    "sha256": "7c12ef061f45bdc3b5ecc5c0eec9089cd6521c499217de07a273dc65fdd7c7cf"
+                }
+            ]
+        },
+        {
+            "name": "kirigami-addons",
+            "buildsystem": "cmake-ninja",
+            "config-opts": ["-DBUILD_TESTING=OFF"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.kde.org/stable/kirigami-addons/kirigami-addons-1.7.0.tar.xz",
+                    "sha256": "7d854975185cf740de486d84f1e2ec3e4eadb66ac9fb897214cba9ab8cc492b1"
+                }
+            ]
+        },
+        {
+            "name": "maplibre-native-qt",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DMLN_WITH_OPENGL=ON",
+                "-DMLN_QT_WITH_LOCATION=OFF",
+                "-DMLN_QT_WITH_WIDGETS=OFF",
+                "-DCMAKE_INSTALL_PREFIX=/app/maplibre"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/maplibre/maplibre-native-qt.git",
+                    "commit": "c3485f3a9590081c7be8edbc542341e688f6663d"
+                }
+            ],
+            "cleanup": ["/maplibre"]
+        },
+        {
+            "name": "kathenaeum",
+            "buildsystem": "cmake-ninja",
+            "config-opts": ["-DBUILD_TESTING=OFF", "-DCMAKE_PREFIX_PATH=/app/maplibre"],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}

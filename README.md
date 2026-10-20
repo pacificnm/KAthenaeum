@@ -11,7 +11,9 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats), Ask about this article, research projects (sources, notes, a project chat, documents, AI drafts, highlights), and offline maps that open Wikipedia articles. See [CLAUDE.md](CLAUDE.md) for the design.
+![An article with its notes beside it](doc/notes.png)
+
+> **Status:** in development, version 0.17. Everything below works; the project is preparing to apply to join KDE.
 
 ## Features
 
@@ -49,45 +51,33 @@ KDE / Qt UI  -->  ZIM files via libzim (C++)   (article text, images, title and 
 
 An answer is made in four steps: **find** the best articles through the ZIM's own indexes, **read** their best passages (ranked by meaning with a small embedding model) with a small local answer model, **cite** by matching each answer sentence to the passages by embedding similarity, and **check** for figures or topics the sources do not contain. With the default models on a laptop iGPU, the first words appear after about 5 seconds and a whole answer takes 9 to 19.
 
-## Requirements (intended)
+## Privacy
+
+KAthenaeum has no account, no telemetry and no hosted AI service. Questions, chats, notes and projects stay in one SQLite file in your home folder. It connects to the internet only for these, and only over https:
+
+- the Kiwix catalog (`opds.library.kiwix.org`), when the Library Manager is open, when you check for updates, and once a week if update checks are on (Settings);
+- library downloads from Kiwix's mirrors, when you start one;
+- map downloads from Protomaps (`build.protomaps.com`) and Geofabrik (`download.geofabrik.de`), when you add a region.
+
+Ollama is reached at the address set in Settings (`http://localhost:11434` by default).
+
+## Requirements
 
 | | |
 |---|---|
-| Desktop | KDE Plasma 6 (other Linux desktops should work with the Qt libraries installed) |
-| Libraries | Qt 6, KDE Frameworks 6, Kirigami, libzim (C++, 9.x), SQLite |
-| [Ollama](https://ollama.com) | Installed on the same machine, with a small answer model and an embedding model |
-| aria2 | `aria2c` on the PATH, for downloading ZIM files |
-| Maps | Downloaded from Protomaps (the map) and Geofabrik (the list of regions, and OpenStreetMap data read once for places with articles); MapLibre Native for Qt, built from source and shipped inside the package |
+| Desktop | KDE Plasma 6 (other Linux desktops work with the Qt and KDE libraries installed) |
+| Libraries | Qt 6.8, KDE Frameworks 6.13, Kirigami, Kirigami Addons, libzim 9, libxml2, SQLite, MapLibre Native for Qt |
+| [Ollama](https://ollama.com) | Installed on the same machine, with a small answer model (default `qwen3.5:2b`) and an embedding model (`nomic-embed-text`). Without it, reading and searching still work. |
+| aria2 | `aria2c`, for downloading libraries |
 | GPU | Not required. Built for laptop iGPUs and small models. |
 
-KAthenaeum will be distributed as a `.deb` package for Debian. Ollama is not packaged by Debian, so install it separately.
+## Installing and building
 
-## Building
+There are no release packages yet. To build KAthenaeum, and a `.deb` for Debian, see [HACKING.md](HACKING.md). Ollama is not packaged by Debian: install it from [ollama.com](https://ollama.com).
 
-On Debian 13, install the build dependencies listed in [CLAUDE.md](CLAUDE.md#build-dependencies-debian-13), and build MapLibre Native for Qt once (it is not packaged by Debian; about 2.5 minutes on 16 cores):
+## Contributing and reporting bugs
 
-```bash
-git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/maplibre/maplibre-native-qt.git
-cmake -S maplibre-native-qt -B maplibre-native-qt/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_OPENGL=ON \
-      -DMLN_QT_WITH_LOCATION=OFF -DMLN_QT_WITH_WIDGETS=OFF -DCMAKE_INSTALL_PREFIX=$HOME/maplibre-qt
-cmake --build maplibre-native-qt/build && cmake --install maplibre-native-qt/build
-```
-
-then:
-
-```bash
-cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$HOME/maplibre-qt
-cmake --build build
-ctest --test-dir build                 # unit tests
-./build/bin/kathenaeum                 # run without installing
-cmake --build build --target package   # make a .deb in build/
-```
-
-Some tests read a real library when one is given, real downloads from kiwix.org run only when asked, and so does a check against your local Ollama: `KATHENAEUM_TEST_ZIM=/path/to/wikipedia_en_….zim KATHENAEUM_NETWORK_TESTS=1 KATHENAEUM_OLLAMA_TESTS=1 ctest --test-dir build`.
-
-To see what a region's map takes before adding it to the app: `./build/bin/mapbench https://build.protomaps.com/YYYYMMDD.pmtiles west south east north maxzoom out.pmtiles` (with `DRY=1`, only measure).
-
-To measure Ask on your own libraries and models: `./build/bin/askbench [--answer MODEL] [--embed MODEL] [--article PATH] library.zim… < questions.txt` (one question per line; a line starting with `+` is a follow-up). It prints the time of each step, the sources, and each answer with its citations and flags.
+Report bugs and ideas at [GitHub issues](https://github.com/pacificnm/KAthenaeum/issues). Contributions are welcome: [HACKING.md](HACKING.md) explains how the code is organised, how to test, and the rules changes must follow.
 
 ## Relationship to Athenaeum
 
@@ -95,4 +85,4 @@ Athenaeum is the web version: a FastAPI server with a React UI and a PostgreSQL 
 
 ## License
 
-KAthenaeum is free software, released under the [GNU General Public License v3.0 or later](LICENSE). It links against libzim (GPL-3.0-or-later). Wikipedia text and images in ZIM files have their own licenses (mostly CC BY-SA 4.0).
+KAthenaeum is free software, released under the [GNU General Public License v3.0 or later](LICENSES/GPL-3.0-or-later.txt). The handbook is under CC BY-SA 4.0, and the bundled map assets and MapLibre under their own licences; `REUSE.toml` and `data/copyright` say which applies to what. Wikipedia text and images in ZIM files have their own licences (mostly CC BY-SA 4.0); map data is © OpenStreetMap contributors (ODbL).

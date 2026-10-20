@@ -56,3 +56,9 @@ path = "data/thirdparty/maplibre/**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = ["2021 MapLibre contributors", "2018-2021 MapTiler.com", "2014-2020 Mapbox"]
 SPDX-License-Identifier = "BSD-2-Clause"
+
+[[annotations]]
+path = ".flatpak-manifest.json"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Jaimie Garner <pacificnm@gmail.com>"
+SPDX-License-Identifier = "CC0-1.0"

@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+# KDE's continuous integration (invent.kde.org). MapLibre Native for Qt and libosmium are not KDE projects and must be
+# provided by the CI images or made optional first: see HACKING.md, "Known issues".
+
+Dependencies:
+- 'on': ['Linux']
+  'require':
+    'frameworks/extra-cmake-modules': '@latest-kf6'
+    'frameworks/kirigami': '@latest-kf6'
+    'frameworks/kcoreaddons': '@latest-kf6'
+    'frameworks/ki18n': '@latest-kf6'
+    'frameworks/kcrash': '@latest-kf6'
+    'frameworks/kdbusaddons': '@latest-kf6'
+    'frameworks/kiconthemes': '@latest-kf6'
+    'frameworks/ktexteditor': '@latest-kf6'
+    'frameworks/kwindowsystem': '@latest-kf6'
+    'frameworks/kdoctools': '@latest-kf6'
+    'frameworks/qqc2-desktop-style': '@latest-kf6'
+    'libraries/kirigami-addons': '@latest-kf6'
+
+Options:
+  require-passing-tests-on: ['Linux']

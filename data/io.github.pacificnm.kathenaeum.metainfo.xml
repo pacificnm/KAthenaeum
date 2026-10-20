@@ -11,13 +11,51 @@ SPDX-License-Identifier: CC0-1.0
   <summary>Offline Wikipedia library with a local AI research assistant</summary>
   <description>
     <p>KAthenaeum turns Kiwix ZIM files into a searchable library on your own computer. Ask a question and get an answer written by a small local language model, with every sentence linked back to the Wikipedia article it came from.</p>
-    <p>Nothing leaves your machine: no cloud service, no account, no tracking.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Read and search offline Wikipedia, and any other Wikipedia-style library from the Kiwix catalog</li>
+      <li>Ask questions answered from your libraries, with citations computed by the application and unsupported sentences flagged</li>
+      <li>A classroom: an AI teacher plans courses from your libraries, with lesson introductions, quizzes, unit tests and a tutor</li>
+      <li>Research projects with sources, saved passages, notes, a project chat and Markdown documents</li>
+      <li>Highlights and notes, citations in MLA, APA and Chicago style, a dictionary and timelines</li>
+      <li>Offline maps whose places open their Wikipedia articles</li>
+    </ul>
+    <p>Nothing leaves your computer: the AI runs locally through Ollama, with no cloud service, no account and no tracking.</p>
   </description>
   <launchable type="desktop-id">io.github.pacificnm.kathenaeum.desktop</launchable>
+  <provides>
+    <binary>kathenaeum</binary>
+  </provides>
   <developer id="io.github.pacificnm">
     <name>Jaimie Garner</name>
   </developer>
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
+  <url type="bugtracker">https://github.com/pacificnm/KAthenaeum/issues</url>
+  <url type="vcs-browser">https://github.com/pacificnm/KAthenaeum</url>
+  <url type="contribute">https://github.com/pacificnm/KAthenaeum/blob/main/HACKING.md</url>
+  <translation type="gettext">kathenaeum</translation>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Reading an article with its highlights and notes</caption>
+      <image>https://raw.githubusercontent.com/pacificnm/KAthenaeum/main/doc/notes.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>An answer from the libraries, every sentence cited</caption>
+      <image>https://raw.githubusercontent.com/pacificnm/KAthenaeum/main/doc/ask.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>A lesson planned by the AI teacher</caption>
+      <image>https://raw.githubusercontent.com/pacificnm/KAthenaeum/main/doc/lesson.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Offline maps that open Wikipedia articles</caption>
+      <image>https://raw.githubusercontent.com/pacificnm/KAthenaeum/main/doc/map.png</image>
+    </screenshot>
+  </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="0.17.0" date="2026-10-20">
