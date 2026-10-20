@@ -358,19 +358,18 @@ QString MapManager::parentName(const MapRegionInfo &r) const
 
 QVariantMap MapManager::toVariant(const MapRegionInfo &r) const
 {
-    bool hasChildren = false;
+    int children = 0;
     for (const MapRegionInfo &c : m_catalog)
-        if (c.parent == r.id) {
-            hasChildren = true;
-            break;
-        }
+        if (c.parent == r.id)
+            ++children;
     const auto installed = MapRegions::byRegion(r.id);
     const QRectF b = r.bounds();
     return {
         {QStringLiteral("id"), r.id},
         {QStringLiteral("name"), r.name},
         {QStringLiteral("parentName"), parentName(r)},
-        {QStringLiteral("hasChildren"), hasChildren},
+        {QStringLiteral("hasChildren"), children > 0},
+        {QStringLiteral("childCount"), children},
         {QStringLiteral("continent"), r.parent.isEmpty()},
         {QStringLiteral("status"), installed ? installed->status : QString()},
         {QStringLiteral("installedZoom"), installed ? installed->maxZoom : 0},

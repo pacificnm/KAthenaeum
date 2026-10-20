@@ -48,7 +48,7 @@ Kirigami.ScrollablePage {
                 Kirigami.SearchField {
                     id: search
                     Layout.fillWidth: true
-                    placeholderText: i18n("Find a country or region…")
+                    placeholderText: i18n("Find a country, state or region…")
                     autoAccept: false
                 }
             }
@@ -104,9 +104,13 @@ Kirigami.ScrollablePage {
                         opacity: 0.7
                         font: Kirigami.Theme.smallFont
                         visible: text !== ""
-                        text: row.modelData.status === "complete" ? i18n("Downloaded")
-                            : row.modelData.status !== "" && row.modelData.status !== "failed" && row.modelData.status !== "cancelled" ? i18n("Downloading")
-                            : search.text.trim() !== "" ? row.modelData.parentName : ""
+                        // a country's states and regions are inside it: say so, or they are never found (the user missed
+                        // Oregon inside "United States of America")
+                        text: [row.modelData.status === "complete" ? i18n("Downloaded")
+                               : row.modelData.status !== "" && row.modelData.status !== "failed" && row.modelData.status !== "cancelled" ? i18n("Downloading") : "",
+                               search.text.trim() !== "" ? row.modelData.parentName : "",
+                               row.modelData.childCount > 0 ? i18np("%1 smaller region inside: click to see it", "%1 smaller regions inside: click to see them", row.modelData.childCount) : ""]
+                              .filter(t => t !== "").join(" · ")
                     }
                 }
                 QQC2.Button {
@@ -115,14 +119,10 @@ Kirigami.ScrollablePage {
                     icon.name: "folder-download"
                     onClicked: sheet.show(row.modelData)
                 }
-                QQC2.ToolButton {
+                QQC2.Button {
                     visible: row.modelData.hasChildren
                     icon.name: "go-next"
-                    display: QQC2.AbstractButton.IconOnly
                     text: i18n("Show Its Parts")
-                    QQC2.ToolTip.text: text
-                    QQC2.ToolTip.visible: hovered
-                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: page.enter(row.modelData)
                 }
             }
