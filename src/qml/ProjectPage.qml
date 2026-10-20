@@ -283,7 +283,7 @@ Kirigami.Page {
                         QQC2.Button {
                             text: i18n("Draft with AI")
                             icon.name: "tools-wizard"
-                            enabled: !Drafting.running && (project.articles.length + project.excerpts.length + project.chats.length > 0)
+                            enabled: !Drafting.running
                             onClicked: draftMenu.popup()
                         }
                         QQC2.Button {
@@ -378,6 +378,11 @@ Kirigami.Page {
 
     QQC2.Menu {
         id: draftMenu
+        QQC2.MenuItem {
+            text: i18n("Write From Your Instructions…")
+            icon.name: "document-edit"
+            onTriggered: reportDialog.open()
+        }
         QQC2.MenuItem {
             text: i18n("Summary of the Project")
             icon.name: "view-list-text"
@@ -493,6 +498,78 @@ Kirigami.Page {
             const error = project.exportTo(selectedFile);
             applicationWindow().showPassiveNotification(error !== "" ? error : i18n("Exported to %1", selectedFile.toString().replace("file://", "")),
                                                         error !== "" ? "long" : "short");
+        }
+    }
+
+    // A report written to the user's instructions: planned into sections, each written from its own sources
+    Kirigami.Dialog {
+        id: reportDialog
+        title: i18n("Write From Your Instructions")
+        padding: Kirigami.Units.largeSpacing
+        preferredWidth: Kirigami.Units.gridUnit * 30
+        standardButtons: Kirigami.Dialog.NoButton
+        readonly property bool emptyProject: project.articles.length + project.excerpts.length === 0
+        onOpened: {
+            if (reportTitle.text === "")
+                reportTitle.text = project.title;
+            if (emptyProject)
+                wholeLibrary.checked = true;
+            instructions.forceActiveFocus();
+        }
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Write")
+                icon.name: "tools-wizard"
+                enabled: reportTitle.text.trim() !== "" && instructions.text.trim() !== "" && !Drafting.running
+                onTriggered: {
+                    Drafting.writeReport(project.projectId, reportTitle.text, instructions.text, fullReport.checked, wholeLibrary.checked);
+                    reportDialog.close();
+                }
+            },
+            Kirigami.Action { text: i18n("Cancel"); icon.name: "dialog-cancel"; onTriggered: reportDialog.close() }
+        ]
+        ColumnLayout {
+            spacing: Kirigami.Units.smallSpacing
+            QQC2.Label { textFormat: Text.PlainText; text: i18n("Title") }
+            QQC2.TextField {
+                id: reportTitle
+                Layout.fillWidth: true
+            }
+            QQC2.Label { textFormat: Text.PlainText; text: i18n("What should it cover, and how?") ; Layout.topMargin: Kirigami.Units.smallSpacing }
+            QQC2.ScrollView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 9
+                QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff  // the text wraps
+                QQC2.TextArea {
+                    id: instructions
+                    wrapMode: TextEdit.Wrap
+                    textFormat: TextEdit.PlainText
+                    placeholderText: i18n("For example: A full report on how Crater Lake formed. Start with Mount Mazama and the eruption, then the caldera and how the lake filled, then its water clarity and research since. Formal tone, with a short conclusion.")
+                }
+            }
+            QQC2.RadioButton {
+                id: shortReport
+                text: i18n("Short: about 3 sections")
+                checked: true
+            }
+            QQC2.RadioButton {
+                id: fullReport
+                text: i18n("Full report: up to 6 longer sections (a few minutes)")
+            }
+            QQC2.CheckBox {
+                id: wholeLibrary
+                text: reportDialog.emptyProject ? i18n("Search the whole library (the project has no sources yet)")
+                                                : i18n("Also search the whole library, beyond the project's sources")
+                enabled: !reportDialog.emptyProject
+            }
+            QQC2.Label {
+                Layout.fillWidth: true
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                color: Kirigami.Theme.disabledTextColor
+                font: Kirigami.Theme.smallFont
+                text: i18n("A small local model plans the sections from your instructions, then writes each one from the sources that fit it. KAthenaeum adds the source numbers and a reference list. The result becomes a document you can edit.")
+            }
         }
     }
 

@@ -3,6 +3,7 @@
 
 #include "core/drafts.h"
 #include "modelsettings.h"
+#include "core/library.h"
 #include "projectlist.h"
 
 #include <KLocalizedString>
@@ -58,6 +59,25 @@ void DraftController::summarizeChat(qint64 projectId, qint64 chatId)
     m_streamed.clear();
     ModelSettings *m = ModelSettings::instance();
     m_drafter->summarizeChat(chatId, {m->answerModel(), m->embeddingModel()});
+    Q_EMIT stateChanged();
+}
+
+void DraftController::writeReport(qint64 projectId, const QString &title, const QString &instructions, bool full, bool alsoLibrary)
+{
+    m_projectId = projectId;
+    m_streamed.clear();
+    Drafts::ReportRequest request;
+    request.title = title;
+    request.instructions = instructions;
+    request.sections = full ? 6 : 3;
+    request.words = full ? 300 : 180;
+    request.alsoLibrary = alsoLibrary;
+    QList<qint64> libraries;
+    for (const LibraryRecord &l : Library::all())
+        if (l.fileExists())
+            libraries << l.id;
+    ModelSettings *m = ModelSettings::instance();
+    m_drafter->writeReport(projectId, request, libraries, {m->answerModel(), m->embeddingModel()});
     Q_EMIT stateChanged();
 }
 

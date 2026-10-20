@@ -32,6 +32,8 @@ public:
 
     Q_INVOKABLE void summarizeProject(qint64 projectId);
     Q_INVOKABLE void summarizeChat(qint64 projectId, qint64 chatId);
+    // A report to the user's instructions: `full` for up to 6 longer sections, else about 3
+    Q_INVOKABLE void writeReport(qint64 projectId, const QString &title, const QString &instructions, bool full, bool alsoLibrary);
     Q_INVOKABLE void stop();
 
 Q_SIGNALS:

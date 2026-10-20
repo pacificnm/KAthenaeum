@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.11.0" date="2026-10-19">
+      <description>
+        <p>Research projects: have the AI write a report to your own instructions, planned in sections, each written from the sources that fit it, with citations and a reference list added by KAthenaeum.</p>
+      </description>
+    </release>
     <release version="0.10.0" date="2026-10-19">
       <description>
         <p>Offline maps: download the world overview and the regions you choose in Settings, browse them without a connection, and click a place to open its Wikipedia article from your libraries.</p>
