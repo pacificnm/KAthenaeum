@@ -406,9 +406,11 @@ With more than one reading, <guilabel>[1]</guilabel> and <guilabel>[2]</guilabel
 </mediaobject>
 </screenshot>
 <para>
-Then read: each reading opens as an ordinary article, with every reading tool: <link linkend="highlights">highlights and
-notes</link>, the <link linkend="dictionary">dictionary</link>, and <link linkend="ask-article">Ask</link> beside it when
-something is unclear. When you have finished, press <guibutton>I've Finished This Lesson</guibutton> and go on with
+Then read: each reading opens as an ordinary article with the lesson beside it, its <guilabel>As you read</guilabel>
+questions at the top, then the introduction and key words, and the lesson's other readings. Every reading tool works as
+usual: <link linkend="highlights">highlights and notes</link>, <link linkend="citing">Cite</link>, the
+<link linkend="dictionary">dictionary</link>, and <link linkend="ask-article">Ask</link> when something is unclear (one
+panel shows at a time; <guibutton>Lesson</guibutton> in the header brings the lesson back). When you have finished, press <guibutton>I've Finished This Lesson</guibutton> and go on with
 <guibutton>Next Lesson</guibutton>; the arrows in the header move between lessons.
 </para>
 <para>

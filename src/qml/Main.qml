@@ -99,6 +99,10 @@ Kirigami.ApplicationWindow {
     function openArticle(libraryId, path, fragment) {
         pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), fragment: fragment ?? "" });
     }
+    // a lesson's reading: the article with the lesson beside it
+    function openReading(libraryId, path, lessonId) {
+        pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), lessonId: lessonId });
+    }
 
     // Each page's title in the header, with a back button when there is somewhere to go back to (a breadcrumb trail
     // of every page, with back and forward arrows, looked dated: the user, 2026-10-19)
@@ -273,7 +277,7 @@ Kirigami.ApplicationWindow {
     Component {
         id: lessonPage
         LessonPage {
-            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+            onOpenArticle: (libraryId, path) => root.openReading(libraryId, path, lessonId)
             onOpenLesson: lessonId => root.openLesson(lessonId, true)
         }
     }

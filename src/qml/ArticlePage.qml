@@ -19,7 +19,11 @@ Kirigami.Page {
     property var info: ({})
     property bool asking: false   // the chat panel is open
     property bool notesOpen: false  // the highlights panel is open (one panel at a time)
-    readonly property bool panelOpen: asking || notesOpen
+    // a lesson's reading: the lesson (the teacher's introduction and questions) beside it, open from the start
+    property var lessonId: 0
+    property bool lessonOpen: lessonId > 0
+    property var lesson: ({})
+    readonly property bool panelOpen: asking || notesOpen || lessonOpen
     property var highlights: []   // this article's, for the Notes panel
     property var location: ({})   // where the map shows the article's subject (MapManager.locate), or nothing
     property var openChatId: 0    // a saved chat about this article to show once it has loaded (from the Chats page)
@@ -56,8 +60,28 @@ Kirigami.Page {
         refreshNotes();
         locate();
     }
-    onAskingChanged: if (asking) notesOpen = false
-    onNotesOpenChanged: if (notesOpen) asking = false
+    onAskingChanged: if (asking) { notesOpen = false; lessonOpen = false; }
+    onNotesOpenChanged: if (notesOpen) { asking = false; lessonOpen = false; }
+    onLessonOpenChanged: if (lessonOpen) { asking = false; notesOpen = false; }
+    function refreshLesson() {
+        page.lesson = page.lessonId > 0 ? Classroom.lesson(page.lessonId) : {};
+    }
+    // the questions to read with first, where they are easy to refer back to, then the rest of the introduction
+    readonly property var lessonParts: {
+        const intro = page.lesson.intro ?? "";
+        const m = intro.match(/(^|\n)##\s*As you read[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
+        if (!m)
+            return { questions: "", rest: intro };
+        return { questions: m[2].trim(), rest: (intro.slice(0, m.index) + intro.slice(m.index + m[0].length)).trim() };
+    }
+    onLessonIdChanged: refreshLesson()
+    Component.onCompleted: refreshLesson()
+    Connections {
+        target: Classroom
+        enabled: page.lessonId > 0
+        function onCoursesChanged() { page.refreshLesson(); }
+        function onIntroReady(lessonId) { if (lessonId === page.lessonId) page.refreshLesson(); }
+    }
 
     function refreshNotes() {
         page.highlights = page.info.found ? Notes.forArticle(page.info.libraryId, page.info.path) : [];
@@ -91,6 +115,7 @@ Kirigami.Page {
             // article first and jump once it is laid out
             page.asking = false;
             page.notesOpen = false;
+            page.lessonOpen = false;
             page.fragment = fragment;
             fragmentTimer.restart();
         } else {
@@ -125,6 +150,15 @@ Kirigami.Page {
                 if (page.asking)
                     chat.focusInput();
             }
+        },
+        Kirigami.Action {
+            text: i18n("Lesson")
+            icon.name: "applications-education-symbolic"
+            visible: page.lessonId > 0
+            checkable: true
+            checked: page.lessonOpen
+            tooltip: i18n("The lesson this reading is for: the teacher's introduction and the questions to read with")
+            onTriggered: page.lessonOpen = !page.lessonOpen
         },
         Kirigami.Action {
             text: page.highlights.length > 0 ? i18n("Notes (%1)", page.highlights.length) : i18n("Notes")
@@ -278,6 +312,164 @@ Kirigami.Page {
     Kirigami.Separator {
         Layout.fillHeight: true
         visible: page.panelOpen && !page.narrow
+    }
+
+    // the lesson panel: what the teacher asked to look for, beside the reading
+    ColumnLayout {
+        Layout.fillHeight: true
+        Layout.fillWidth: page.narrow
+        Layout.preferredWidth: page.narrow ? -1 : Math.max(Kirigami.Units.gridUnit * 20, page.width * 0.32)
+        visible: page.lessonOpen
+        spacing: 0
+
+        QQC2.ToolBar {
+            Layout.fillWidth: true
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        textFormat: Text.PlainText
+                        text: i18n("Lesson %1 of %2 · %3", page.lesson.number ?? 0, page.lesson.count ?? 0, page.lesson.courseTitle ?? "")
+                        elide: Text.ElideRight
+                        font: Kirigami.Theme.smallFont
+                        opacity: 0.7
+                    }
+                    Kirigami.Heading {
+                        Layout.fillWidth: true
+                        level: 4
+                        textFormat: Text.PlainText
+                        text: page.lesson.title ?? ""
+                        elide: Text.ElideRight
+                    }
+                }
+                QQC2.ToolButton {
+                    icon.name: "window-close"
+                    text: i18n("Close")
+                    display: QQC2.AbstractButton.IconOnly
+                    QQC2.ToolTip.text: text
+                    QQC2.ToolTip.visible: hovered
+                    onClicked: page.lessonOpen = false
+                }
+            }
+        }
+        QQC2.ScrollView {
+            id: lessonScroll
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentWidth: availableWidth
+            QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+            ColumnLayout {
+                width: lessonScroll.availableWidth
+                spacing: Kirigami.Units.largeSpacing
+                Item { implicitHeight: Kirigami.Units.smallSpacing }
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    visible: text !== ""
+                    textFormat: Text.PlainText
+                    text: page.lesson.objective ?? ""
+                    wrapMode: Text.Wrap
+                    font.italic: true
+                    opacity: 0.75
+                }
+                // the questions to answer while reading
+                Kirigami.ShadowedRectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    visible: page.lessonParts.questions !== ""
+                    implicitHeight: questionsLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
+                    radius: Kirigami.Units.cornerRadius * 1.5
+                    color: Qt.alpha(Kirigami.Theme.highlightColor, 0.1)
+                    ColumnLayout {
+                        id: questionsLayout
+                        anchors { fill: parent; margins: Kirigami.Units.largeSpacing }
+                        spacing: Kirigami.Units.smallSpacing
+                        QQC2.Label {
+                            textFormat: Text.PlainText
+                            text: i18n("As you read")
+                            font.weight: Font.DemiBold
+                        }
+                        TextEdit {
+                            Layout.fillWidth: true
+                            text: page.lessonParts.questions
+                            textFormat: TextEdit.MarkdownText
+                            wrapMode: TextEdit.Wrap
+                            readOnly: true
+                            selectByMouse: true
+                            color: Kirigami.Theme.textColor
+                            selectedTextColor: Kirigami.Theme.highlightedTextColor
+                            selectionColor: Kirigami.Theme.highlightColor
+                            font: Kirigami.Theme.defaultFont
+                        }
+                    }
+                }
+                // the rest of the teacher's introduction: the main idea and key words (Markdown from the model, tidied)
+                TextEdit {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    visible: text !== ""
+                    text: page.lessonParts.rest
+                    textFormat: TextEdit.MarkdownText
+                    wrapMode: TextEdit.Wrap
+                    readOnly: true
+                    selectByMouse: true
+                    color: Kirigami.Theme.textColor
+                    selectedTextColor: Kirigami.Theme.highlightedTextColor
+                    selectionColor: Kirigami.Theme.highlightColor
+                    font: Kirigami.Theme.defaultFont
+                }
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    visible: (page.lesson.intro ?? "") === ""
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    opacity: 0.7
+                    text: i18n("The teacher has not written this lesson's introduction yet. Open the lesson to have it written.")
+                }
+                // the lesson's readings: this one marked, the others a click away
+                QQC2.Label {
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    visible: (page.lesson.readings ?? []).length > 1
+                    textFormat: Text.PlainText
+                    text: i18n("Readings")
+                    font.weight: Font.DemiBold
+                }
+                Repeater {
+                    model: (page.lesson.readings ?? []).length > 1 ? page.lesson.readings : []
+                    delegate: QQC2.ItemDelegate {
+                        id: lessonReading
+                        required property var modelData
+                        readonly property bool current: modelData.libraryId === page.info.libraryId && modelData.path === page.info.path
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.smallSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        enabled: modelData.available && !current
+                        icon.name: current ? "go-next" : "document-open"
+                        text: modelData.n + ". " + Util.plain(modelData.title)
+                        font.weight: current ? Font.DemiBold : Font.Normal
+                        onClicked: view.url = LibraryBrowser.articleUrl(modelData.libraryId, modelData.path)
+                    }
+                }
+                AppButton {
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    Layout.bottomMargin: Kirigami.Units.largeSpacing
+                    kind: page.lesson.completed ? "secondary" : "primary"
+                    icon.name: page.lesson.completed ? "edit-undo" : "checkmark"
+                    text: page.lesson.completed ? i18n("Mark as Not Done") : i18n("I've Finished This Lesson")
+                    onClicked: Classroom.setCompleted(page.lessonId, !page.lesson.completed)
+                }
+            }
+        }
     }
 
     // the highlights panel

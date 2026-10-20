@@ -75,7 +75,7 @@ Kirigami.ScrollablePage {
                 text: i18n("%1 · %2 · Lesson %3 of %4", page.lesson.courseTitle ?? "", page.lesson.unitTitle ?? "", page.lesson.number ?? 0, page.lesson.count ?? 0)
                 elide: Text.ElideRight
                 font: Kirigami.Theme.smallFont
-                color: Kirigami.Theme.highlightColor
+                opacity: 0.7  // the accent colour was nearly invisible on a light accent (the user, 2026-10-20)
             }
             Kirigami.Heading {
                 Layout.fillWidth: true
@@ -213,13 +213,12 @@ Kirigami.ScrollablePage {
                         Layout.preferredWidth: Kirigami.Units.gridUnit * 1.6
                         Layout.preferredHeight: Layout.preferredWidth
                         radius: width / 2
-                        color: Qt.alpha(Kirigami.Theme.highlightColor, 0.15)
+                        color: Qt.alpha(Kirigami.Theme.textColor, 0.08)
                         QQC2.Label {
                             anchors.centerIn: parent
                             textFormat: Text.PlainText
                             text: reading.modelData.n
                             font.weight: Font.DemiBold
-                            color: Kirigami.Theme.highlightColor
                         }
                     }
                     ColumnLayout {

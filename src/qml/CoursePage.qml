@@ -167,7 +167,7 @@ Kirigami.ScrollablePage {
                         textFormat: Text.PlainText
                         text: i18n("Unit %1", unit.index + 1)
                         font: Kirigami.Theme.smallFont
-                        color: Kirigami.Theme.highlightColor
+                        opacity: 0.6
                     }
                     Kirigami.Heading {
                         Layout.fillWidth: true
