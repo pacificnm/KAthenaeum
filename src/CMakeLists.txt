@@ -76,6 +76,7 @@ qt_add_qml_module(kathenaeum
         qml/CitationDialog.qml
         qml/ClassroomPage.qml
         qml/CoursePage.qml
+        qml/CourseProjectDialog.qml
         qml/LessonPage.qml
         qml/NewCourseDialog.qml
         qml/ProfileDialog.qml

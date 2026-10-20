@@ -19,7 +19,11 @@ Kirigami.Page {
     signal openArticle(var libraryId, string path, string fragment)
     signal openChat(var chatId, var articleLibraryId, string articlePath)
     signal openDocument(var documentId)
+    signal openCourse(var courseId)
     signal closed()
+
+    // the classroom course this project is kept for, if any
+    readonly property var course: project.projectId > 0 && project.exists ? Classroom.courseForProject(project.projectId) : ({})
 
     title: Util.pageTitle(project.title)
     padding: 0
@@ -100,6 +104,29 @@ Kirigami.Page {
             wrapMode: Text.Wrap
             color: Kirigami.Theme.disabledTextColor
         }
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            visible: page.course.id !== undefined
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.Icon {
+                source: "applications-education-symbolic"
+                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                opacity: 0.7
+            }
+            QQC2.Label {
+                textFormat: Text.PlainText
+                text: i18n("Kept for the course “%1”", page.course.title ?? "")
+                opacity: 0.7
+            }
+            AppButton {
+                kind: "flat"
+                text: i18n("Open Course")
+                onClicked: page.openCourse(page.course.id)
+            }
+            Item { Layout.fillWidth: true }
+        }
 
         SegmentedTabs {
             id: tabs
@@ -166,7 +193,8 @@ Kirigami.Page {
                         delegate: SourceRow {
                             Layout.fillWidth: true
                             heading: modelData.title
-                            detail: modelData.available ? modelData.libraryTitle : i18n("%1 (not installed)", modelData.libraryTitle || i18n("library removed"))
+                            detail: (modelData.available ? modelData.libraryTitle : i18n("%1 (not installed)", modelData.libraryTitle || i18n("library removed")))
+                                    + (modelData.lesson !== "" ? " · " + modelData.lesson : "")
                             note: modelData.note
                             iconName: "text-html"
                             onOpen: if (modelData.available) page.openArticle(modelData.libraryId, modelData.path, "")
@@ -190,9 +218,10 @@ Kirigami.Page {
                         delegate: SourceRow {
                             Layout.fillWidth: true
                             quote: modelData.text
-                            detail: modelData.title === "" ? i18n("Saved answer")
+                            detail: (modelData.title === "" ? i18n("Saved answer")
                                 : modelData.sources > 1 ? i18np("%2 and %1 other", "%2 and %1 others", modelData.sources - 1, modelData.title)
-                                : modelData.section !== "" ? i18n("%1 – %2", modelData.title, modelData.section) : modelData.title
+                                : modelData.section !== "" ? i18n("%1 – %2", modelData.title, modelData.section) : modelData.title)
+                                + (modelData.lesson !== "" ? " · " + modelData.lesson : "")
                             note: modelData.note
                             iconName: "format-text-blockquote"
                             onOpen: if (modelData.available) page.openArticle(modelData.libraryId, modelData.path, "")

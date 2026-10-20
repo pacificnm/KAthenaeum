@@ -9,6 +9,7 @@
 #include "core/settings.h"
 
 #include <QCache>
+#include <QSet>
 #include <QColor>
 
 namespace
@@ -134,7 +135,14 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
     if (!content || !content->mimetype.startsWith(QLatin1String("text/html")))
         return std::nullopt;
     // highlights and saved excerpts are marked in the page (cleared from the cache whenever either changes)
-    const QList<Highlight> marks = Highlights::marksFor(libraryId, content->path) + Projects::highlightsFor(libraryId, content->path);
+    // a passage both highlighted and saved to a project (a lesson's highlight is both) is marked once, in its colour
+    QList<Highlight> marks = Highlights::marksFor(libraryId, content->path);
+    QSet<QString> marked;
+    for (const Highlight &h : std::as_const(marks))
+        marked.insert(h.text.simplified().toLower());
+    for (const Highlight &h : Projects::highlightsFor(libraryId, content->path))
+        if (!marked.contains(h.text.simplified().toLower()))
+            marks << h;
     auto rendered = ArticleRenderer::render(
         content->data, content->path, QStringLiteral("zim://lib%1/").arg(libraryId),
         [libraryId](const QString &p) {

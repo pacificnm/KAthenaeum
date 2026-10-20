@@ -230,6 +230,7 @@ Kirigami.ApplicationWindow {
             onOpenSettings: root.show(settingsPage)
             onShowOnMap: (location, libraryId, path, title) => root.showOnMap(location, libraryId, path, title)
             onOpenLibraryManager: root.findDictionaries()
+            onOpenProject: projectId => root.openProject(projectId)
         }
     }
     Component {
@@ -257,6 +258,7 @@ Kirigami.ApplicationWindow {
             onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
+            onOpenCourse: courseId => root.openCourse(courseId)
             onClosed: root.show(projectsPage)
         }
     }
@@ -271,6 +273,7 @@ Kirigami.ApplicationWindow {
         id: coursePage
         CoursePage {
             onOpenLesson: lessonId => root.openLesson(lessonId, false)
+            onOpenProject: projectId => root.openProject(projectId)
             onClosed: root.show(classroomPage)
         }
     }
@@ -279,6 +282,7 @@ Kirigami.ApplicationWindow {
         LessonPage {
             onOpenArticle: (libraryId, path) => root.openReading(libraryId, path, lessonId)
             onOpenLesson: lessonId => root.openLesson(lessonId, true)
+            onOpenProject: projectId => root.openProject(projectId)
         }
     }
     Component {

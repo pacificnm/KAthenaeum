@@ -6,6 +6,7 @@
 #include "core/classroom.h"
 #include "core/database.h"
 #include "core/library.h"
+#include "core/projects.h"
 #include "core/teacher.h"
 
 // The classroom (schema v10): reading the teacher's syllabus, levels, which libraries a subject reads, storing courses,
@@ -202,6 +203,66 @@ private Q_SLOTS:
         QSqlQuery q(QStringLiteral("SELECT (SELECT count(*) FROM course_units) + (SELECT count(*) FROM course_lessons)"));
         QVERIFY(q.next());
         QCOMPARE(q.value(0).toInt(), 0);
+    }
+
+    void aCourseKeptInAProject()
+    {
+        const qint64 course = Classroom::createCourse(QStringLiteral("science"), QStringLiteral("Volcanoes"), QStringLiteral("9"), {}, {});
+        Classroom::Lesson a;
+        a.title = QStringLiteral("The Lithosphere");
+        a.readings = {{{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")}, 0.8}};
+        Classroom::Lesson b;
+        b.title = QStringLiteral("Seismic Waves");
+        b.readings = {{{2, QStringLiteral("Seismic_wave"), QStringLiteral("Seismic wave")}, 0.8},
+                      {{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")}, 0.75}};  // shared with lesson 1
+        QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Plates"), {a, b}}}));
+        const auto lessons = Classroom::syllabus(course).first().lessons;
+        QCOMPARE(Classroom::lessonLabel(lessons[1].id), QStringLiteral("Lesson 2: Seismic Waves"));
+
+        QVERIFY(!Classroom::syncLesson(lessons[0].id));  // no project yet
+        const qint64 project = Projects::create(QStringLiteral("Volcanoes"));
+        QVERIFY(Classroom::setProject(course, project));
+        QCOMPARE(Classroom::courseForProject(project)->id, course);
+        QVERIFY(Classroom::setIntro(lessons[0].id, QStringLiteral("The main idea.\n\n## As you read\n\n1. Why?")));
+        Classroom::syncCourse(course);
+
+        // the readings, once each, labelled with the first lesson that reads them
+        const auto articles = Projects::items(project, QStringLiteral("article"));
+        QCOMPARE(articles.size(), 2);
+        for (const ProjectItem &i : articles)
+            QCOMPARE(i.lesson, i.article.path == QLatin1String("Lithosphere") ? QStringLiteral("Lesson 1: The Lithosphere")
+                                                                               : QStringLiteral("Lesson 2: Seismic Waves"));
+        // the introduction as a document, once; lesson 2 has none yet
+        auto docs = Projects::documents(project);
+        QCOMPARE(docs.size(), 1);
+        QCOMPARE(docs[0].title, QStringLiteral("Lesson 1: The Lithosphere"));
+        QVERIFY(docs[0].content.contains(QLatin1String("## As you read")));
+        QVERIFY(docs[0].content.contains(QLatin1String("## Readings\n\n1. [Lithosphere](zim://lib2/Lithosphere)")));
+        QVERIFY(docs[0].content.trimmed().endsWith(QLatin1String("## My answers")));
+        Classroom::syncCourse(course);
+        QCOMPARE(Projects::documents(project).size(), 1);
+        QCOMPARE(Projects::items(project, QStringLiteral("article")).size(), 2);
+        // deleted, it is written again the next time
+        QVERIFY(Projects::removeDocument(docs[0].id));
+        Classroom::syncLesson(lessons[0].id);
+        QCOMPARE(Projects::documents(project).size(), 1);
+
+        // a highlight while reading for the lesson: an excerpt, once, with the lesson
+        const ArticleRef lith{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")};
+        const qint64 clip = Classroom::keepHighlight(lessons[0].id, QStringLiteral("The lithosphere is the rigid outer shell."), lith, {});
+        QVERIFY(clip > 0);
+        QCOMPARE(Classroom::keepHighlight(lessons[0].id, QStringLiteral("the lithosphere is  the rigid outer shell."), lith, QStringLiteral("key")), clip);
+        const auto clips = Projects::items(project, QStringLiteral("clip"));
+        QCOMPARE(clips.size(), 1);
+        QCOMPARE(clips[0].note, QStringLiteral("key"));  // a note given later is kept
+        QCOMPARE(clips[0].lesson, QStringLiteral("Lesson 1: The Lithosphere"));
+
+        // untied: nothing more goes in; deleting the project unties it
+        QVERIFY(Classroom::setProject(course, 0));
+        QCOMPARE(Classroom::keepHighlight(lessons[0].id, QStringLiteral("Another passage of the reading."), lith, {}), 0);
+        QVERIFY(Classroom::setProject(course, project));
+        QVERIFY(Projects::remove(project));
+        QCOMPARE(Classroom::course(course)->projectId, 0);
     }
 
     void aLessonsReadings()

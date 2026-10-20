@@ -42,6 +42,7 @@ struct ProjectItem {
     QString embedModel;
     qint64 chatId = 0;  // an attached chat
     QString chatTitle;
+    QString lesson;  // the classroom lesson it was added for ("Lesson 3: Fractions"), if any
     QDateTime createdAt;
 };
 
@@ -70,6 +71,8 @@ qint64 addArticle(qint64 projectId, const ArticleRef &article, const QString &no
 qint64 addClip(qint64 projectId, const QString &text, const QList<ArticleRef> &refs, const QString &section = {}, const QString &note = {});
 qint64 attachChat(qint64 projectId, qint64 chatId);  // idempotent
 bool setNote(qint64 projectId, qint64 itemId, const QString &note);
+// The lesson an item was added for; an item already labelled keeps its first lesson
+bool setLesson(qint64 itemId, const QString &lesson);
 bool removeItem(qint64 projectId, qint64 itemId);
 bool setEmbedding(qint64 itemId, const Vector &v, const QString &model);
 QList<ProjectItem> items(qint64 projectId, const QString &kind = {});  // newest first

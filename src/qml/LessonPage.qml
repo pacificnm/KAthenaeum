@@ -16,6 +16,7 @@ Kirigami.ScrollablePage {
 
     signal openArticle(var libraryId, string path)
     signal openLesson(var lessonId)
+    signal openProject(var projectId)
 
     title: Util.pageTitle(lesson.title ?? i18n("Lesson"))
 
@@ -259,6 +260,30 @@ Kirigami.ScrollablePage {
             text: i18n("While you read: highlight what matters, right-click a word to look it up, and use Ask beside the article if something is unclear.")
         }
 
+        // the course's project: where the readings, this introduction and the highlights are kept
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.Icon {
+                source: "folder-bookmark"
+                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                opacity: 0.7
+            }
+            QQC2.Label {
+                textFormat: Text.PlainText
+                text: (page.lesson.projectId ?? 0) > 0 ? i18n("Kept in the project “%1”", page.lesson.projectTitle) : i18n("Not kept in a project")
+                opacity: 0.7
+            }
+            AppButton {
+                kind: "flat"
+                text: (page.lesson.projectId ?? 0) > 0 ? i18n("Open Project") : i18n("Keep the Course in a Project…")
+                onClicked: (page.lesson.projectId ?? 0) > 0 ? page.openProject(page.lesson.projectId) : projectDialog.open()
+            }
+            Item { Layout.fillWidth: true }
+        }
+
         // done
         RowLayout {
             Layout.fillWidth: true
@@ -280,5 +305,13 @@ Kirigami.ScrollablePage {
             }
             Item { Layout.fillWidth: true }
         }
+    }
+
+    CourseProjectDialog {
+        id: projectDialog
+        courseId: page.lesson.courseId ?? 0
+        courseTitle: page.lesson.courseTitle ?? ""
+        onTied: projectId => applicationWindow().showPassiveNotification(i18n("This course is now kept in a project"), "long",
+                                                                          i18n("Open"), () => page.openProject(projectId))
     }
 }

@@ -90,6 +90,7 @@ struct Course {
     QString status;  // new | planning | ready | failed
     QString error;
     QDateTime updatedAt;
+    qint64 projectId = 0;  // the research project it is kept in, if any
     int lessons = 0;
     int completed = 0;
 };
@@ -110,6 +111,19 @@ bool saveSyllabus(qint64 courseId, const QList<Unit> &units);
 QList<Unit> syllabus(qint64 courseId);
 std::optional<Lesson> lesson(qint64 id);
 bool setIntro(qint64 lessonId, const QString &markdown);
+
+// ---- a course kept in a research project ----
+bool setProject(qint64 courseId, qint64 projectId);  // 0: none
+std::optional<Course> courseForProject(qint64 projectId);
+QString lessonLabel(qint64 lessonId);  // "Lesson 3: Fractions", numbered through the course
+// Puts what the lesson has into its course's project: its readings as sources, its introduction as a document (once;
+// again if that document was deleted). False if the course has no project.
+bool syncLesson(qint64 lessonId);
+void syncCourse(qint64 courseId);
+// A highlight made while reading for the lesson, kept in its course's project as an excerpt (once). Its item id, or 0.
+qint64 keepHighlight(qint64 lessonId, const QString &text, const ArticleRef &article, const QString &note);
+// The introduction as a project document: the teacher's words, the readings linked, and room for the answers
+QString lessonDocument(const Lesson &lesson);
 bool setCompleted(qint64 lessonId, bool completed);
 
 // ---- what the teacher is asked, and how its answers are read ----

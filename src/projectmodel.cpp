@@ -70,6 +70,7 @@ void ProjectModel::refresh()
                                           {QStringLiteral("title"), i.article.title},
                                           {QStringLiteral("libraryTitle"), lib ? lib->title : QString()},
                                           {QStringLiteral("note"), i.note},
+                                          {QStringLiteral("lesson"), i.lesson},
                                           {QStringLiteral("available"), available}};
             else if (i.kind == QLatin1String("clip"))
                 m_excerpts << QVariantMap{{QStringLiteral("itemId"), i.id},
@@ -80,6 +81,7 @@ void ProjectModel::refresh()
                                           {QStringLiteral("libraryId"), i.article.libraryId},
                                           {QStringLiteral("path"), i.article.path},
                                           {QStringLiteral("note"), i.note},
+                                          {QStringLiteral("lesson"), i.lesson},
                                           {QStringLiteral("available"), available}};
             else if (i.kind == QLatin1String("chat")) {
                 const auto chat = Chats::byId(i.chatId);

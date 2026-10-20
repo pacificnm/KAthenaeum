@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.15.0" date="2026-10-20">
+      <description>
+        <p>Classroom: a lesson's readings open with the lesson beside them, its questions first. A course can be kept in a research project: its readings become sources marked with their lesson, each introduction a document to answer in, and what you highlight while reading is saved there too.</p>
+      </description>
+    </release>
     <release version="0.14.0" date="2026-10-20">
       <description>
         <p>The Classroom: tell it about yourself, choose a subject (or any topic) and a level, and an AI teacher plans a course of units and lessons. Each lesson reads real articles from your libraries, chosen for being about it, with an introduction written for you. Lessons with nothing to read are left out rather than made up, and missing libraries are pointed out.</p>

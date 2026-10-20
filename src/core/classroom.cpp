@@ -75,7 +75,7 @@ Classroom::Lesson lessonFrom(const QSqlQuery &q)
 }
 
 const QString CourseColumns = QStringLiteral(
-    "c.id, c.subject, c.title, c.level, c.focus, c.length, c.status, c.error, c.updated_at, "
+    "c.id, c.subject, c.title, c.level, c.focus, c.length, c.status, c.error, c.updated_at, coalesce(c.project_id, 0), "
     "(SELECT count(*) FROM course_lessons l WHERE l.course_id = c.id), "
     "(SELECT count(*) FROM course_lessons l WHERE l.course_id = c.id AND l.completed_at IS NOT NULL)");
 
@@ -91,8 +91,9 @@ Classroom::Course courseFrom(const QSqlQuery &q)
     c.status = q.value(6).toString();
     c.error = q.value(7).toString();
     c.updatedAt = timestamp(q.value(8));
-    c.lessons = q.value(9).toInt();
-    c.completed = q.value(10).toInt();
+    c.projectId = q.value(9).toLongLong();
+    c.lessons = q.value(10).toInt();
+    c.completed = q.value(11).toInt();
     return c;
 }
 
@@ -482,6 +483,135 @@ bool Classroom::setCompleted(qint64 lessonId, bool completed)
     q.finish();
     touch(courseId);
     return true;
+}
+
+// ---- a course kept in a research project ----
+
+bool Classroom::setProject(qint64 courseId, qint64 projectId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE courses SET project_id = ? WHERE id = ?"));
+    q.addBindValue(projectId > 0 ? QVariant(projectId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(courseId);
+    return q.exec() && q.numRowsAffected() == 1;
+}
+
+std::optional<Classroom::Course> Classroom::courseForProject(qint64 projectId)
+{
+    if (projectId <= 0)
+        return std::nullopt;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT %1 FROM courses c WHERE c.project_id = ? ORDER BY c.updated_at DESC LIMIT 1").arg(CourseColumns));
+    q.addBindValue(projectId);
+    if (q.exec() && q.next())
+        return courseFrom(q);
+    return std::nullopt;
+}
+
+QString Classroom::lessonLabel(qint64 lessonId)
+{
+    const auto l = lesson(lessonId);
+    if (!l)
+        return {};
+    int n = 0;
+    for (const Unit &u : syllabus(l->courseId))
+        for (const Lesson &other : u.lessons) {
+            ++n;
+            if (other.id == lessonId)
+                return QStringLiteral("Lesson %1: %2").arg(n).arg(l->title);
+        }
+    return l->title;
+}
+
+QString Classroom::lessonDocument(const Lesson &lesson)
+{
+    QStringList out{lesson.intro.trimmed()};
+    if (!lesson.readings.isEmpty()) {
+        out << QString() << QStringLiteral("## Readings") << QString();
+        for (int i = 0; i < lesson.readings.size(); ++i)
+            out << QStringLiteral("%1. ").arg(i + 1) + Projects::articleLink(lesson.readings.at(i).article);
+    }
+    out << QString() << QStringLiteral("## My answers") << QString();
+    return out.join(QLatin1Char('\n')).trimmed() + QStringLiteral("\n\n");
+}
+
+bool Classroom::syncLesson(qint64 lessonId)
+{
+    const auto l = lesson(lessonId);
+    const auto c = l ? course(l->courseId) : std::nullopt;
+    if (!c || c->projectId <= 0 || !Projects::byId(c->projectId))
+        return false;
+    const QString label = lessonLabel(lessonId);
+    for (const Reading &r : l->readings)
+        if (const qint64 item = Projects::addArticle(c->projectId, r.article))
+            Projects::setLesson(item, label);
+    // the introduction, once: a document the learner deleted is written again only when it is gone
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT coalesce(document_id, 0) FROM course_lessons WHERE id = ?"));
+    q.addBindValue(lessonId);
+    const qint64 documentId = q.exec() && q.next() ? q.value(0).toLongLong() : 0;
+    q.finish();
+    if (!l->intro.isEmpty() && (documentId <= 0 || !Projects::document(documentId))) {
+        const qint64 created = Projects::createDocument(c->projectId, label, lessonDocument(*l));
+        QSqlQuery set;
+        set.prepare(QStringLiteral("UPDATE course_lessons SET document_id = ? WHERE id = ?"));
+        set.addBindValue(created > 0 ? QVariant(created) : QVariant(QMetaType::fromType<qint64>()));
+        set.addBindValue(lessonId);
+        set.exec();
+    }
+    return true;
+}
+
+void Classroom::syncCourse(qint64 courseId)
+{
+    // the last lesson first: a project lists its newest sources first, so the course reads from lesson 1 down
+    QList<qint64> lessons;
+    for (const Unit &u : syllabus(courseId))
+        for (const Lesson &l : u.lessons)
+            lessons.prepend(l.id);
+    for (qint64 id : std::as_const(lessons))
+        if (!syncLesson(id))
+            return;
+    // an article two lessons read is labelled with the first of them (added last to first, it got the later one)
+    const auto c = course(courseId);
+    QSet<QString> seen;
+    for (auto it = lessons.crbegin(); it != lessons.crend(); ++it) {
+        const auto l = lesson(*it);
+        const QString label = lessonLabel(*it);
+        for (const Reading &r : l->readings) {
+            const QString key = QString::number(r.article.libraryId) + QLatin1Char('/') + r.article.path;
+            if (seen.contains(key))
+                continue;
+            seen.insert(key);
+            QSqlQuery q;
+            q.prepare(QStringLiteral("UPDATE project_items SET lesson = ? WHERE project_id = ? AND kind = 'article' AND library_id = ? AND path = ?"));
+            q.addBindValue(label);
+            q.addBindValue(c->projectId);
+            q.addBindValue(r.article.libraryId);
+            q.addBindValue(r.article.path);
+            q.exec();
+        }
+    }
+}
+
+qint64 Classroom::keepHighlight(qint64 lessonId, const QString &text, const ArticleRef &article, const QString &note)
+{
+    const auto l = lesson(lessonId);
+    const auto c = l ? course(l->courseId) : std::nullopt;
+    if (!c || c->projectId <= 0 || text.trimmed().isEmpty())
+        return 0;
+    // the same passage highlighted again (another colour, a note added) is one excerpt
+    const QString squeezed = text.simplified().toLower();
+    for (const ProjectItem &i : Projects::items(c->projectId, QStringLiteral("clip")))
+        if (i.text.simplified().toLower() == squeezed) {
+            if (!note.trimmed().isEmpty() && i.note.isEmpty())
+                Projects::setNote(c->projectId, i.id, note);
+            return i.id;
+        }
+    const qint64 id = Projects::addClip(c->projectId, text, {article}, {}, note);
+    if (id > 0)
+        Projects::setLesson(id, lessonLabel(lessonId));
+    return id;
 }
 
 // ---- prompts ----

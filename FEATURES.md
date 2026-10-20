@@ -10,6 +10,7 @@ computer).
 | Phase | What | State |
 |---|---|---|
 | 1 | Profile, ten core subjects and courses of your own, levels, syllabus planning, readings from the libraries, lesson introductions, progress, missing-library prompts | **Done in 0.14** |
+| 1b | The lesson beside its readings; a course kept in a research project (readings, introductions, highlights) | **Done in 0.15** |
 | 2 | Lesson quizzes and unit tests built from the readings (answers checked against the text), grading, progress per unit | Next |
 | 3 | A teacher to talk with on each lesson (guiding questions, not answers), review of weak spots | Later |
 

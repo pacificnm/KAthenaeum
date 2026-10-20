@@ -25,7 +25,7 @@
 <legalnotice>&FDLNotice;</legalnotice>
 
 <date>2026-10-20</date>
-<releaseinfo>0.14.0</releaseinfo>
+<releaseinfo>0.15.0</releaseinfo>
 
 <abstract>
 <para>
@@ -412,6 +412,14 @@ usual: <link linkend="highlights">highlights and notes</link>, <link linkend="ci
 <link linkend="dictionary">dictionary</link>, and <link linkend="ask-article">Ask</link> when something is unclear (one
 panel shows at a time; <guibutton>Lesson</guibutton> in the header brings the lesson back). When you have finished, press <guibutton>I've Finished This Lesson</guibutton> and go on with
 <guibutton>Next Lesson</guibutton>; the arrows in the header move between lessons.
+</para>
+<para>
+<guibutton>Keep in a Project…</guibutton> on a course's page keeps the course in a
+<link linkend="projects">research project</link>: a new one named after it, or one you have. Each lesson's readings
+become the project's sources (marked with their lesson), each introduction a document with the readings linked and a
+<quote>My answers</quote> section to write in, and what you highlight while reading for a lesson is saved there as an
+excerpt with your note. The project's chat and AI drafts then work from the whole course. <guibutton>Project</guibutton>
+on the course, the lesson and the Lesson panel opens it; the project shows which course it is kept for.
 </para>
 <para>
 The teacher is a small model. It explains and asks questions well when it has the reading in front of it, which is why

@@ -14,6 +14,7 @@ Kirigami.ScrollablePage {
     readonly property bool planning: Classroom.job === "plan" && Classroom.jobSubject === courseId
 
     signal openLesson(var lessonId)
+    signal openProject(var projectId)
     signal closed()
 
     title: Util.pageTitle(course.title ?? i18n("Course"))
@@ -42,6 +43,21 @@ Kirigami.ScrollablePage {
             icon.name: "media-playback-start"
             visible: page.course.status === "ready" && page.nextLesson !== null
             onTriggered: page.openLesson(page.nextLesson.id)
+        },
+        Kirigami.Action {
+            text: (page.course.projectId ?? 0) > 0 ? i18n("Project") : i18n("Keep in a Project…")
+            icon.name: "folder-bookmark"
+            tooltip: (page.course.projectId ?? 0) > 0 ? i18n("Open “%1”, where this course's readings, introductions and highlights are kept", Util.plain(page.course.projectTitle))
+                                                      : i18n("Keep this course's readings, introductions and highlights in a research project")
+            onTriggered: (page.course.projectId ?? 0) > 0 ? page.openProject(page.course.projectId) : projectDialog.open()
+        },
+        Kirigami.Action {
+            text: i18n("Stop Keeping in “%1”", Util.plain(page.course.projectTitle ?? ""))
+            icon.name: "edit-clear"
+            visible: (page.course.projectId ?? 0) > 0
+            displayHint: Kirigami.DisplayHint.AlwaysHide
+            tooltip: i18n("The project and what is in it stay; new lessons and highlights no longer go there")
+            onTriggered: Classroom.untieProject(page.courseId)
         },
         Kirigami.Action {
             text: i18n("Plan Again")
@@ -248,6 +264,14 @@ Kirigami.ScrollablePage {
                 }
             }
         }
+    }
+
+    CourseProjectDialog {
+        id: projectDialog
+        courseId: page.courseId
+        courseTitle: page.course.title ?? ""
+        onTied: projectId => applicationWindow().showPassiveNotification(i18n("This course is now kept in a project"), "long",
+                                                                          i18n("Open"), () => page.openProject(projectId))
     }
 
     Kirigami.PromptDialog {

@@ -5,6 +5,9 @@
 #include "core/library.h"
 #include "core/teacher.h"
 #include "modelsettings.h"
+#include "projectlist.h"
+
+#include "core/projects.h"
 
 #include <KLocalizedString>
 
@@ -41,11 +44,17 @@ ClassroomController::ClassroomController(QObject *parent)
         Q_EMIT coursesChanged();
         if (job == QLatin1String("plan")) {
             const auto c = Classroom::course(subject);
+            if (status == QLatin1String("done") && c && c->projectId > 0) {  // the new lessons' readings go into its project
+                Classroom::syncCourse(subject);
+                Q_EMIT ProjectsNotifier::instance()->changed();
+            }
             if (status == QLatin1String("done") && c)
                 Q_EMIT courseReady(subject, c->title);
             else if (status == QLatin1String("error"))
                 Q_EMIT failed(i18n("The course could not be planned: %1", error));
         } else if (status == QLatin1String("done")) {
+            if (Classroom::syncLesson(subject))  // the introduction, as a document of the course's project
+                Q_EMIT ProjectsNotifier::instance()->changed();
             Q_EMIT introReady(subject);
         } else if (status == QLatin1String("error")) {
             Q_EMIT failed(i18n("The introduction could not be written: %1", error));
@@ -212,6 +221,7 @@ QVariantMap ClassroomController::course(qint64 courseId) const
     if (!c)
         return {};
     const Classroom::Subject s = Classroom::subject(c->subject);
+    const auto project = c->projectId > 0 ? Projects::byId(c->projectId) : std::nullopt;
     QVariantList units;
     for (const Classroom::Unit &u : Classroom::syllabus(courseId)) {
         QVariantList lessons;
@@ -237,6 +247,8 @@ QVariantMap ClassroomController::course(qint64 courseId) const
             {QStringLiteral("error"), c->error},
             {QStringLiteral("lessons"), c->lessons},
             {QStringLiteral("completed"), c->completed},
+            {QStringLiteral("projectId"), c->projectId},
+            {QStringLiteral("projectTitle"), project ? project->title : QString()},
             {QStringLiteral("units"), units}};
 }
 
@@ -246,6 +258,7 @@ QVariantMap ClassroomController::lesson(qint64 lessonId) const
     if (!l)
         return {};
     const auto c = Classroom::course(l->courseId);
+    const auto project = c && c->projectId > 0 ? Projects::byId(c->projectId) : std::nullopt;
     // where it is in the course: its number, and the lessons before and after it
     QList<qint64> order;
     QString unitTitle;
@@ -278,6 +291,8 @@ QVariantMap ClassroomController::lesson(qint64 lessonId) const
             {QStringLiteral("completed"), l->completed()},
             {QStringLiteral("number"), int(at + 1)},
             {QStringLiteral("count"), int(order.size())},
+            {QStringLiteral("projectId"), project ? project->id : 0},
+            {QStringLiteral("projectTitle"), project ? project->title : QString()},
             {QStringLiteral("previousId"), at > 0 ? order.at(at - 1) : 0},
             {QStringLiteral("nextId"), at >= 0 && at + 1 < order.size() ? order.at(at + 1) : 0},
             {QStringLiteral("readings"), readings}};
@@ -318,4 +333,52 @@ QString ClassroomController::job() const
 qint64 ClassroomController::jobSubject() const
 {
     return m_teacher->running() ? m_teacher->subject() : 0;
+}
+
+// ---- a course kept in a research project ----
+
+qint64 ClassroomController::tieProject(qint64 courseId, qint64 projectId)
+{
+    const auto c = Classroom::course(courseId);
+    if (!c)
+        return 0;
+    qint64 id = projectId;
+    if (id <= 0) {
+        // the course's goal for the project chat and drafts: what it is, at what level, and what the learner asked for
+        QString goal = i18n("The course “%1” (%2, %3).", c->title, Classroom::subject(c->subject).name, Classroom::levelLabel(c->level));
+        if (!c->focus.isEmpty())
+            goal += QLatin1Char(' ') + i18n("Focus: %1", c->focus);
+        id = Projects::create(c->title, goal);
+    }
+    if (id <= 0 || !Projects::byId(id) || !Classroom::setProject(courseId, id))
+        return 0;
+    Classroom::syncCourse(courseId);
+    Q_EMIT ProjectsNotifier::instance()->changed();
+    Q_EMIT coursesChanged();
+    return id;
+}
+
+bool ClassroomController::untieProject(qint64 courseId)
+{
+    const bool ok = Classroom::setProject(courseId, 0);
+    Q_EMIT ProjectsNotifier::instance()->changed();
+    Q_EMIT coursesChanged();
+    return ok;
+}
+
+QVariantMap ClassroomController::courseForProject(qint64 projectId) const
+{
+    const auto c = Classroom::courseForProject(projectId);
+    if (!c)
+        return {};
+    return {{QStringLiteral("id"), c->id}, {QStringLiteral("title"), c->title}};
+}
+
+bool ClassroomController::keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text,
+                                        const QString &note)
+{
+    const bool kept = Classroom::keepHighlight(lessonId, text, {libraryId, path, title}, note) > 0;
+    if (kept)
+        Q_EMIT ProjectsNotifier::instance()->changed();
+    return kept;
 }

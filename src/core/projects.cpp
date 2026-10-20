@@ -202,6 +202,15 @@ qint64 Projects::addClip(qint64 projectId, const QString &text, const QList<Arti
     return id;
 }
 
+bool Projects::setLesson(qint64 itemId, const QString &lesson)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("UPDATE project_items SET lesson = ? WHERE id = ? AND lesson = ''"));
+    q.addBindValue(Database::text(lesson));
+    q.addBindValue(itemId);
+    return q.exec();
+}
+
 qint64 Projects::attachChat(qint64 projectId, qint64 chatId)
 {
     if (!exists(projectId))
@@ -262,7 +271,7 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
     QList<ProjectItem> out;
     QSqlQuery q;
     q.prepare(QStringLiteral("SELECT i.id, i.project_id, i.kind, coalesce(i.library_id, 0), i.path, i.title, i.section, i.text, i.refs, i.note,"
-                             " i.embedding, i.embed_model, coalesce(i.chat_id, 0), coalesce(c.title, ''), i.created_at"
+                             " i.embedding, i.embed_model, coalesce(i.chat_id, 0), coalesce(c.title, ''), i.created_at, i.lesson"
                              " FROM project_items i LEFT JOIN chats c ON c.id = i.chat_id"
                              " WHERE i.project_id = ? AND (? = '' OR i.kind = ?) ORDER BY i.created_at DESC, i.id DESC"));
     q.addBindValue(projectId);
@@ -285,6 +294,7 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
         i.chatId = q.value(12).toLongLong();
         i.chatTitle = q.value(13).toString();
         i.createdAt = timestamp(q.value(14));
+        i.lesson = q.value(15).toString();
         out << i;
     }
     return out;

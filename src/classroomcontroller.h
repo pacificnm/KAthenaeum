@@ -70,6 +70,17 @@ public:
     Q_INVOKABLE bool setCompleted(qint64 lessonId, bool completed);
     Q_INVOKABLE void stop();
 
+    // ---- a course kept in a research project ----
+    // Ties the course to a project (0: a new one named after the course) and puts in what its lessons have so far.
+    // The project's id, or 0.
+    Q_INVOKABLE qint64 tieProject(qint64 courseId, qint64 projectId);
+    Q_INVOKABLE bool untieProject(qint64 courseId);
+    // {id, title} of the course a project is kept for, or an empty map
+    Q_INVOKABLE QVariantMap courseForProject(qint64 projectId) const;
+    // A highlight made in one of the lesson's readings, kept in its course's project too (when it has one)
+    Q_INVOKABLE bool keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text,
+                                   const QString &note);
+
 Q_SIGNALS:
     void profileChanged();
     void coursesChanged();

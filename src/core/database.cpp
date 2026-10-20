@@ -249,6 +249,14 @@ const QList<QStringList> migrations = {
                        " completed_at TEXT)"),
         QStringLiteral("CREATE INDEX course_lessons_course ON course_lessons (course_id, unit_id, position)"),
     },
+    {
+        // A course kept in a research project: its lessons' readings become sources, each introduction a document, and
+        // highlights made in the readings excerpts. A source's lesson is a label ("Lesson 3: Fractions"), not an id, so
+        // it survives planning the course again (which replaces the lessons).
+        QStringLiteral("ALTER TABLE courses ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL"),
+        QStringLiteral("ALTER TABLE course_lessons ADD COLUMN document_id INTEGER REFERENCES project_documents (id) ON DELETE SET NULL"),
+        QStringLiteral("ALTER TABLE project_items ADD COLUMN lesson TEXT NOT NULL DEFAULT ''"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

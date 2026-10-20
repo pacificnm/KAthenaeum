@@ -33,6 +33,7 @@ Kirigami.Page {
     signal openSettings()
     signal showOnMap(var location, var libraryId, string path, string title)
     signal openLibraryManager()
+    signal openProject(var projectId)
 
     title: info.title !== undefined ? Util.pageTitle(info.found === false && page.conversation.articleTitle !== "" ? page.conversation.articleTitle : info.title) : i18n("Loading…")
     padding: 0
@@ -101,7 +102,12 @@ Kirigami.Page {
     }
     // marked in the page once it is saved (Notes.changed reloads the article)
     function highlight(text, color, note) {
-        if (Notes.add(page.info.libraryId, page.info.path, page.info.title, text, color, note ?? "") > 0 && !page.notesOpen)
+        if (Notes.add(page.info.libraryId, page.info.path, page.info.title, text, color, note ?? "") <= 0)
+            return;
+        // reading for a lesson whose course is kept in a project: the highlight goes there too
+        if (page.lessonId > 0 && Classroom.keepHighlight(page.lessonId, page.info.libraryId, page.info.path, page.info.title, text, note ?? ""))
+            applicationWindow().showPassiveNotification(i18n("Highlighted, and saved to “%1”", Util.plain(page.lesson.projectTitle)), "short");
+        else if (!page.notesOpen)
             applicationWindow().showPassiveNotification(i18n("Highlighted. Your notes are under Notes."), "short",
                                                         i18n("Show"), () => page.notesOpen = true);
     }
@@ -458,6 +464,17 @@ Kirigami.Page {
                         font.weight: current ? Font.DemiBold : Font.Normal
                         onClicked: view.url = LibraryBrowser.articleUrl(modelData.libraryId, modelData.path)
                     }
+                }
+                AppButton {
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    visible: (page.lesson.projectId ?? 0) > 0
+                    kind: "flat"
+                    icon.name: "folder-bookmark"
+                    text: i18n("Open “%1”", Util.plain(page.lesson.projectTitle ?? ""))
+                    QQC2.ToolTip.text: i18n("The course's project: its readings, your highlights and the lesson documents")
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    onClicked: page.openProject(page.lesson.projectId)
                 }
                 AppButton {
                     Layout.leftMargin: Kirigami.Units.largeSpacing
