@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <QDateTime>
 #include <QString>
 
 // Small key/value settings kept in the database's `settings` table.
@@ -18,6 +19,12 @@ bool setLibraryFolder(const QString &folder);
 QString ollamaUrl();       // default http://localhost:11434
 QString answerModel();     // default qwen3.5:2b
 QString embeddingModel();  // default nomic-embed-text
+
+// Library updates: checked against the Kiwix catalog once a week (on by default), and when that last happened
+bool autoCheckLibraryUpdates();
+bool setAutoCheckLibraryUpdates(bool on);
+QDateTime lastLibraryUpdateCheck();  // invalid if never
+bool setLastLibraryUpdateCheck(const QDateTime &when);
 
 // Articles across the whole window (the default), or in a column of comfortable reading width
 bool articleFullWidth();

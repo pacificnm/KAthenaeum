@@ -61,3 +61,23 @@ bool AppSettings::setArticleFullWidth(bool full)
 {
     return setValue(QStringLiteral("reading.width"), full ? QStringLiteral("full") : QStringLiteral("column"));
 }
+
+bool AppSettings::autoCheckLibraryUpdates()
+{
+    return value(QStringLiteral("library.autoUpdateCheck"), QStringLiteral("on")) == QLatin1String("on");
+}
+
+bool AppSettings::setAutoCheckLibraryUpdates(bool on)
+{
+    return setValue(QStringLiteral("library.autoUpdateCheck"), on ? QStringLiteral("on") : QStringLiteral("off"));
+}
+
+QDateTime AppSettings::lastLibraryUpdateCheck()
+{
+    return QDateTime::fromString(value(QStringLiteral("library.lastUpdateCheck")), Qt::ISODate);
+}
+
+bool AppSettings::setLastLibraryUpdateCheck(const QDateTime &when)
+{
+    return setValue(QStringLiteral("library.lastUpdateCheck"), when.toUTC().toString(Qt::ISODate));
+}

@@ -14,6 +14,7 @@
 #include <QQmlEngine>
 #include <QStandardPaths>
 #include <QStorageInfo>
+#include <QTimer>
 
 #include <KLocalizedString>
 
@@ -31,6 +32,8 @@ LibraryManager::LibraryManager(QObject *parent)
             syncCatalogState();
             reloadInstalled();  // update badges depend on the catalog
         }
+        if (m_checkingUpdates && !m_feed->isLoading())
+            finishUpdateCheck();
         Q_EMIT catalogChanged();
     });
     connect(m_downloader, &DownloadManager::listChanged, this, &LibraryManager::reloadDownloads);
@@ -84,6 +87,62 @@ void LibraryManager::initialize()
     Library::scan(folder());
     reloadInstalled();
     reloadDownloads();
+    // updates known from the catalog already on disk, without the network
+    m_feed->useCache();
+    // and once a week, a little after starting, the catalog is fetched to look for newer versions
+    const QDateTime last = AppSettings::lastLibraryUpdateCheck();
+    if (AppSettings::autoCheckLibraryUpdates() && !Library::all().isEmpty() && (!last.isValid() || last.daysTo(QDateTime::currentDateTime()) >= 7))
+        QTimer::singleShot(20000, this, [this] {
+            checkForUpdates(true);
+        });
+}
+
+QDateTime LibraryManager::lastUpdateCheck() const
+{
+    return AppSettings::lastLibraryUpdateCheck();
+}
+
+bool LibraryManager::autoCheckUpdates() const
+{
+    return AppSettings::autoCheckLibraryUpdates();
+}
+
+void LibraryManager::setAutoCheckUpdates(bool on)
+{
+    if (on == autoCheckUpdates())
+        return;
+    AppSettings::setAutoCheckLibraryUpdates(on);
+    Q_EMIT updatesChanged();
+}
+
+void LibraryManager::checkForUpdates(bool quiet)
+{
+    if (m_checkingUpdates)
+        return;
+    m_checkingUpdates = true;
+    m_quietCheck = quiet;
+    Q_EMIT updatesChanged();
+    m_feed->refresh();
+}
+
+void LibraryManager::finishUpdateCheck()
+{
+    m_checkingUpdates = false;
+    const QString error = m_feed->error();
+    if (!error.isEmpty()) {
+        if (!m_quietCheck)
+            Q_EMIT message(i18n("Could not check for library updates: %1", error), true);
+        Q_EMIT updatesChanged();
+        return;
+    }
+    AppSettings::setLastLibraryUpdateCheck(QDateTime::currentDateTime());
+    if (m_updateCount > 0)
+        Q_EMIT message(i18np("An update is available: %2. The Library Manager has it.", "%1 updates are available: %2. The Library Manager has them.",
+                             m_updateCount, m_updateNames.join(QStringLiteral(", "))),
+                       false);
+    else if (!m_quietCheck)
+        Q_EMIT message(i18n("All libraries are up to date."), false);
+    Q_EMIT updatesChanged();
 }
 
 QString LibraryManager::folder() const
@@ -306,6 +365,14 @@ void LibraryManager::reloadInstalled()
         for (auto it = updates.begin(); it != updates.end();)
             it = it->filename == lib.filename() ? updates.erase(it) : std::next(it);
     m_installed.reload(folder(), updates);
+    m_updateNames.clear();
+    for (const LibraryRecord &lib : libs)
+        if (updates.contains(lib.id))
+            m_updateNames << lib.title;
+    if (m_updateCount != updates.size()) {
+        m_updateCount = int(updates.size());
+        Q_EMIT updatesChanged();
+    }
 }
 
 void LibraryManager::reloadDownloads()

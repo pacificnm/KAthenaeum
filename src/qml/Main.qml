@@ -82,6 +82,7 @@ Kirigami.ApplicationWindow {
         id: sidebar
         current: root.section
         activeDownloads: LibraryManager.activeDownloads
+        updates: LibraryManager.updateCount
         modal: !root.wideScreen
         drawerOpen: root.wideScreen
         onNavigate: name => root.show(root.componentOf(name))

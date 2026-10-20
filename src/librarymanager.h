@@ -30,6 +30,10 @@ class LibraryManager : public QObject
     Q_PROPERTY(QString catalogError READ catalogError NOTIFY catalogChanged)
     Q_PROPERTY(QDateTime catalogFetchedAt READ catalogFetchedAt NOTIFY catalogChanged)
     Q_PROPERTY(bool aria2Available READ aria2Available CONSTANT)
+    Q_PROPERTY(int updateCount READ updateCount NOTIFY updatesChanged)  // installed libraries with a newer version
+    Q_PROPERTY(bool checkingUpdates READ checkingUpdates NOTIFY updatesChanged)
+    Q_PROPERTY(QDateTime lastUpdateCheck READ lastUpdateCheck NOTIFY updatesChanged)
+    Q_PROPERTY(bool autoCheckUpdates READ autoCheckUpdates WRITE setAutoCheckUpdates NOTIFY updatesChanged)
 
 public:
     // Created once in main() as a child of the application, so it (and any running aria2c) goes before the app does
@@ -50,6 +54,15 @@ public:
     QString catalogError() const;
     QDateTime catalogFetchedAt() const;
     bool aria2Available() const;
+    int updateCount() const { return m_updateCount; }
+    bool checkingUpdates() const { return m_checkingUpdates; }
+    QDateTime lastUpdateCheck() const;
+    bool autoCheckUpdates() const;
+    void setAutoCheckUpdates(bool on);
+
+    // Fetches the catalog and says which installed libraries have a newer version. `quiet` (the weekly check): says
+    // nothing when there is no update or the catalog cannot be reached.
+    Q_INVOKABLE void checkForUpdates(bool quiet = false);
 
     Q_INVOKABLE void loadCatalog();     // from the cache if fresh
     Q_INVOKABLE void refreshCatalog();  // from Kiwix
@@ -69,6 +82,7 @@ Q_SIGNALS:
     void folderChanged();
     void downloadsChanged();
     void catalogChanged();
+    void updatesChanged();
     void message(const QString &text, bool isError);
 
 private:
@@ -84,4 +98,9 @@ private:
     CatalogModel m_catalog;
     DownloadsModel m_downloads;
     QDateTime m_lastFetch;
+    int m_updateCount = 0;
+    QStringList m_updateNames;
+    bool m_checkingUpdates = false;
+    bool m_quietCheck = false;
+    void finishUpdateCheck();
 };

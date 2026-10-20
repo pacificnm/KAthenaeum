@@ -67,12 +67,23 @@ Kirigami.ScrollablePage {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
                         spacing: Kirigami.Units.smallSpacing
-                        Kirigami.Heading {
+                        RowLayout {
                             Layout.fillWidth: true
-                            level: 3
-                            textFormat: Text.PlainText
-                            text: cell.model.title
-                            elide: Text.ElideRight
+                            Kirigami.Heading {
+                                Layout.fillWidth: true
+                                level: 3
+                                textFormat: Text.PlainText
+                                text: cell.model.title
+                                elide: Text.ElideRight
+                            }
+                            // a newer version in the catalog: to the Library Manager, where it can be downloaded
+                            AppButton {
+                                visible: cell.model.updateVersion !== ""
+                                kind: "secondary"
+                                icon.name: "update-medium"
+                                text: i18n("Update to %1", cell.model.updateVersion)
+                                onClicked: page.openLibraryManager()
+                            }
                         }
                         QQC2.Label {
                             Layout.fillWidth: true

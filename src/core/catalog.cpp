@@ -165,6 +165,12 @@ void CatalogFeed::refresh()
     fetch();
 }
 
+void CatalogFeed::useCache()
+{
+    if (m_entries.isEmpty() && loadCache())
+        Q_EMIT changed();
+}
+
 bool CatalogFeed::loadCache()
 {
     QFile file(m_cacheFile);

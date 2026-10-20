@@ -15,12 +15,21 @@ Kirigami.Page {
     actions: [
         Kirigami.Action {
             visible: tabs.currentIndex === 0
+            text: LibraryManager.checkingUpdates ? i18n("Checking…") : i18n("Check for Updates")
+            icon.name: "update-none"
+            enabled: !LibraryManager.checkingUpdates && LibraryManager.installed.count > 0
+            tooltip: i18n("Look in the Kiwix catalog for newer versions of the installed libraries")
+            onTriggered: LibraryManager.checkForUpdates()
+        },
+        Kirigami.Action {
+            visible: tabs.currentIndex === 0
             text: i18n("Add File…")
             icon.name: "document-open"
             onTriggered: addFileDialog.open()
         },
         Kirigami.Action {
             visible: tabs.currentIndex === 0
+            displayHint: Kirigami.DisplayHint.AlwaysHide
             text: i18n("Rescan Folder")
             icon.name: "view-refresh"
             onTriggered: LibraryManager.rescan()
@@ -42,7 +51,8 @@ Kirigami.Page {
         contentItem: SegmentedTabs {
             id: tabs
             tabs: [
-                { text: LibraryManager.installed.count > 0 ? i18n("Installed (%1)", LibraryManager.installed.count) : i18n("Installed"), icon: "bookmarks" },
+                { text: LibraryManager.updateCount > 0 ? i18np("Installed · %1 update", "Installed · %1 updates", LibraryManager.updateCount)
+                      : LibraryManager.installed.count > 0 ? i18n("Installed (%1)", LibraryManager.installed.count) : i18n("Installed"), icon: "bookmarks" },
                 { text: i18n("Catalog"), icon: "globe" },
                 { text: LibraryManager.activeDownloads > 0 ? i18n("Downloads (%1)", LibraryManager.activeDownloads) : i18n("Downloads"), icon: "folder-download" }
             ]

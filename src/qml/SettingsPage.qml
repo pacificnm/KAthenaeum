@@ -89,6 +89,31 @@ FormCard.FormCardPage {
         }
     }
 
+    FormCard.FormHeader { title: i18n("Library Updates") }
+    FormCard.FormCard {
+        FormCard.FormSwitchDelegate {
+            text: i18n("Check for newer versions once a week")
+            description: i18n("Kiwix publishes new versions of its libraries every few months. KAthenaeum looks in the catalog and tells you; it downloads nothing unless you choose to.")
+            checked: LibraryManager.autoCheckUpdates
+            onToggled: LibraryManager.autoCheckUpdates = checked
+        }
+        FormCard.FormDelegateSeparator {}
+        FormCard.FormTextDelegate {
+            text: LibraryManager.updateCount > 0 ? i18np("%1 update available", "%1 updates available", LibraryManager.updateCount) : i18n("Up to date")
+            description: LibraryManager.checkingUpdates ? i18n("Checking…")
+                : isNaN(LibraryManager.lastUpdateCheck.getTime()) ? i18n("Not checked yet")
+                : i18n("Last checked %1", LibraryManager.lastUpdateCheck.toLocaleString(Qt.locale(), Locale.ShortFormat))
+            icon.name: LibraryManager.updateCount > 0 ? "update-medium" : "checkmark"
+            trailing: AppButton {
+                kind: "flat"
+                text: i18n("Check Now")
+                icon.name: "view-refresh"
+                enabled: !LibraryManager.checkingUpdates
+                onClicked: LibraryManager.checkForUpdates()
+            }
+        }
+    }
+
     FormCard.FormHeader { title: i18n("Reading") }
     FormCard.FormCard {
         FormCard.FormSwitchDelegate {

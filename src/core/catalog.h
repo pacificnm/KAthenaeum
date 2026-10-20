@@ -77,6 +77,8 @@ public:
     void load();
     // Always fetches.
     void refresh();
+    // The cached copy, if there is one, and no fetch (at startup: update badges without touching the network)
+    void useCache();
 
     static constexpr int MaxAgeSeconds = 3600;
 

@@ -13,6 +13,7 @@ Kirigami.OverlayDrawer {
     // the section shown ("libraries", "map", "ask", "chats", "projects", "manager", "settings", "about", "search")
     property string current
     property int activeDownloads: 0
+    property int updates: 0
 
     signal navigate(string section)
     signal search(string text)
@@ -146,7 +147,7 @@ Kirigami.OverlayDrawer {
             Item { Layout.fillHeight: true }
 
             Kirigami.Separator { Layout.fillWidth: true }
-            Place { section: "manager"; text: i18n("Library Manager"); icon.name: "folder-download"; count: drawer.activeDownloads; Layout.topMargin: Kirigami.Units.smallSpacing }
+            Place { section: "manager"; text: i18n("Library Manager"); icon.name: "folder-download"; count: drawer.activeDownloads > 0 ? drawer.activeDownloads : drawer.updates; Layout.topMargin: Kirigami.Units.smallSpacing }
             Place { section: "settings"; text: i18n("Settings"); icon.name: "settings-configure" }
             Place { section: "about"; text: i18n("About KAthenaeum"); icon.name: "help-about"; Layout.bottomMargin: Kirigami.Units.smallSpacing }
         }
