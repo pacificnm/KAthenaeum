@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.14.0" date="2026-10-20">
+      <description>
+        <p>The Classroom: tell it about yourself, choose a subject (or any topic) and a level, and an AI teacher plans a course of units and lessons. Each lesson reads real articles from your libraries, chosen for being about it, with an introduction written for you. Lessons with nothing to read are left out rather than made up, and missing libraries are pointed out.</p>
+      </description>
+    </release>
     <release version="0.13.0" date="2026-10-20">
       <description>
         <p>Tools for studying: highlight passages in four colours and write notes on them, gathered on a Notes page; cite any article in MLA, APA or Chicago style, with a bibliography for each project and works cited added to exported documents; look up a word in an installed Wiktionary from the right-click menu; and show the place an article is about on your maps.</p>

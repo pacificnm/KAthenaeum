@@ -44,6 +44,7 @@ add_executable(kathenaeum
     appstate.cpp appstate.h
     articlestore.cpp articlestore.h
     chatlist.cpp chatlist.h
+    classroomcontroller.cpp classroomcontroller.h
     conversation.cpp conversation.h
     documentmodel.cpp documentmodel.h
     documentwindow.cpp documentwindow.h
@@ -73,6 +74,11 @@ qt_add_qml_module(kathenaeum
     QML_FILES
         qml/Main.qml
         qml/CitationDialog.qml
+        qml/ClassroomPage.qml
+        qml/CoursePage.qml
+        qml/LessonPage.qml
+        qml/NewCourseDialog.qml
+        qml/ProfileDialog.qml
         qml/DefinitionPopup.qml
         qml/HighlightCard.qml
         qml/NotesPage.qml

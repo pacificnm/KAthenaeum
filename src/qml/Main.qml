@@ -18,11 +18,11 @@ Kirigami.ApplicationWindow {
     property string section: "libraries"
     function sectionOf(component) {
         return component === librariesPage ? "libraries" : component === searchPage ? "search" : component === mapPage ? "map"
-             : component === askPage ? "ask" : component === chatsPage ? "chats" : component === projectsPage ? "projects" : component === notesPage ? "notes"
+             : component === askPage ? "ask" : component === chatsPage ? "chats" : component === projectsPage ? "projects" : component === notesPage ? "notes" : component === classroomPage ? "classroom"
              : component === libraryManagerPage ? "manager" : component === settingsPage ? "settings" : component === aboutPage ? "about" : section;
     }
     function componentOf(name) {
-        return { libraries: librariesPage, search: searchPage, map: mapPage, ask: askPage, chats: chatsPage, projects: projectsPage, notes: notesPage,
+        return { libraries: librariesPage, search: searchPage, map: mapPage, ask: askPage, chats: chatsPage, projects: projectsPage, notes: notesPage, classroom: classroomPage,
                  manager: libraryManagerPage, settings: settingsPage, about: aboutPage }[name];
     }
 
@@ -34,6 +34,22 @@ Kirigami.ApplicationWindow {
     }
     function showLibraryManager() {
         show(libraryManagerPage);
+    }
+    // the classroom: a course on top of the Classroom, a lesson on top of its course; the next lesson replaces this one
+    function openCourse(courseId) {
+        section = "classroom";
+        pageStack.push(coursePage, { courseId: courseId });
+    }
+    function openLesson(lessonId, replace) {
+        section = "classroom";
+        replace ? pageStack.replace(lessonPage, { lessonId: lessonId }) : pageStack.push(lessonPage, { lessonId: lessonId });
+    }
+    // the catalog, showing the libraries with this title (a library a course needs)
+    function findLibrary(title) {
+        LibraryManager.catalog.category = "";
+        LibraryManager.catalog.flavour = "";
+        LibraryManager.catalog.query = title;
+        show(libraryManagerPage, { startTab: 1 });
     }
     // the catalog, showing the dictionaries (from a word looked up with none installed)
     function findDictionaries() {
@@ -151,6 +167,18 @@ Kirigami.ApplicationWindow {
     }
 
     Connections {
+        target: Classroom
+        function onCourseReady(courseId, title) {
+            const page = root.pageStack.currentItem;
+            if (!(page && page.courseId === courseId))
+                root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => root.openCourse(courseId));
+        }
+        function onFailed(message) {
+            root.showPassiveNotification(message, "long");
+        }
+    }
+
+    Connections {
         target: Notes
         function onMessage(text) {
             root.showPassiveNotification(text, "long");
@@ -226,6 +254,27 @@ Kirigami.ApplicationWindow {
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onClosed: root.show(projectsPage)
+        }
+    }
+    Component {
+        id: classroomPage
+        ClassroomPage {
+            onOpenCourse: courseId => root.openCourse(courseId)
+            onGetLibrary: title => root.findLibrary(title)
+        }
+    }
+    Component {
+        id: coursePage
+        CoursePage {
+            onOpenLesson: lessonId => root.openLesson(lessonId, false)
+            onClosed: root.show(classroomPage)
+        }
+    }
+    Component {
+        id: lessonPage
+        LessonPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+            onOpenLesson: lessonId => root.openLesson(lessonId, true)
         }
     }
     Component {

@@ -25,7 +25,7 @@
 <legalnotice>&FDLNotice;</legalnotice>
 
 <date>2026-10-20</date>
-<releaseinfo>0.13.0</releaseinfo>
+<releaseinfo>0.14.0</releaseinfo>
 
 <abstract>
 <para>
@@ -73,6 +73,7 @@ download, map regions, and a weekly check for newer versions of your libraries, 
 <listitem><para><link linkend="reading">Read</link> any Wikipedia library, with its pictures, in your desktop's colours.</para></listitem>
 <listitem><para><link linkend="highlights">Highlight</link> passages and write notes on them, <link linkend="citing">cite</link> articles in MLA, APA or Chicago style, and <link linkend="dictionary">look up words</link>.</para></listitem>
 <listitem><para><link linkend="search">Search</link> every library at once, by title or by the text of every article.</para></listitem>
+<listitem><para>Learn in the <link linkend="classroom">Classroom</link>: an AI teacher plans a course in any subject, at your level, from your own libraries.</para></listitem>
 <listitem><para><link linkend="ask">Ask</link> questions and get answers with citations, from all your libraries or from one article.</para></listitem>
 <listitem><para>Keep <link linkend="projects">research projects</link>: articles, saved passages, notes, chats, and documents written in &kate;'s editor, with AI drafts.</para></listitem>
 <listitem><para>Browse <link linkend="maps">offline maps</link>, and click a city, a building or a lake to read about it.</para></listitem>
@@ -161,7 +162,8 @@ and export the document.
 <title>The Main Window</title>
 <para>
 The sidebar on the left holds a search box and the places of the application, grouped as <guilabel>Read</guilabel>
-(<guilabel>Libraries</guilabel>, <guilabel>Search</guilabel>, <guilabel>Map</guilabel>) and <guilabel>Research</guilabel>
+(<guilabel>Libraries</guilabel>, <guilabel>Search</guilabel>, <guilabel>Map</guilabel>), <guilabel>Learn</guilabel>
+(<guilabel>Classroom</guilabel>) and <guilabel>Research</guilabel>
 (<guilabel>Ask</guilabel>, <guilabel>Chats</guilabel>, <guilabel>Projects</guilabel>, <guilabel>Notes</guilabel>), with the
 <guilabel>Library Manager</guilabel>, <guilabel>Settings</guilabel>, this handbook and <guilabel>About</guilabel> at the
 bottom. The place you are in is highlighted; a number beside <guilabel>Library Manager</guilabel> counts downloads in
@@ -324,6 +326,95 @@ The dictionary is Wiktionary, installed like any library from the <link linkend=
 (<guibutton>Get a Dictionary…</guibutton> takes you there). <emphasis>Wiktionary in Simple English</emphasis> is small (31 MB)
 and written in plain words; the full English Wiktionary (9 GB) knows far more words. With both installed, the full one is
 asked first.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="classroom">
+<title>The Classroom</title>
+<para>
+The classroom gives you a teacher for whatever you want to learn. Choose a subject and a level, and the AI teacher (the
+language model on your computer) plans a course: units and lessons in a sensible order, each lesson with readings from
+your own libraries and an introduction written for you.
+</para>
+<screenshot>
+<screeninfo>The Classroom</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="classroom.png" format="PNG"/></imageobject>
+<textobject><phrase>The Classroom: a course in progress, and the subjects to start one in</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<sect1 id="profile">
+<title>Your Profile</title>
+<para>
+The first time, <guibutton>Set Up Your Profile</guibutton> asks your name, the highest grade you have completed, what you
+enjoy and what you want to learn for. The teacher uses it to start courses at the right level, to speak to you by name,
+and to choose examples you will like. It stays on this computer; <guibutton>Your Profile</guibutton> in the Classroom's
+header changes it.
+</para>
+</sect1>
+
+<sect1 id="courses">
+<title>Starting a Course</title>
+<para>
+<guilabel>Start a Course</guilabel> offers the core subjects: Mathematics, Science, English and Literature, History,
+Geography, Civics and Government, Health, Art, Music and Computing. <guilabel>Your Own Course…</guilabel> is for anything
+else (<quote>Volcanoes</quote>, <quote>The Roman Empire</quote>, <quote>How the stock market works</quote>).
+</para>
+<para>
+Choose the level (it starts at the grade after the one you have completed), the length (about 9, 16 or 24 lessons), and,
+if you like, say what the course should cover. The dialog says which libraries the readings will come from. Each subject
+reads its own library when you have it (<quote>Mathematics by Wikipedia</quote>, <quote>History by Wikipedia</quote>…)
+and the whole Wikipedia; if none of them is installed, <guibutton>Get It…</guibutton> shows the right one in the Library
+Manager. For kindergarten to grade 5, <quote>Wikipedia in simple English</quote> is read first when it is installed.
+</para>
+<para>
+<guibutton>Plan the Course</guibutton> starts the teacher. It writes the syllabus, then looks for each lesson's readings:
+the articles that are truly about the lesson, not just ones sharing its words. A lesson nothing in your libraries is about
+is left out rather than made up. A short course takes about a minute. You can leave the page meanwhile; you are told
+when the course is ready.
+</para>
+<screenshot>
+<screeninfo>A course's syllabus</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="course.png" format="PNG"/></imageobject>
+<textobject><phrase>The syllabus of a course on volcanoes and earthquakes, in three units</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+A course's page shows its units and lessons, with a tick on the lessons you have finished. <guibutton>Start</guibutton>
+(or <guibutton>Continue</guibutton>) opens the next lesson to do. <guimenuitem>Plan Again</guimenuitem> writes a new
+syllabus, and <guimenuitem>Delete Course</guimenuitem> removes it; both are in the page's menu.
+</para>
+</sect1>
+
+<sect1 id="lessons">
+<title>Lessons</title>
+<para>
+The first time you open a lesson, the teacher writes its introduction from the lesson's readings: the main idea in
+simple words with an everyday example, the key words with their meanings, and questions to think about as you read.
+With more than one reading, <guilabel>[1]</guilabel> and <guilabel>[2]</guilabel> say which a sentence comes from;
+<guilabel>[?]</guilabel> marks a figure the readings do not have.
+</para>
+<screenshot>
+<screeninfo>A lesson</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="lesson.png" format="PNG"/></imageobject>
+<textobject><phrase>The lesson The Lithosphere: the teacher's introduction, key words and questions</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+Then read: each reading opens as an ordinary article, with every reading tool: <link linkend="highlights">highlights and
+notes</link>, the <link linkend="dictionary">dictionary</link>, and <link linkend="ask-article">Ask</link> beside it when
+something is unclear. When you have finished, press <guibutton>I've Finished This Lesson</guibutton> and go on with
+<guibutton>Next Lesson</guibutton>; the arrows in the header move between lessons.
+</para>
+<para>
+The teacher is a small model. It explains and asks questions well when it has the reading in front of it, which is why
+every lesson is built on articles from your libraries; but it can still be wrong. Read the articles, and check what
+matters. Quizzes, tests and a teacher to talk with about each lesson are planned for a later version.
 </para>
 </sect1>
 </chapter>
@@ -676,7 +767,7 @@ to the Internet only:
 Links to web sites in articles open in your browser, only when you click them.
 </para>
 <para>
-Your highlights, notes, projects, chats and settings are kept in one database on your computer
+Your profile, courses, highlights, notes, projects, chats and settings are kept in one database on your computer
 (<filename>~/.local/share/kathenaeum/kathenaeum.sqlite</filename>). Looking up a word reads a dictionary library you have
 installed; a citation names an article's address on the web, but nothing is fetched from it.
 </para>
@@ -719,6 +810,14 @@ TED) may open, but their articles cannot be searched or used for answers.
 Download the world overview and a region in
 <menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>. The map shows only what has been
 downloaded.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>A course could not be planned, or has fewer lessons than asked for.</para></question>
+<answer><para>
+The teacher leaves out a lesson that nothing in your libraries is about. Install the subject's library (the course dialog
+names it), or describe the course differently, and use <guimenuitem>Plan Again</guimenuitem>. Planning also needs
+&ollama; and both models, as Ask does.
 </para></answer>
 </qandaentry>
 <qandaentry>

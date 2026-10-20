@@ -211,6 +211,8 @@ const QList<QStringList> migrations = {
         // The classroom: the learner (one per computer), courses, their units and lessons. A lesson's readings are
         // articles of the installed libraries (JSON [{libraryId, path, title, score}]); its intro is the teacher's
         // Markdown, written when it is first opened. grade and level are keys (Classroom::levels, gradesCompleted).
+        // AUTOINCREMENT: planning a course again replaces its lessons, and a lesson page still open must not show another
+        // lesson that took its id (SQLite reuses the highest ids otherwise).
         QStringLiteral("CREATE TABLE learner ("
                        " id INTEGER PRIMARY KEY CHECK (id = 1),"
                        " name TEXT NOT NULL DEFAULT '',"
@@ -219,7 +221,7 @@ const QList<QStringList> migrations = {
                        " goals TEXT NOT NULL DEFAULT '',"
                        " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
         QStringLiteral("CREATE TABLE courses ("
-                       " id INTEGER PRIMARY KEY,"
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " subject TEXT NOT NULL,"
                        " title TEXT NOT NULL,"
                        " level TEXT NOT NULL,"
@@ -230,13 +232,13 @@ const QList<QStringList> migrations = {
                        " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
                        " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
         QStringLiteral("CREATE TABLE course_units ("
-                       " id INTEGER PRIMARY KEY,"
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
                        " position INTEGER NOT NULL,"
                        " title TEXT NOT NULL DEFAULT '')"),
         QStringLiteral("CREATE INDEX course_units_course ON course_units (course_id, position)"),
         QStringLiteral("CREATE TABLE course_lessons ("
-                       " id INTEGER PRIMARY KEY,"
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
                        " unit_id INTEGER NOT NULL REFERENCES course_units (id) ON DELETE CASCADE,"
                        " position INTEGER NOT NULL,"

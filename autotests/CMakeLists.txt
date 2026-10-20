@@ -5,6 +5,7 @@ ecm_add_tests(
     catalogtest.cpp
     chatstest.cpp
     citationstest.cpp
+    classroomtest.cpp
     databasetest.cpp
     dictionarytest.cpp
     extracttest.cpp

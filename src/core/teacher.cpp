@@ -394,6 +394,9 @@ void Teacher::introWritten(const QString &raw)
             // have is marked for checking, not a sentence on its own topic
             if (c.reason == QLatin1String("topic"))
                 c.reason.clear();
+            // with one reading, "[1]" after every sentence says nothing
+            if (m_lesson.readings.size() < 2)
+                c.sources.clear();
         }
         if (!Classroom::setIntro(m_lesson.id, Drafts::citeSection(text, kept, numbers)))
             finish(QStringLiteral("error"), QStringLiteral("The introduction could not be saved."));
