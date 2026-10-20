@@ -30,7 +30,7 @@ CatalogEntry readEntry(QXmlStreamReader &xml, const QUrl &feedUrl)
             if (rel == Acquisition) {
                 e.url = href;
                 e.size = xml.attributes().value(QLatin1String("length")).toLongLong();
-            } else if (rel == Thumbnail && Catalog::isKiwixUrl(href)) {
+            } else if (rel == Thumbnail && Catalog::isIllustrationUrl(href)) {
                 e.illustration = href;  // shown by QML, which may fetch from kiwix.org only (see main.cpp)
             }
             xml.skipCurrentElement();
@@ -124,6 +124,15 @@ bool Catalog::isValidFilename(const QString &filename)
 {
     static const QRegularExpression re(QStringLiteral("^[A-Za-z0-9][A-Za-z0-9._-]{0,200}\\.zim$"));
     return re.match(filename).hasMatch();
+}
+
+bool Catalog::isIllustrationUrl(const QUrl &url)
+{
+    // "https://opds.library.kiwix.org/catalog/v2/illustration/<uuid>/?size=48", and nothing more: any other address or
+    // query on kiwix.org could carry text out of the computer (a question put in it by a model told to by an article)
+    static const QRegularExpression path(QStringLiteral("^/catalog/v2/illustration/[0-9a-fA-F-]{36}/?$"));
+    static const QRegularExpression query(QStringLiteral("^(size=\\d{1,4})?$"));
+    return isKiwixUrl(url) && path.match(url.path()).hasMatch() && query.match(url.query()).hasMatch() && url.fragment().isEmpty();
 }
 
 bool Catalog::isKiwixUrl(const QUrl &url)

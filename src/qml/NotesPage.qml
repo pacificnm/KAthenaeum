@@ -124,7 +124,6 @@ Kirigami.ScrollablePage {
                 anchors { left: parent.left; right: parent.right; leftMargin: Kirigami.Units.largeSpacing * 2; rightMargin: Kirigami.Units.largeSpacing * 2 }
                 width: Math.min(parent.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 50)
                 onGoTo: page.openArticle(row.modelData.libraryId, row.modelData.path, "hl-" + row.modelData.id)
-                onOpenArticle: page.openArticle(row.modelData.libraryId, row.modelData.path, "")
                 onAddToProject: {
                     excerptPicker.highlightId = row.modelData.id;
                     excerptPicker.preview = row.modelData.text;
@@ -151,7 +150,7 @@ Kirigami.ScrollablePage {
         withNote: false
         onChosen: (projectId, projectTitle) => {
             if (Notes.addToProject(projectId, highlightId))
-                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", Util.plain(projectTitle)));
         }
     }
 
@@ -163,8 +162,8 @@ Kirigami.ScrollablePage {
             const documentId = Notes.toProject(projectId, i18n("Notes"), page.shownIds);
             if (documentId > 0) {
                 DocumentWindows.open(documentId);
-                applicationWindow().showPassiveNotification(i18n("A document of your notes is in “%1”", projectTitle), "long",
-                                                            i18n("Open Project"), () => page.openProject(projectId));
+                applicationWindow().showPassiveNotification(i18n("A document of your notes is in “%1”", Util.plain(projectTitle)), "long",
+                                                            i18n("Open Project"), () => applicationWindow().openProject(projectId));
             }
         }
     }
@@ -178,7 +177,7 @@ Kirigami.ScrollablePage {
         selectedFile: currentFolder + "/notes.md"
         onAccepted: {
             const error = Notes.exportTo(selectedFile, page.shownIds);
-            applicationWindow().showPassiveNotification(error !== "" ? error : i18n("Exported to %1", selectedFile.toString().replace("file://", "")),
+            applicationWindow().showPassiveNotification(error !== "" ? Util.plain(error) : i18n("Exported to %1", Util.plain(Util.localPath(selectedFile))),
                                                         error !== "" ? "long" : "short");
         }
     }

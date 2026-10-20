@@ -253,8 +253,20 @@ bool ClassroomController::planAgain(qint64 courseId)
 
 bool ClassroomController::removeCourse(qint64 courseId)
 {
-    if (m_teacher->running() && m_teacher->job() == QLatin1String("plan") && m_teacher->subject() == courseId)
-        m_teacher->stop();
+    // whatever the teacher is doing for this course stops: its plan, or a lesson's introduction or quiz, or a unit's test
+    // (left running, it wrote into rows the deletion had removed)
+    if (m_teacher->running()) {
+        const qint64 subject = m_teacher->subject();
+        qint64 owner = 0;
+        if (m_teacher->job() == QLatin1String("plan"))
+            owner = subject;
+        else if (m_teacher->job() == QLatin1String("intro") || (m_teacher->job() == QLatin1String("quiz") && m_quizKind == QLatin1String("lesson")))
+            owner = Classroom::lesson(subject) ? Classroom::lesson(subject)->courseId : 0;
+        else if (m_teacher->job() == QLatin1String("quiz"))
+            owner = Classroom::unitCourse(subject);
+        if (owner == courseId)
+            m_teacher->stop();
+    }
     const bool ok = Classroom::removeCourse(courseId);
     Q_EMIT coursesChanged();
     return ok;

@@ -447,6 +447,14 @@ QList<Classroom::Unit> Classroom::syllabus(qint64 courseId)
     return units;
 }
 
+qint64 Classroom::unitCourse(qint64 unitId)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT course_id FROM course_units WHERE id = ?"));
+    q.addBindValue(unitId);
+    return q.exec() && q.next() ? q.value(0).toLongLong() : 0;
+}
+
 std::optional<Classroom::Lesson> Classroom::lesson(qint64 id)
 {
     QSqlQuery q;

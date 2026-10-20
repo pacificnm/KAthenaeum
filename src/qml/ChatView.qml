@@ -41,12 +41,12 @@ ColumnLayout {
             if (!s.libraryId)
                 return;
             if (!s.available) {
-                applicationWindow().showPassiveNotification(i18n("“%1” is no longer installed.", s.libraryTitle || i18n("That library")));
+                applicationWindow().showPassiveNotification(i18n("“%1” is no longer installed.", Util.plain(s.libraryTitle) || i18n("That library")));
                 return;
             }
             view.openArticle(s.libraryId, s.path, s.section ? s.section.replace(/ /g, "_") : "");
         } else if (link.startsWith("check:")) {
-            applicationWindow().showPassiveNotification(view.conversation.flagReason(row, parseInt(link.slice(6))), "long");
+            applicationWindow().showPassiveNotification(Util.plain(view.conversation.flagReason(row, parseInt(link.slice(6)))), "long");
         }
     }
 
@@ -201,7 +201,7 @@ ColumnLayout {
                 id: answer
                 visible: message.role === "assistant" && message.text !== ""
                 Layout.fillWidth: true
-                text: message.text
+                text: Util.markdown(message.text)
                 textFormat: TextEdit.MarkdownText
                 wrapMode: TextEdit.Wrap
                 readOnly: true
@@ -232,14 +232,14 @@ ColumnLayout {
                 Layout.fillWidth: true
                 visible: message.error !== ""
                 type: Kirigami.MessageType.Error
-                text: message.error
+                text: Util.plain(message.error)
             }
 
             Kirigami.InlineMessage {
                 Layout.fillWidth: true
                 visible: message.note !== "" && message.error === ""  // the error already says what went wrong
                 type: Kirigami.MessageType.Warning
-                text: message.note
+                text: Util.plain(message.note)
             }
 
             // the sources the model was shown
@@ -362,7 +362,7 @@ ColumnLayout {
         title: i18n("Save Answer to Project")
         onChosen: (projectId, projectTitle, note) => {
             if (projects.addAnswer(projectId, answerPicker.preview, answerPicker.sources, note))
-                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", Util.plain(projectTitle)));
         }
     }
 }

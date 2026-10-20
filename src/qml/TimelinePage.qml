@@ -206,7 +206,7 @@ Kirigami.ScrollablePage {
         withNote: false
         onChosen: (projectId, projectTitle) => {
             if (timeline.toProject(projectId) > 0)
-                applicationWindow().showPassiveNotification(i18n("The timeline is a document of “%1” now", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("The timeline is a document of “%1” now", Util.plain(projectTitle)));
         }
     }
 
@@ -219,7 +219,7 @@ Kirigami.ScrollablePage {
         selectedFile: currentFolder + "/" + timeline.exportName()
         onAccepted: {
             const error = timeline.exportTo(selectedFile);
-            applicationWindow().showPassiveNotification(error !== "" ? error : i18n("Exported to %1", selectedFile.toString().replace("file://", "")),
+            applicationWindow().showPassiveNotification(error !== "" ? Util.plain(error) : i18n("Exported to %1", Util.plain(Util.localPath(selectedFile))),
                                                         error !== "" ? "long" : "short");
         }
     }

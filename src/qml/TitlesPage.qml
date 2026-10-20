@@ -65,7 +65,7 @@ Kirigami.ScrollablePage {
             required property string title
             required property string path
             width: ListView.view.width
-            text: title
+            text: Util.plain(title)
             highlighted: false
             onClicked: page.openArticle(page.libraryId, path)
         }

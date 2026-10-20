@@ -96,7 +96,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             type: Kirigami.MessageType.Error
                             visible: row.model.missing
-                            text: i18n("The file is missing: %1", row.model.path)
+                            text: i18n("The file is missing: %1", Util.plain(row.model.path))
                         }
                         Kirigami.InlineMessage {
                             Layout.fillWidth: true

@@ -109,6 +109,7 @@ std::optional<Course> course(qint64 id);
 // Replaces the course's syllabus (a new plan)
 bool saveSyllabus(qint64 courseId, const QList<Unit> &units);
 QList<Unit> syllabus(qint64 courseId);
+qint64 unitCourse(qint64 unitId);  // the course a unit is in, or 0
 std::optional<Lesson> lesson(qint64 id);
 bool setIntro(qint64 lessonId, const QString &markdown);
 

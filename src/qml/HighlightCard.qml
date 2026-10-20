@@ -11,10 +11,8 @@ Kirigami.ShadowedRectangle {
     id: card
 
     required property var highlight  // Notes.forArticle() / Notes.all() item
-    property bool showArticle: false
 
     signal goTo()
-    signal openArticle()
     signal addToProject()
 
     // the highlighter's colours, as the article shows them
@@ -42,18 +40,6 @@ Kirigami.ShadowedRectangle {
         id: layout
         anchors { fill: parent; margins: Kirigami.Units.largeSpacing; leftMargin: Kirigami.Units.largeSpacing + 4 }
         spacing: Kirigami.Units.smallSpacing
-
-        QQC2.Label {
-            Layout.fillWidth: true
-            visible: card.showArticle
-            textFormat: Text.PlainText
-            text: card.highlight.title || card.highlight.path
-            elide: Text.ElideRight
-            font.weight: Font.DemiBold
-            color: titleHover.hovered ? Kirigami.Theme.linkColor : Kirigami.Theme.textColor
-            HoverHandler { id: titleHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: card.openArticle() }
-        }
 
         // the passage, as a highlighter would have it
         QQC2.Label {

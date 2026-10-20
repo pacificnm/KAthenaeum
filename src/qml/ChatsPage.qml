@@ -127,7 +127,7 @@ Kirigami.ScrollablePage {
         withNote: false
         onChosen: (projectId, projectTitle) => {
             if (projects.attachChat(projectId, picker.chatId))
-                applicationWindow().showPassiveNotification(i18n("Added to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Added to “%1”", Util.plain(projectTitle)));
         }
     }
 
@@ -136,7 +136,7 @@ Kirigami.ScrollablePage {
         property var chatId
         property string chatTitle
         title: i18n("Delete Chat")
-        subtitle: i18n("Delete “%1” and its answers? This cannot be undone.", chatTitle)
+        subtitle: i18n("Delete “%1” and its answers? This cannot be undone.", Util.plain(chatTitle))
         standardButtons: Kirigami.Dialog.NoButton
         customFooterActions: [
             Kirigami.Action {

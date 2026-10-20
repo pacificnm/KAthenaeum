@@ -8,7 +8,6 @@
 #include "zimreader.h"
 
 #include <QFutureWatcher>
-#include <QSqlQuery>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -445,10 +444,7 @@ void Teacher::writeQuiz(const QString &kind, qint64 targetId, const Models &mode
     m_quizTried = 0;
     qint64 courseId = 0;
     if (kind == QLatin1String("unit")) {
-        QSqlQuery q;
-        q.prepare(QStringLiteral("SELECT course_id FROM course_units WHERE id = ?"));
-        q.addBindValue(targetId);
-        courseId = q.exec() && q.next() ? q.value(0).toLongLong() : 0;
+        courseId = Classroom::unitCourse(targetId);
         for (const Classroom::Unit &u : Classroom::syllabus(courseId))
             if (u.id == targetId)
                 m_quizLessons = u.lessons;

@@ -172,14 +172,14 @@ Kirigami.ApplicationWindow {
                 root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => root.openDocument(documentId));
         }
         function onFailed(message) {
-            root.showPassiveNotification(message, "long");
+            root.showPassiveNotification(Util.plain(message), "long");
         }
     }
 
     Connections {
         target: MapManager
         function onMessage(text, isError) {
-            root.showPassiveNotification(text, isError ? "long" : "short");
+            root.showPassiveNotification(Util.plain(text), isError ? "long" : "short");
         }
     }
 
@@ -191,21 +191,21 @@ Kirigami.ApplicationWindow {
                 root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => root.openCourse(courseId));
         }
         function onFailed(message) {
-            root.showPassiveNotification(message, "long");
+            root.showPassiveNotification(Util.plain(message), "long");
         }
     }
 
     Connections {
         target: Notes
         function onMessage(text) {
-            root.showPassiveNotification(text, "long");
+            root.showPassiveNotification(Util.plain(text), "long");
         }
     }
 
     Connections {
         target: LibraryManager
         function onMessage(text, isError) {
-            root.showPassiveNotification(text, isError ? "long" : "short");
+            root.showPassiveNotification(Util.plain(text), isError ? "long" : "short");
         }
     }
 

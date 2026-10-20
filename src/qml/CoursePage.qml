@@ -383,7 +383,7 @@ Kirigami.ScrollablePage {
         courseId: page.courseId
         courseTitle: page.course.title ?? ""
         onTied: projectId => applicationWindow().showPassiveNotification(i18n("This course is now kept in a project"), "long",
-                                                                          i18n("Open"), () => page.openProject(projectId))
+                                                                          i18n("Open"), () => applicationWindow().openProject(projectId))
     }
 
     Kirigami.PromptDialog {

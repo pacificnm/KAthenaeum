@@ -13,8 +13,6 @@ Kirigami.Page {
 
     property alias projectId: project.projectId
     property alias project: project
-    property alias conversation: conversation
-    property alias tab: tabs.currentIndex
 
     signal openArticle(var libraryId, string path, string fragment)
     signal openChat(var chatId, var articleLibraryId, string articlePath)
@@ -390,7 +388,7 @@ Kirigami.Page {
                         QQC2.Label {
                             Layout.fillWidth: true
                             visible: Drafting.streamed !== ""
-                            text: Drafting.streamed
+                            text: Util.markdown(Drafting.streamed)
                             textFormat: Text.MarkdownText
                             wrapMode: Text.Wrap
                             color: Kirigami.Theme.disabledTextColor
@@ -426,7 +424,7 @@ Kirigami.Page {
                             onOpen: page.openDocument(modelData.documentId)
                             onRemove: {
                                 deleteDocDialog.documentId = modelData.documentId;
-                                deleteDocDialog.subtitle = i18n("Delete “%1”? This cannot be undone.", modelData.title);
+                                deleteDocDialog.subtitle = i18n("Delete “%1”? This cannot be undone.", Util.plain(modelData.title));
                                 deleteDocDialog.open();
                             }
                         }
@@ -513,7 +511,7 @@ Kirigami.Page {
     Kirigami.PromptDialog {
         id: deleteDialog
         title: i18n("Delete Project")
-        subtitle: i18n("Delete “%1” with its sources, notes and documents? Its chats are kept. This cannot be undone.", project.title)
+        subtitle: i18n("Delete “%1” with its sources, notes and documents? Its chats are kept. This cannot be undone.", Util.plain(project.title))
         standardButtons: Kirigami.Dialog.NoButton
         customFooterActions: [
             Kirigami.Action {
@@ -556,7 +554,7 @@ Kirigami.Page {
         selectedFile: currentFolder + "/" + project.exportName()
         onAccepted: {
             const error = project.exportTo(selectedFile);
-            applicationWindow().showPassiveNotification(error !== "" ? error : i18n("Exported to %1", selectedFile.toString().replace("file://", "")),
+            applicationWindow().showPassiveNotification(error !== "" ? Util.plain(error) : i18n("Exported to %1", Util.plain(Util.localPath(selectedFile))),
                                                         error !== "" ? "long" : "short");
         }
     }

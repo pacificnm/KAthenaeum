@@ -262,7 +262,7 @@ Kirigami.ScrollablePage {
             text: MapManager.catalogLoading ? i18n("Loading the list of regions…")
                 : MapManager.catalogError !== "" ? i18n("Could not load the list of regions")
                 : i18n("No region by that name")
-            explanation: MapManager.catalogError
+            explanation: Util.plain(MapManager.catalogError)
             helpfulAction: Kirigami.Action {
                 enabled: MapManager.catalogError !== ""
                 text: i18n("Try Again")

@@ -23,6 +23,25 @@ QtObject {
         return String(text ?? "").replace(/</g, "\u2039");
     }
 
+    // Model output shown as Markdown (an answer, a lesson's introduction, a draft as it is written). A text the model was
+    // led by an article to write must not make the interface load anything or draw HTML: images, inline or by reference,
+    // keep only their alt text; link reference definitions go; and "<" is escaped, so raw HTML (an <img>, an autolink) is
+    // shown as text. Qt's Markdown importer renders raw HTML and reference-style images otherwise (checked with Qt 6.8).
+    // The stored text is not changed: citations are offsets into it.
+    function markdown(text) {
+        return String(text ?? "")
+            .replace(/!\[([^\]\n]*)\]\([^)\n]*\)/g, "$1")
+            .replace(/!\[([^\]\n]*)\]\[[^\]\n]*\]/g, "$1")
+            .replace(/^[ \t]{0,3}\[[^\]\n]+\]:[ \t]*\S.*$/gm, "")
+            .replace(/</g, "&lt;");
+    }
+
+    // A file URL from a file dialog as a path to show ("file:///home/me/My%20notes.md" -> "/home/me/My notes.md")
+    function localPath(url) {
+        const s = String(url ?? "");
+        return s.startsWith("file://") ? decodeURIComponent(s.slice(7)) : s;
+    }
+
     // A page title from outside text, for the breadcrumb: plain, and short enough that the trail keeps its parents
     // (a long project name was clipped mid-word and pushed the parent crumbs off; the review)
     function pageTitle(text) {

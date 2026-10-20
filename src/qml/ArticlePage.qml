@@ -110,7 +110,7 @@ Kirigami.Page {
             applicationWindow().showPassiveNotification(i18n("Highlighted, and saved to “%1”", Util.plain(page.lesson.projectTitle)), "short");
         else if (!page.notesOpen)
             applicationWindow().showPassiveNotification(i18n("Highlighted. Your notes are under Notes."), "short",
-                                                        i18n("Show"), () => page.notesOpen = true);
+                                                        i18n("Show"), () => { if (page) page.notesOpen = true; });  // the page may have closed
     }
 
     // a citation in the chat: a section of this article scrolls here; another article opens on its own page
@@ -274,6 +274,7 @@ Kirigami.Page {
         settings.localStorageEnabled: false
         settings.localContentCanAccessRemoteUrls: false
         settings.localContentCanAccessFileUrls: false
+        settings.navigateOnDropEnabled: false  // a file dropped on the article must not replace it
 
         onLoadingChanged: loadingInfo => {
             if (loadingInfo.status === WebEngineView.LoadSucceededStatus && page.fragment !== "")
@@ -411,7 +412,7 @@ Kirigami.Page {
                         }
                         TextEdit {
                             Layout.fillWidth: true
-                            text: page.lessonParts.questions
+                            text: Util.markdown(page.lessonParts.questions)
                             textFormat: TextEdit.MarkdownText
                             wrapMode: TextEdit.Wrap
                             readOnly: true
@@ -429,7 +430,7 @@ Kirigami.Page {
                     Layout.leftMargin: Kirigami.Units.largeSpacing
                     Layout.rightMargin: Kirigami.Units.largeSpacing
                     visible: text !== ""
-                    text: page.lessonParts.rest
+                    text: Util.markdown(page.lessonParts.rest)
                     textFormat: TextEdit.MarkdownText
                     wrapMode: TextEdit.Wrap
                     readOnly: true
@@ -639,7 +640,7 @@ Kirigami.Page {
         title: i18n("Add Article to Project")
         onChosen: (projectId, projectTitle, note) => {
             if (projects.addArticle(projectId, page.info.libraryId, page.info.path, page.info.title, note))
-                applicationWindow().showPassiveNotification(i18n("Added to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Added to “%1”", Util.plain(projectTitle)));
         }
     }
     ProjectPicker {
@@ -647,7 +648,7 @@ Kirigami.Page {
         title: i18n("Save Passage to Project")
         onChosen: (projectId, projectTitle, note) => {
             if (projects.addExcerpt(projectId, excerptPicker.preview, page.info.libraryId, page.info.path, page.info.title, "", note)) {
-                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", Util.plain(projectTitle)));
                 view.reload();  // shows it marked (the picker has closed, so no selection is lost: Athenaeum's lesson)
             }
         }
@@ -716,7 +717,7 @@ Kirigami.Page {
         withNote: false
         onChosen: (projectId, projectTitle) => {
             if (Notes.addToProject(projectId, highlightId))
-                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", projectTitle));
+                applicationWindow().showPassiveNotification(i18n("Saved to “%1”", Util.plain(projectTitle)));
         }
     }
 

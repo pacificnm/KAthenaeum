@@ -28,7 +28,7 @@ Kirigami.Dialog {
             enabled: titleField.text.trim() !== "" && dialog.coverage.ok
             onTriggered: {
                 const id = Classroom.createCourse(dialog.own ? ownSubject.currentValue : dialog.subject, titleField.text, level.currentValue,
-                                                  focus.text, lengths.values[lengths.currentIndex]);
+                                                  focusField.text, lengths.values[lengths.currentIndex]);
                 if (id > 0) {
                     dialog.close();
                     dialog.created(id);
@@ -39,11 +39,11 @@ Kirigami.Dialog {
 
     onOpened: {
         titleField.text = own ? "" : Classroom.subject(subject).name;
-        focus.text = "";
+        focusField.text = "";
         level.currentIndex = Math.max(0, Classroom.levels.findIndex(l => l.key === Classroom.defaultLevel()));
         lengths.currentIndex = 0;
         ownSubject.currentIndex = Classroom.subjects.length;  // "Other"
-        (own ? titleField : focus).forceActiveFocus();
+        (own ? titleField : focusField).forceActiveFocus();
     }
 
     ColumnLayout {
@@ -85,7 +85,7 @@ Kirigami.Dialog {
             text: i18n("What should it cover? (optional)")
         }
         QQC2.TextArea {
-            id: focus
+            id: focusField
             Layout.fillWidth: true
             Layout.preferredHeight: Kirigami.Units.gridUnit * 4
             wrapMode: TextEdit.Wrap

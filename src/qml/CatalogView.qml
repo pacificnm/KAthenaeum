@@ -33,12 +33,12 @@ ColumnLayout {
                 valueRole: "value"
                 // every kind first, then the catalog's own categories, most common first
                 model: [{ value: "", label: i18n("All kinds"), count: view.catalog.totalCount }].concat(view.catalog.categories)
-                displayText: currentIndex < 0 ? "" : model[currentIndex].label
+                displayText: currentIndex < 0 ? "" : Util.plain(model[currentIndex].label)
                 delegate: QQC2.ItemDelegate {
                     required property var modelData
                     required property int index
                     width: ListView.view.width
-                    text: i18n("%1 (%2)", modelData.label, modelData.count)
+                    text: i18n("%1 (%2)", Util.plain(modelData.label), modelData.count)
                     highlighted: kind.highlightedIndex === index
                 }
                 // computed from the list itself: indexOfValue() is not re-run when the categories arrive
@@ -85,9 +85,9 @@ ColumnLayout {
         type: Kirigami.MessageType.Warning
         visible: LibraryManager.catalogError !== ""
         text: view.catalog.totalCount > 0
-              ? i18n("Could not reach the Kiwix catalog (%1). Showing the copy from %2.", LibraryManager.catalogError,
+              ? i18n("Could not reach the Kiwix catalog (%1). Showing the copy from %2.", Util.plain(LibraryManager.catalogError),
                      LibraryManager.catalogFetchedAt.toLocaleString(Qt.locale(), Locale.ShortFormat))
-              : i18n("Could not reach the Kiwix catalog: %1", LibraryManager.catalogError)
+              : i18n("Could not reach the Kiwix catalog: %1", Util.plain(LibraryManager.catalogError))
         actions: Kirigami.Action {
             text: i18n("Try Again")
             icon.name: "view-refresh"

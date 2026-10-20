@@ -43,6 +43,17 @@ private Q_SLOTS:
         QVERIFY(!devdocs.hasFulltextIndex());
     }
 
+    void onlyIllustrationsMayBeLoadedByTheInterface()
+    {
+        // the one address shape the QML engine may fetch; anything else on kiwix.org could carry text away in its query
+        QVERIFY(Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?size=48"))));
+        QVERIFY(Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
+        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?q=what+did+I+ask"))));
+        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://library.kiwix.org/?q=secret"))));
+        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("http://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
+        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://evil.example/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
+    }
+
     void rejectsBadXml()
     {
         QString error;

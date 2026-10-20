@@ -11,7 +11,6 @@ Kirigami.Page {
     id: page
 
     property alias chatId: conversation.chatId
-    property alias conversation: conversation
 
     signal openArticle(var libraryId, string path, string fragment)
     signal openSettings()
@@ -30,11 +29,6 @@ Kirigami.Page {
             }
         }
     ]
-
-    // for the UI checks: what a click on a citation link does
-    function openCitation(row, link) {
-        chat.openCitation(row, link);
-    }
 
     Component.onCompleted: chat.focusInput()
 

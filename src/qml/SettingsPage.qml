@@ -32,7 +32,7 @@ FormCard.FormCardPage {
             description: Models.checking ? i18n("Checking…")
                 : !Models.checked ? ""
                 : Models.reachable ? i18np("Running at %2 · %1 model installed", "Running at %2 · %1 models installed", Models.installed.length, Models.url)
-                : Models.error
+                : Util.plain(Models.error)
             icon.name: !Models.checked || Models.checking ? "view-refresh" : Models.reachable ? "dialog-ok" : "dialog-error"
             trailing: AppButton {
                 kind: "flat"
@@ -273,13 +273,13 @@ FormCard.FormCardPage {
         FormCard.FormDelegateSeparator {}
         FormCard.FormTextDelegate {
             text: i18n("Database")
-            description: AppState.databasePath
+            description: Util.plain(AppState.databasePath)
         }
         FormCard.FormDelegateSeparator { visible: AppState.databaseError !== "" }
         FormCard.FormTextDelegate {
             visible: AppState.databaseError !== ""
             text: i18n("The database could not be opened")
-            description: AppState.databaseError
+            description: Util.plain(AppState.databaseError)
             textItem.color: Kirigami.Theme.negativeTextColor
         }
     }

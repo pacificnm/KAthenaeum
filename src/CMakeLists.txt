@@ -122,7 +122,7 @@ qt_add_qml_module(kathenaeum
 target_link_libraries(kathenaeum PRIVATE
     kathenaeum_core
     Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Concurrent Qt6::WebEngineCore Qt6::WebEngineQuick
-    KF6::CoreAddons KF6::I18n KF6::I18nQml KF6::Crash KF6::DBusAddons KF6::IconThemes KF6::TextEditor
+    KF6::CoreAddons KF6::I18n KF6::I18nQml KF6::Crash KF6::DBusAddons KF6::IconThemes KF6::TextEditor KF6::WindowSystem
 )
 
 install(TARGETS kathenaeum ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

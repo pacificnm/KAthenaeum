@@ -28,7 +28,7 @@ qt_policy(SET QTP0004 NEW)  # a qmldir for each QML subfolder
 # Debian ships Qt's private headers in separate -private-dev packages, but Qt's QML targets still list their folders
 add_compile_options(-Wno-missing-include-dirs)
 
-find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes TextEditor DocTools)
+find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes TextEditor WindowSystem DocTools)
 find_package(KF6KirigamiAddons 1.7.0 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -84,5 +84,5 @@ set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "khelpcenter")  # shows the handbook (Help, F1)
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${CPACK_PACKAGING_INSTALL_PREFIX}/${KATHENAEUM_PRIVATE_DIR}/lib")
 # Loaded at run time, so dpkg-shlibdeps cannot see them. Ollama is not in Debian: the app explains how to get it.
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "aria2, libqt6sql6-sqlite, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-shapes, qml6-module-qtquick-dialogs, qml6-module-qtwebengine, qml6-module-org-kde-kirigami, qml6-module-org-kde-kirigamiaddons-formcard, qml6-module-org-kde-coreaddons, qml6-module-org-kde-desktop")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "aria2, libqt6sql6-sqlite, qml6-module-qtcore, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-shapes, qml6-module-qtquick-dialogs, qml6-module-qtwebengine, qml6-module-org-kde-kirigami, qml6-module-org-kde-kirigamiaddons-formcard, qml6-module-org-kde-coreaddons, qml6-module-org-kde-desktop")
 include(CPack)

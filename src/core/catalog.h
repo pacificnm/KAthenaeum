@@ -49,6 +49,8 @@ std::optional<std::pair<QString, QString>> splitFilename(const QString &filename
 
 // https on kiwix.org or one of its subdomains, with no user info: the only place the app fetches anything from
 bool isKiwixUrl(const QUrl &url);
+// A library's illustration in the catalog: the only address the interface itself may load from the network
+bool isIllustrationUrl(const QUrl &url);
 
 // A plain ZIM file name, nothing that could escape the library folder.
 bool isValidFilename(const QString &filename);

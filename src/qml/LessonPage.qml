@@ -198,7 +198,7 @@ Kirigami.Page {
                     Layout.fillWidth: true
                     visible: text !== ""
                     // while it is written, without the title the model may start with (it is dropped once written)
-                    text: page.writing ? Classroom.streamed.replace(/^\s*# [^\n]*\n?/, "") : (page.lesson.intro ?? "")
+                    text: Util.markdown(page.writing ? Classroom.streamed.replace(/^\s*# [^\n]*\n?/, "") : (page.lesson.intro ?? ""))
                     textFormat: TextEdit.MarkdownText
                     wrapMode: TextEdit.Wrap
                     readOnly: true
@@ -415,6 +415,6 @@ Kirigami.Page {
         courseId: page.lesson.courseId ?? 0
         courseTitle: page.lesson.courseTitle ?? ""
         onTied: projectId => applicationWindow().showPassiveNotification(i18n("This course is now kept in a project"), "long",
-                                                                          i18n("Open"), () => page.openProject(projectId))
+                                                                          i18n("Open"), () => applicationWindow().openProject(projectId))
     }
 }
