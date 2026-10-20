@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-project(kathenaeum VERSION 0.8.0 LANGUAGES CXX)
+project(kathenaeum VERSION 0.9.0 LANGUAGES CXX)
 
 set(QT_MIN_VERSION "6.8.0")
 set(KF_MIN_VERSION "6.13.0")
@@ -28,7 +28,7 @@ qt_policy(SET QTP0004 NEW)  # a qmldir for each QML subfolder
 # Debian ships Qt's private headers in separate -private-dev packages, but Qt's QML targets still list their folders
 add_compile_options(-Wno-missing-include-dirs)
 
-find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes)
+find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes TextEditor)
 find_package(KF6KirigamiAddons 1.7.0 REQUIRED)
 
 find_package(PkgConfig REQUIRED)

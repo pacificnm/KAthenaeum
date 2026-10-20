@@ -28,3 +28,10 @@ add_executable(askbench askbench.cpp)
 target_link_libraries(askbench kathenaeum_core)
 ecm_add_test(libraryidstest.cpp LINK_LIBRARIES kathenaeum_core Qt6::Test PkgConfig::ZIM)
 kde_target_enable_exceptions(libraryidstest PRIVATE)
+
+# The document window is app code (widgets): built from the app's sources it needs
+ecm_add_test(documentwindowtest.cpp ../src/documentwindow.cpp ../src/documentmodel.cpp ../src/projectlist.cpp ../src/projectmodel.cpp
+             TEST_NAME documentwindowtest
+             LINK_LIBRARIES kathenaeum_core Qt6::Test Qt6::Widgets Qt6::Qml KF6::TextEditor KF6::I18n)
+target_include_directories(documentwindowtest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+set_tests_properties(documentwindowtest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

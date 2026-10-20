@@ -351,7 +351,7 @@ Kirigami.Page {
                         visible: project.documents.length === 0 && !page.drafting
                         icon.name: "document-new"
                         text: i18n("No documents yet")
-                        explanation: i18n("Write notes, an outline or a report in Markdown, citing the project's articles and excerpts.")
+                        explanation: i18n("Write notes, an outline or a report in Markdown, citing the project's articles and excerpts. Documents open in a window of their own, with Kate's editor and a live preview.")
                     }
                     Repeater {
                         model: project.documents

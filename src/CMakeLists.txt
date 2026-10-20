@@ -33,6 +33,7 @@ add_executable(kathenaeum
     chatlist.cpp chatlist.h
     conversation.cpp conversation.h
     documentmodel.cpp documentmodel.h
+    documentwindow.cpp documentwindow.h
     draftcontroller.cpp draftcontroller.h
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
@@ -74,13 +75,12 @@ qt_add_qml_module(kathenaeum
         qml/ProjectEditDialog.qml
         qml/ProjectPage.qml
         qml/SourceRow.qml
-        qml/DocumentPage.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE
     kathenaeum_core
     Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Concurrent Qt6::WebEngineCore Qt6::WebEngineQuick
-    KF6::CoreAddons KF6::I18n KF6::I18nQml KF6::Crash KF6::DBusAddons KF6::IconThemes
+    KF6::CoreAddons KF6::I18n KF6::I18nQml KF6::Crash KF6::DBusAddons KF6::IconThemes KF6::TextEditor
 )
 
 install(TARGETS kathenaeum ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

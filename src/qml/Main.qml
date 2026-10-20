@@ -25,8 +25,9 @@ Kirigami.ApplicationWindow {
     function openProject(projectId) {
         pageStack.push(projectPage, { projectId: projectId });
     }
+    // a document opens in its own window: Kate's editor and a live preview
     function openDocument(documentId) {
-        pageStack.push(documentPage, { documentId: documentId });
+        DocumentWindows.open(documentId);
     }
     // a chat about one article opens with its article, the panel beside it; a project's chat in its project
     // `onTop`: opened from inside a page (a project's sources), so Back returns there; from the Chats list it replaces
@@ -82,6 +83,16 @@ Kirigami.ApplicationWindow {
     pageStack.initialPage: librariesPage
 
     // an AI draft is written as a project document, wherever the reader has gone meanwhile
+    // a link in a document's preview: show the article here, and bring this window forward
+    Connections {
+        target: DocumentWindows
+        function onOpenArticle(url) {
+            root.pageStack.push(articlePage, { url: url });
+            root.raise();
+            root.requestActivate();
+        }
+    }
+
     Connections {
         target: Drafting
         function onDocumentReady(documentId, projectId, title) {
@@ -89,11 +100,7 @@ Kirigami.ApplicationWindow {
             if (page && page.project !== undefined && page.project.projectId === projectId)
                 root.openDocument(documentId);
             else
-                root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => {
-                    root.show(projectsPage);
-                    root.openProject(projectId);
-                    root.openDocument(documentId);
-                });
+                root.showPassiveNotification(i18n("“%1” is ready", Util.plain(title)), "long", i18n("Open"), () => root.openDocument(documentId));
         }
         function onFailed(message) {
             root.showPassiveNotification(message, "long");
@@ -167,12 +174,6 @@ Kirigami.ApplicationWindow {
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onClosed: root.show(projectsPage)
-        }
-    }
-    Component {
-        id: documentPage
-        DocumentPage {
-            onOpenUrl: url => root.pageStack.push(articlePage, { url: url })
         }
     }
     Component { id: libraryManagerPage; LibraryManagerPage {} }
