@@ -21,7 +21,7 @@ DocumentModel::DocumentModel(QObject *parent)
 DocumentModel::~DocumentModel()
 {
     if (m_dirty)
-        save();  // leaving the editor keeps what was typed, including after an earlier save failed
+        save(); // leaving the editor keeps what was typed, including after an earlier save failed
 }
 
 void DocumentModel::setDocumentId(qint64 id)
@@ -87,7 +87,10 @@ void DocumentModel::save()
 
 QString DocumentModel::exportTo(const QUrl &file) const
 {
-    return writeTextFile(file, QStringLiteral("# %1\n\n%2").arg(m_title, Projects::exportMarkdown(m_content, Citations::style(AppSettings::citationStyle())).trimmed()) + QLatin1Char('\n'));
+    return writeTextFile(
+        file,
+        QStringLiteral("# %1\n\n%2").arg(m_title, Projects::exportMarkdown(m_content, Citations::style(AppSettings::citationStyle())).trimmed())
+            + QLatin1Char('\n'));
 }
 
 QString DocumentModel::exportName() const

@@ -5,8 +5,8 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
-// The app's push button: compact, rounded, an icon beside its words. The desktop style's raised grey button looked
-// dated (the user, 2026-10-19). `kind`:
+// The app's push button: compact, rounded, an icon beside its words. The desktop style's raised grey button looks
+// dated. `kind`:
 //   primary   — the main thing to do here (Ask, Read, Download): filled with the accent colour
 //   secondary — other actions: a soft tint
 //   flat      — links and minor actions ("Show All"): no background until hovered

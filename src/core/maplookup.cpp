@@ -46,7 +46,7 @@ std::optional<MapFeature> nearest(PMTiles::Archive &archive, double lat, double 
     // at `zoom`, a tile of zoom z is 512 * 2^(zoom - z) pixels wide
     const double tilePx = 512.0 * std::pow(2.0, zoom - z);
     const double x = MapTiling::lonToX(lon, z), y = MapTiling::latToY(lat, z);
-    const double r = radiusPx / tilePx;  // in tiles
+    const double r = radiusPx / tilePx; // in tiles
     const qint64 n = qint64(1) << z;
 
     std::optional<MapFeature> best;

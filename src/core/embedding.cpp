@@ -10,9 +10,9 @@
 namespace
 {
 struct Family {
-    const char *name;  // a prefix of the model name
+    const char *name; // a prefix of the model name
     const char *query;
-    const char *document;  // "{head}" is the passage's title, "none" when it has none
+    const char *document; // "{head}" is the passage's title, "none" when it has none
 };
 
 const char *Instruct = "Represent this sentence for searching relevant passages: ";
@@ -29,7 +29,7 @@ const Family Families[] = {
 const Family *family(const QString &model)
 {
     QString name = Embedding::normalizeName(model).toLower();
-    name = name.mid(name.lastIndexOf(QLatin1Char('/')) + 1);  // hf.co/owner/name
+    name = name.mid(name.lastIndexOf(QLatin1Char('/')) + 1); // hf.co/owner/name
     for (const Family &f : Families)
         if (name.startsWith(QLatin1String(f.name)))
             return &f;

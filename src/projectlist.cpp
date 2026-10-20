@@ -22,8 +22,14 @@ int ProjectList::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> ProjectList::roleNames() const
 {
-    return {{ProjectIdRole, "projectId"}, {TitleRole, "title"},       {DescriptionRole, "description"}, {UpdatedRole, "updated"},
-            {ArticlesRole, "articles"},   {ClipsRole, "excerpts"},    {ChatsRole, "chats"},             {DocumentsRole, "documents"}};
+    return {{ProjectIdRole, "projectId"},
+            {TitleRole, "title"},
+            {DescriptionRole, "description"},
+            {UpdatedRole, "updated"},
+            {ArticlesRole, "articles"},
+            {ClipsRole, "excerpts"},
+            {ChatsRole, "chats"},
+            {DocumentsRole, "documents"}};
 }
 
 QVariant ProjectList::data(const QModelIndex &index, int role) const
@@ -90,8 +96,13 @@ bool ProjectList::addArticle(qint64 projectId, qint64 libraryId, const QString &
     return ok;
 }
 
-bool ProjectList::addExcerpt(qint64 projectId, const QString &text, qint64 libraryId, const QString &path, const QString &title,
-                             const QString &section, const QString &note)
+bool ProjectList::addExcerpt(qint64 projectId,
+                             const QString &text,
+                             qint64 libraryId,
+                             const QString &path,
+                             const QString &title,
+                             const QString &section,
+                             const QString &note)
 {
     const QList<ArticleRef> refs = libraryId > 0 ? QList<ArticleRef>{{libraryId, path, title}} : QList<ArticleRef>{};
     const bool ok = Projects::addClip(projectId, text, refs, section, note) > 0;
@@ -104,9 +115,12 @@ bool ProjectList::addAnswer(qint64 projectId, const QString &text, const QVarian
     QList<ArticleRef> refs;
     for (const QVariant &v : sources) {
         const QVariantMap s = v.toMap();
-        const ArticleRef r{s.value(QStringLiteral("libraryId")).toLongLong(), s.value(QStringLiteral("path")).toString(),
+        const ArticleRef r{s.value(QStringLiteral("libraryId")).toLongLong(),
+                           s.value(QStringLiteral("path")).toString(),
                            s.value(QStringLiteral("title")).toString()};
-        const bool seen = std::any_of(refs.cbegin(), refs.cend(), [&r](const ArticleRef &o) { return o.libraryId == r.libraryId && o.path == r.path; });
+        const bool seen = std::any_of(refs.cbegin(), refs.cend(), [&r](const ArticleRef &o) {
+            return o.libraryId == r.libraryId && o.path == r.path;
+        });
         if (r.libraryId > 0 && !r.path.isEmpty() && !seen)
             refs << r;
     }

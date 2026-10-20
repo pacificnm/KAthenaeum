@@ -9,9 +9,10 @@
 void History::record(qint64 libraryId, const QString &path, const QString &title)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO reading_history (library_id, path, title) VALUES (?, ?, ?)"
-                             " ON CONFLICT (library_id, path) DO UPDATE SET title = excluded.title,"
-                             " read_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
+    q.prepare(
+        QStringLiteral("INSERT INTO reading_history (library_id, path, title) VALUES (?, ?, ?)"
+                       " ON CONFLICT (library_id, path) DO UPDATE SET title = excluded.title,"
+                       " read_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
     q.addBindValue(libraryId);
     q.addBindValue(path);
     q.addBindValue(Database::text(title));

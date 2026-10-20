@@ -57,7 +57,7 @@ void rotate(quint64 n, quint64 &x, quint64 &y, quint64 rx, quint64 ry)
     }
 }
 
-quint64 tilesBefore(int z)  // 4^0 + 4^1 + ... + 4^(z-1)
+quint64 tilesBefore(int z) // 4^0 + 4^1 + ... + 4^(z-1)
 {
     return ((quint64(1) << (2 * z)) - 1) / 3;
 }
@@ -158,7 +158,7 @@ std::optional<QList<Entry>> parseDirectory(const QByteArray &in)
         if (!getVarint(in, pos, v))
             return std::nullopt;
         if (v == 0 && i > 0)
-            entries[i].offset = entries[i - 1].offset + entries[i - 1].length;  // right after the previous one
+            entries[i].offset = entries[i - 1].offset + entries[i - 1].length; // right after the previous one
         else if (v == 0)
             return std::nullopt;
         else
@@ -326,7 +326,7 @@ QByteArray gzip(const QByteArray &data)
 std::optional<QByteArray> gunzip(const QByteArray &data, qsizetype limit)
 {
     z_stream zs{};
-    if (inflateInit2(&zs, 15 + 32) != Z_OK)  // gzip or zlib, by its header
+    if (inflateInit2(&zs, 15 + 32) != Z_OK) // gzip or zlib, by its header
         return std::nullopt;
     zs.next_in = reinterpret_cast<Bytef *>(const_cast<char *>(data.constData()));
     zs.avail_in = uInt(data.size());
@@ -340,12 +340,12 @@ std::optional<QByteArray> gunzip(const QByteArray &data, qsizetype limit)
         if (rc != Z_OK && rc != Z_STREAM_END)
             break;
         out.append(buffer, qsizetype(sizeof buffer - zs.avail_out));
-        if (out.size() > limit) {  // a directory is a few MB at most: anything bigger is not one
+        if (out.size() > limit) { // a directory is a few MB at most: anything bigger is not one
             rc = Z_MEM_ERROR;
             break;
         }
         if (rc == Z_OK && zs.avail_in == 0 && zs.avail_out != 0)
-            break;  // truncated
+            break; // truncated
     }
     inflateEnd(&zs);
     if (rc != Z_STREAM_END)
@@ -359,6 +359,6 @@ std::optional<QByteArray> decompress(const QByteArray &data, quint8 compression,
         return data.size() <= limit ? std::optional<QByteArray>(data) : std::nullopt;
     if (compression == Gzip)
         return gunzip(data, limit);
-    return std::nullopt;  // Protomaps uses gzip; brotli and zstd are not read here
+    return std::nullopt; // Protomaps uses gzip; brotli and zstd are not read here
 }
 }

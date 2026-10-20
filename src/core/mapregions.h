@@ -21,24 +21,27 @@ class QFile;
 // A region that can be downloaded: Geofabrik's list (continents, countries, states and smaller), with each region's
 // shape and its OpenStreetMap extract. The map itself is cut from Protomaps' planet build to that shape.
 struct MapRegionInfo {
-    QString id;  // "us/oregon"
-    QString parent;  // "north-america" ("" for a continent)
-    QString name;  // "Oregon"
-    QUrl pbf;  // its OpenStreetMap extract
+    QString id; // "us/oregon"
+    QString parent; // "north-america" ("" for a continent)
+    QString name; // "Oregon"
+    QUrl pbf; // its OpenStreetMap extract
     MapTiling::MultiPolygon shape;
-    QRectF bounds() const { return MapTiling::bounds(shape); }
+    QRectF bounds() const
+    {
+        return MapTiling::bounds(shape);
+    }
 };
 
 namespace MapCatalog
 {
-QUrl indexUrl();  // Geofabrik's region list with shapes, ~3.7 MB
-QUrl buildsUrl();  // Protomaps' list of planet builds
-QUrl buildUrl(const QString &key);  // "20261019.pmtiles" -> its address
+QUrl indexUrl(); // Geofabrik's region list with shapes, ~3.7 MB
+QUrl buildsUrl(); // Protomaps' list of planet builds
+QUrl buildUrl(const QString &key); // "20261019.pmtiles" -> its address
 // The only hosts maps are fetched from (https): Geofabrik for regions and OpenStreetMap data, Protomaps for the map
 bool isAllowedUrl(const QUrl &url);
 
 std::optional<QList<MapRegionInfo>> parseIndex(const QByteArray &json, QString *error = nullptr);
-QByteArray shapeToJson(const MapTiling::MultiPolygon &shape);  // as GeoJSON MultiPolygon coordinates
+QByteArray shapeToJson(const MapTiling::MultiPolygon &shape); // as GeoJSON MultiPolygon coordinates
 // The newest planet build from Protomaps' list ("20261019.pmtiles"); empty if none
 QString latestBuild(const QByteArray &json);
 
@@ -47,8 +50,8 @@ constexpr int WorldZoom = 6;
 MapRegionInfo world();
 
 // Detail levels offered for a region
-constexpr int StreetsZoom = 15;  // streets and buildings, the most the planet build has
-constexpr int RoadsZoom = 13;  // roads, towns and parks: about a fifth of the size
+constexpr int StreetsZoom = 15; // streets and buildings, the most the planet build has
+constexpr int RoadsZoom = 13; // roads, towns and parks: about a fifth of the size
 // Larger extracts would hold millions of tiles in memory while they are cut: choose less detail or a smaller region
 constexpr quint64 MaxTiles = 4'000'000;
 }
@@ -61,8 +64,8 @@ struct MapRegionRecord {
     QString name;
     QString parentName;
     int maxZoom = 0;
-    QRectF bounds;  // x = west, y = south
-    QString status;  // queued | downloading | indexing | complete | failed | cancelled
+    QRectF bounds; // x = west, y = south
+    QString status; // queued | downloading | indexing | complete | failed | cancelled
     QString error;
     QString file;
     qint64 size = 0;
@@ -75,8 +78,8 @@ struct MapRegionRecord {
 
 namespace MapRegions
 {
-QString folder();  // <AppDataLocation>/maps
-QList<MapRegionRecord> all();  // the world first, then by name
+QString folder(); // <AppDataLocation>/maps
+QList<MapRegionRecord> all(); // the world first, then by name
 std::optional<MapRegionRecord> byId(qint64 id);
 std::optional<MapRegionRecord> byRegion(const QString &region);
 // Adds a region to download (or queues an existing one again, with this detail). Returns its id, 0 on failure.
@@ -100,16 +103,28 @@ public:
     explicit MapDownloader(QNetworkAccessManager *network, QObject *parent = nullptr);
     ~MapDownloader() override;
 
-    void startNext();  // starts the next queued region unless one is running
+    void startNext(); // starts the next queued region unless one is running
     bool cancel(qint64 id);
-    qint64 running() const { return m_id; }
+    qint64 running() const
+    {
+        return m_id;
+    }
     // what the running region is doing: "map" (cutting the map), "places" (fetching OpenStreetMap data), "indexing"
-    QString step() const { return m_step; }
-    qint64 done() const { return m_done; }
-    qint64 total() const { return m_total; }
+    QString step() const
+    {
+        return m_step;
+    }
+    qint64 done() const
+    {
+        return m_done;
+    }
+    qint64 total() const
+    {
+        return m_total;
+    }
 
 Q_SIGNALS:
-    void changed(qint64 id);  // status or progress
+    void changed(qint64 id); // status or progress
     void finished(qint64 id, const QString &error);
 
 private:

@@ -18,10 +18,10 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-#include <QSqlError>
-#include <QSqlQuery>
 #include <QRegularExpression>
 #include <QSet>
+#include <QSqlError>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTimeZone>
 #include <QtConcurrentRun>
@@ -72,7 +72,7 @@ std::optional<QList<MapRegionInfo>> MapCatalog::parseIndex(const QByteArray &jso
         r.shape = MapTiling::fromGeoJson(f.toObject().value(QStringLiteral("geometry")).toObject().toVariantMap());
         if (r.id.isEmpty() || r.name.isEmpty() || r.shape.isEmpty() || !isAllowedUrl(r.pbf))
             continue;
-        // Geofabrik's list has quirks (2026-10-19): Polish and Norwegian names hold "<br />" before their English name,
+        // Geofabrik's list has quirks: Polish and Norwegian names hold "<br />" before their English name,
         // and the US states are named by their id ("us/oregon") and listed under North America, not the United States
         r.name.replace(QStringLiteral("<br />"), QStringLiteral(" "));
         r.name = r.name.simplified();
@@ -155,8 +155,9 @@ bool MapRegionRecord::isActive() const
 
 namespace
 {
-constexpr QLatin1StringView Columns("id, region, name, parent_name, max_zoom, west, south, east, north, status, error, file, size, build, places, "
-                                       "updated_at, shape, pbf");
+constexpr QLatin1StringView Columns(
+    "id, region, name, parent_name, max_zoom, west, south, east, north, status, error, file, size, build, places, "
+    "updated_at, shape, pbf");
 
 MapRegionRecord fromRow(const QSqlQuery &q)
 {
@@ -221,11 +222,12 @@ qint64 MapRegions::add(const MapRegionInfo &info, const QString &parentName, int
 {
     const QRectF b = info.bounds();
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO map_regions (region, name, parent_name, max_zoom, shape, pbf, west, south, east, north, status) "
-                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued') "
-                             "ON CONFLICT (region) DO UPDATE SET name = excluded.name, parent_name = excluded.parent_name, max_zoom = excluded.max_zoom, "
-                             "shape = excluded.shape, pbf = excluded.pbf, "
-                             "status = 'queued', error = '', updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
+    q.prepare(
+        QStringLiteral("INSERT INTO map_regions (region, name, parent_name, max_zoom, shape, pbf, west, south, east, north, status) "
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued') "
+                       "ON CONFLICT (region) DO UPDATE SET name = excluded.name, parent_name = excluded.parent_name, max_zoom = excluded.max_zoom, "
+                       "shape = excluded.shape, pbf = excluded.pbf, "
+                       "status = 'queued', error = '', updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
     q.addBindValue(info.id);
     q.addBindValue(info.name);
     q.addBindValue(Database::text(parentName));
@@ -258,8 +260,9 @@ bool MapRegions::setStatus(qint64 id, const QString &status, const QString &erro
 bool MapRegions::setDone(qint64 id, const QString &file, qint64 size, const QString &build, int places)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("UPDATE map_regions SET status = 'complete', error = '', file = ?, size = ?, build = ?, places = ?, "
-                             "updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') WHERE id = ?"));
+    q.prepare(
+        QStringLiteral("UPDATE map_regions SET status = 'complete', error = '', file = ?, size = ?, build = ?, places = ?, "
+                       "updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') WHERE id = ?"));
     q.addBindValue(file);
     q.addBindValue(size);
     q.addBindValue(Database::text(build));
@@ -300,7 +303,7 @@ QList<MapRegionRecord> MapRegions::ready()
 {
     QList<MapRegionRecord> out;
     for (const auto rows = all(); const MapRegionRecord &r : rows)
-        if (!r.file.isEmpty() && QFile::exists(r.file))  // a region being updated keeps showing its old map
+        if (!r.file.isEmpty() && QFile::exists(r.file)) // a region being updated keeps showing its old map
             out.append(r);
     return out;
 }
@@ -379,7 +382,7 @@ void MapDownloader::gotBuild(const QString &build)
     m_mapFile = QDir(MapRegions::folder()).filePath(safe + QStringLiteral(".pmtiles"));
     // the new file replaces the old one only once it is complete (QSaveFile): an update keeps the old map until then
     m_extract = new MapExtract(nullptr, m_info.shape, record->maxZoom, m_mapFile, this);
-    m_extract->setSource(new HttpRangeReader(MapCatalog::buildUrl(build), m_network, m_extract));  // goes with it
+    m_extract->setSource(new HttpRangeReader(MapCatalog::buildUrl(build), m_network, m_extract)); // goes with it
     connect(m_extract, &MapExtract::progress, this, [this](qint64 done, qint64 total) {
         m_done = done;
         m_total = total;
@@ -390,7 +393,7 @@ void MapDownloader::gotBuild(const QString &build)
         if (!error.isEmpty())
             return finish(i18n("The map could not be downloaded: %1", error));
         if (m_info.pbf.isEmpty())
-            return finish({});  // the world overview has no places of its own
+            return finish({}); // the world overview has no places of its own
         fetchPlaces();
     });
     m_extract->start();
@@ -450,7 +453,8 @@ void MapDownloader::indexPlaces()
             return;
         const Result result = watcher->result();
         if (!result.first)
-            return finish(result.second.isEmpty() ? i18nc("@info map region download status", "Stopped") : i18n("The region's OpenStreetMap data could not be read: %1", result.second));
+            return finish(result.second.isEmpty() ? i18nc("@info map region download status", "Stopped")
+                                                  : i18n("The region's OpenStreetMap data could not be read: %1", result.second));
         QString error;
         if (!MapPlaces::store(m_id, *result.first, &error))
             return finish(i18n("Could not save the region's places: %1", error));

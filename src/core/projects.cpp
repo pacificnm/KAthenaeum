@@ -60,8 +60,8 @@ QList<ArticleRef> refsFrom(const QByteArray &json)
     QList<ArticleRef> out;
     for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array) {
         const QJsonObject o = v.toObject();
-        out.append({qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(),
-                    o.value(QLatin1String("title")).toString()});
+        out.append(
+            {qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(), o.value(QLatin1String("title")).toString()});
     }
     return out;
 }
@@ -77,8 +77,14 @@ const char *ProjectSelect =
 
 ProjectRecord project(const QSqlQuery &q)
 {
-    return {q.value(0).toLongLong(), q.value(1).toString(), q.value(2).toString(), timestamp(q.value(3)),
-            q.value(4).toInt(),      q.value(5).toInt(),    q.value(6).toInt(),    q.value(7).toInt()};
+    return {q.value(0).toLongLong(),
+            q.value(1).toString(),
+            q.value(2).toString(),
+            timestamp(q.value(3)),
+            q.value(4).toInt(),
+            q.value(5).toInt(),
+            q.value(6).toInt(),
+            q.value(7).toInt()};
 }
 
 // [text](zim://lib<id>/<path>) as written by articleLink, or by hand
@@ -164,10 +170,11 @@ qint64 Projects::addArticle(qint64 projectId, const ArticleRef &a, const QString
     if (a.libraryId <= 0 || a.path.isEmpty() || !exists(projectId))
         return 0;
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, note) VALUES (?, 'article', ?, ?, ?, ?) "
-                             "ON CONFLICT (project_id, library_id, path) WHERE kind = 'article' DO UPDATE SET "
-                             "note = CASE WHEN excluded.note <> '' THEN excluded.note ELSE project_items.note END "
-                             "RETURNING id"));
+    q.prepare(
+        QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, note) VALUES (?, 'article', ?, ?, ?, ?) "
+                       "ON CONFLICT (project_id, library_id, path) WHERE kind = 'article' DO UPDATE SET "
+                       "note = CASE WHEN excluded.note <> '' THEN excluded.note ELSE project_items.note END "
+                       "RETURNING id"));
     q.addBindValue(projectId);
     q.addBindValue(a.libraryId);
     q.addBindValue(a.path);
@@ -188,8 +195,9 @@ qint64 Projects::addClip(qint64 projectId, const QString &text, const QList<Arti
         return 0;
     const ArticleRef first = refs.value(0);
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, section, text, refs, note) "
-                             "VALUES (?, 'clip', ?, ?, ?, ?, ?, ?, ?)"));
+    q.prepare(
+        QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, section, text, refs, note) "
+                       "VALUES (?, 'clip', ?, ?, ?, ?, ?, ?, ?)"));
     q.addBindValue(projectId);
     q.addBindValue(nullable(first.libraryId));
     q.addBindValue(Database::text(first.path));
@@ -220,9 +228,10 @@ qint64 Projects::attachChat(qint64 projectId, qint64 chatId)
         return 0;
     QSqlQuery q;
     // not a chat started in this project: it is listed there already (attached as well, it was counted and shown twice)
-    q.prepare(QStringLiteral("INSERT INTO project_items (project_id, kind, chat_id) SELECT ?, 'chat', id FROM chats WHERE id = ? "
-                             "AND coalesce(project_id, 0) <> ? "
-                             "ON CONFLICT (project_id, chat_id) WHERE kind = 'chat' DO UPDATE SET chat_id = excluded.chat_id RETURNING id"));
+    q.prepare(
+        QStringLiteral("INSERT INTO project_items (project_id, kind, chat_id) SELECT ?, 'chat', id FROM chats WHERE id = ? "
+                       "AND coalesce(project_id, 0) <> ? "
+                       "ON CONFLICT (project_id, chat_id) WHERE kind = 'chat' DO UPDATE SET chat_id = excluded.chat_id RETURNING id"));
     q.addBindValue(projectId);
     q.addBindValue(chatId);
     q.addBindValue(projectId);
@@ -273,10 +282,11 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
 {
     QList<ProjectItem> out;
     QSqlQuery q;
-    q.prepare(QStringLiteral("SELECT i.id, i.project_id, i.kind, coalesce(i.library_id, 0), i.path, i.title, i.section, i.text, i.refs, i.note,"
-                             " i.embedding, i.embed_model, coalesce(i.chat_id, 0), coalesce(c.title, ''), i.created_at, i.lesson"
-                             " FROM project_items i LEFT JOIN chats c ON c.id = i.chat_id"
-                             " WHERE i.project_id = ? AND (? = '' OR i.kind = ?) ORDER BY i.created_at DESC, i.id DESC"));
+    q.prepare(
+        QStringLiteral("SELECT i.id, i.project_id, i.kind, coalesce(i.library_id, 0), i.path, i.title, i.section, i.text, i.refs, i.note,"
+                       " i.embedding, i.embed_model, coalesce(i.chat_id, 0), coalesce(c.title, ''), i.created_at, i.lesson"
+                       " FROM project_items i LEFT JOIN chats c ON c.id = i.chat_id"
+                       " WHERE i.project_id = ? AND (? = '' OR i.kind = ?) ORDER BY i.created_at DESC, i.id DESC"));
     q.addBindValue(projectId);
     q.addBindValue(Database::text(kind));
     q.addBindValue(Database::text(kind));
@@ -306,8 +316,9 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
 QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("SELECT i.text, p.title, i.note FROM project_items i JOIN projects p ON p.id = i.project_id "
-                             "WHERE i.kind = 'clip' AND i.library_id = ? AND i.path = ? ORDER BY i.created_at, i.id"));
+    q.prepare(
+        QStringLiteral("SELECT i.text, p.title, i.note FROM project_items i JOIN projects p ON p.id = i.project_id "
+                       "WHERE i.kind = 'clip' AND i.library_id = ? AND i.path = ? ORDER BY i.created_at, i.id"));
     q.addBindValue(libraryId);
     q.addBindValue(path);
     QStringList order;
@@ -322,8 +333,9 @@ QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
                 texts.insert(key, text);
             }
             const QString note = q.value(2).toString();
-            lines[key] << (note.isEmpty() ? i18nc("@info:tooltip %1 is a project's title", "Saved in “%1”", q.value(1).toString())
-                                          : i18nc("@info:tooltip %1 is a project's title, %2 the user's note", "Saved in “%1”: %2", q.value(1).toString(), note));
+            lines[key] << (note.isEmpty()
+                               ? i18nc("@info:tooltip %1 is a project's title", "Saved in “%1”", q.value(1).toString())
+                               : i18nc("@info:tooltip %1 is a project's title, %2 the user's note", "Saved in “%1”: %2", q.value(1).toString(), note));
         }
     }
     QList<Highlight> out;
@@ -371,8 +383,9 @@ std::optional<DocumentRecord> Projects::document(qint64 id)
 bool Projects::saveDocument(qint64 id, const QString &title, const QString &content)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("UPDATE project_documents SET title = ?, content = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
-                             "WHERE id = ? RETURNING project_id"));
+    q.prepare(
+        QStringLiteral("UPDATE project_documents SET title = ?, content = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
+                       "WHERE id = ? RETURNING project_id"));
     q.addBindValue(title.simplified().isEmpty() ? i18nc("@title a document with no title", "Untitled") : title.simplified().left(200));
     q.addBindValue(Database::text(content));
     q.addBindValue(id);
@@ -396,7 +409,8 @@ QList<DocumentRecord> Projects::documents(qint64 projectId)
 {
     QList<DocumentRecord> out;
     QSqlQuery q;
-    q.prepare(QStringLiteral("SELECT id, project_id, title, content, updated_at FROM project_documents WHERE project_id = ? ORDER BY updated_at DESC, id DESC"));
+    q.prepare(
+        QStringLiteral("SELECT id, project_id, title, content, updated_at FROM project_documents WHERE project_id = ? ORDER BY updated_at DESC, id DESC"));
     q.addBindValue(projectId);
     if (q.exec())
         while (q.next())
@@ -412,7 +426,7 @@ QString Projects::articleLink(const ArticleRef &a)
     const QString path = QString::fromLatin1(QUrl::toPercentEncoding(a.path, "/_-.,!~*'"));
     QString text = a.title;
     text.replace(QLatin1Char('['), QLatin1Char('(')).replace(QLatin1Char(']'), QLatin1Char(')'));
-    // one arg() call: chained, a title containing "%1" was filled in by the next one (the review, 2026-10-19)
+    // one arg() call: chained, a title containing "%1" would be filled in by the next one
     return QStringLiteral("[%1](zim://lib%2/%3)").arg(text, QString::number(a.libraryId), path);
 }
 
@@ -440,7 +454,7 @@ Citations::Source citationFor(qint64 libraryId, const QString &path, const QStri
     const QString shown = title.isEmpty() ? QString(path).replace(QLatin1Char('_'), QLatin1Char(' ')) : title;
     if (const auto library = Library::byId(libraryId))
         return Citations::source(*library, path, shown);
-    Citations::Source s;  // its library is gone: cite what is known
+    Citations::Source s; // its library is gone: cite what is known
     s.title = shown;
     s.path = path;
     return s;
@@ -537,7 +551,7 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
 {
     // links to the project's articles: the note after the link
     QHash<QString, QString> articleNotes;
-    QList<std::pair<QString, QString>> clipNotes;  // (squeezed text, note)
+    QList<std::pair<QString, QString>> clipNotes; // (squeezed text, note)
     for (const ProjectItem &i : items) {
         if (i.note.isEmpty())
             continue;
@@ -554,8 +568,9 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
         linked += QStringView(markdown).mid(last, m.capturedEnd() - last);
         last = m.capturedEnd();
         const QString note = articleNotes.value(m.captured(2) + QLatin1Char('/') + QUrl::fromPercentEncoding(m.captured(3).toUtf8()));
-        if (!note.isEmpty() && !markdown.contains(note))  // a summary draft already writes the note out
-            linked += QLatin1Char(' ') + i18nc("@info a note shown after a link in a document preview; keep the asterisks (Markdown italics)", "*(note: %1)*", note.simplified());
+        if (!note.isEmpty() && !markdown.contains(note)) // a summary draft already writes the note out
+            linked += QLatin1Char(' ')
+                + i18nc("@info a note shown after a link in a document preview; keep the asterisks (Markdown italics)", "*(note: %1)*", note.simplified());
     }
     linked += QStringView(markdown).mid(last);
 
@@ -595,8 +610,9 @@ QString Projects::exportProject(qint64 projectId, Citations::Style style, const 
     if (!p->description.isEmpty())
         out << p->description << QString();
     const auto docs = documents(projectId);
-    for (auto it = docs.crbegin(); it != docs.crend(); ++it)  // oldest first, as they were written
-        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content, style, accessed).trimmed() << QString();
+    for (auto it = docs.crbegin(); it != docs.crend(); ++it) // oldest first, as they were written
+        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content, style, accessed).trimmed()
+            << QString();
     const auto articles = items(projectId, QStringLiteral("article"));
     if (!articles.isEmpty()) {
         out << QStringLiteral("---") << QString() << QStringLiteral("## ") + i18nc("@title heading in an exported project", "Sources") << QString();

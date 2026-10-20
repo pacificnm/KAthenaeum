@@ -22,7 +22,7 @@ struct ExtractedArticle {
 // short ones are merged into their neighbours. Search snippets and Ask both read articles through this. Thread-safe.
 namespace Extract
 {
-constexpr int MaxChars = 1400;  // ~350 tokens: comfortably inside the embedding model's context
+constexpr int MaxChars = 1400; // ~350 tokens: comfortably inside the embedding model's context
 constexpr int MinChars = 40;
 
 // Unparseable input gives an empty result, never an error

@@ -11,14 +11,14 @@
 struct TocEntry {
     QString id;
     QString text;
-    int level = 2;  // 2 or 3
+    int level = 2; // 2 or 3
 };
 
 struct RenderedArticle {
     QString title;
-    QString html;  // the article body only: sanitised, links and images rewritten
+    QString html; // the article body only: sanitised, links and images rewritten
     QList<TocEntry> toc;
-    int highlighted = 0;  // how many of the highlights asked for were found in the text
+    int highlighted = 0; // how many of the highlights asked for were found in the text
     // where the article says its subject is (Wikipedia's coordinates, the first <span class="geo">), for "Show on Map"
     bool hasCoordinates = false;
     double lat = 0, lon = 0;
@@ -35,8 +35,8 @@ struct Highlight {
     }
     QString text;
     QString label;
-    QString cssClass;  // the mark's class
-    QString anchor;    // an id for its first mark, to jump to it ("hl-12"); none if empty
+    QString cssClass; // the mark's class
+    QString anchor; // an id for its first mark, to jump to it ("hl-12"); none if empty
 };
 
 // Turns a mwoffliner article page into safe, self-contained HTML (a port of Athenaeum's render.py, same parser family:
@@ -51,8 +51,12 @@ using HasEntry = std::function<bool(const QString &path)>;
 // Each highlight's first occurrence is wrapped in <mark class="cssClass" title="label">, one per text node it spans
 // (a passage may cross links and paragraphs). Matching ignores whitespace and case, so a passage saved with other spacing
 // still matches (Athenaeum's rule); a passage no longer in the text is not shown.
-std::optional<RenderedArticle> render(const QByteArray &raw, const QString &path, const QString &urlPrefix, const HasEntry &hasEntry,
-                                      QString *error = nullptr, const QList<Highlight> &highlights = {});
+std::optional<RenderedArticle> render(const QByteArray &raw,
+                                      const QString &path,
+                                      const QString &urlPrefix,
+                                      const HasEntry &hasEntry,
+                                      QString *error = nullptr,
+                                      const QList<Highlight> &highlights = {});
 
 // "45.52000; -122.68194" (the text of Wikipedia's <span class="geo">): a latitude and a longitude, if both are in range
 std::optional<std::pair<double, double>> parseGeo(const QString &text);

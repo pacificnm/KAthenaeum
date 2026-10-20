@@ -19,11 +19,23 @@ int InstalledModel::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> InstalledModel::roleNames() const
 {
-    return {{IdRole, "libraryId"}, {TitleRole, "title"}, {DescriptionRole, "description"}, {PathRole, "path"},
-            {FilenameRole, "filename"}, {FlavourRole, "flavour"}, {LanguageRole, "language"}, {DateRole, "date"},
-            {SizeRole, "size"}, {ArticleCountRole, "articleCount"}, {IconRole, "icon"}, {HasFulltextRole, "hasFulltext"},
-            {IsWikipediaRole, "isWikipedia"}, {MissingRole, "missing"}, {ManagedRole, "managed"},
-            {UpdateVersionRole, "updateVersion"}, {UpdateSizeRole, "updateSize"}};
+    return {{IdRole, "libraryId"},
+            {TitleRole, "title"},
+            {DescriptionRole, "description"},
+            {PathRole, "path"},
+            {FilenameRole, "filename"},
+            {FlavourRole, "flavour"},
+            {LanguageRole, "language"},
+            {DateRole, "date"},
+            {SizeRole, "size"},
+            {ArticleCountRole, "articleCount"},
+            {IconRole, "icon"},
+            {HasFulltextRole, "hasFulltext"},
+            {IsWikipediaRole, "isWikipedia"},
+            {MissingRole, "missing"},
+            {ManagedRole, "managed"},
+            {UpdateVersionRole, "updateVersion"},
+            {UpdateSizeRole, "updateSize"}};
 }
 
 QVariant InstalledModel::data(const QModelIndex &index, int role) const
@@ -32,24 +44,41 @@ QVariant InstalledModel::data(const QModelIndex &index, int role) const
         return {};
     const LibraryRecord &r = m_records.at(index.row());
     switch (role) {
-    case IdRole: return r.id;
+    case IdRole:
+        return r.id;
     case Qt::DisplayRole:
-    case TitleRole: return r.title;
-    case DescriptionRole: return r.description;
-    case PathRole: return r.path;
-    case FilenameRole: return r.filename();
-    case FlavourRole: return r.flavour;
-    case LanguageRole: return r.language;
-    case DateRole: return r.date;
-    case SizeRole: return double(r.sizeBytes);  // QML numbers are doubles; qint64 would arrive as a string-ish variant
-    case ArticleCountRole: return double(r.articleCount);
-    case IconRole: return m_icons.value(r.id);
-    case HasFulltextRole: return r.hasFulltextIndex;
-    case IsWikipediaRole: return ZimArchive::isMwoffliner(r.scraper);
-    case MissingRole: return !r.fileExists();
-    case ManagedRole: return QFileInfo(r.path).absolutePath() == QDir(m_folder).absolutePath();
-    case UpdateVersionRole: return m_updates.contains(r.id) ? m_updates.value(r.id).version : QString();
-    case UpdateSizeRole: return m_updates.contains(r.id) ? double(m_updates.value(r.id).size) : 0.0;
+    case TitleRole:
+        return r.title;
+    case DescriptionRole:
+        return r.description;
+    case PathRole:
+        return r.path;
+    case FilenameRole:
+        return r.filename();
+    case FlavourRole:
+        return r.flavour;
+    case LanguageRole:
+        return r.language;
+    case DateRole:
+        return r.date;
+    case SizeRole:
+        return double(r.sizeBytes); // QML numbers are doubles; qint64 would arrive as a string-ish variant
+    case ArticleCountRole:
+        return double(r.articleCount);
+    case IconRole:
+        return m_icons.value(r.id);
+    case HasFulltextRole:
+        return r.hasFulltextIndex;
+    case IsWikipediaRole:
+        return ZimArchive::isMwoffliner(r.scraper);
+    case MissingRole:
+        return !r.fileExists();
+    case ManagedRole:
+        return QFileInfo(r.path).absolutePath() == QDir(m_folder).absolutePath();
+    case UpdateVersionRole:
+        return m_updates.contains(r.id) ? m_updates.value(r.id).version : QString();
+    case UpdateSizeRole:
+        return m_updates.contains(r.id) ? double(m_updates.value(r.id).size) : 0.0;
     }
     return {};
 }
@@ -81,10 +110,20 @@ int CatalogModel::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> CatalogModel::roleNames() const
 {
-    return {{TitleRole, "title"}, {SummaryRole, "summary"}, {NameRole, "name"}, {CategoryRole, "category"},
-            {FlavourRole, "flavour"}, {LanguageRole, "language"}, {DateRole, "date"}, {SizeRole, "size"},
-            {ArticleCountRole, "articleCount"}, {IllustrationRole, "illustration"}, {HasFulltextRole, "hasFulltext"},
-            {FilenameRole, "filename"}, {StateRole, "state"}, {ProgressRole, "progress"}};
+    return {{TitleRole, "title"},
+            {SummaryRole, "summary"},
+            {NameRole, "name"},
+            {CategoryRole, "category"},
+            {FlavourRole, "flavour"},
+            {LanguageRole, "language"},
+            {DateRole, "date"},
+            {SizeRole, "size"},
+            {ArticleCountRole, "articleCount"},
+            {IllustrationRole, "illustration"},
+            {HasFulltextRole, "hasFulltext"},
+            {FilenameRole, "filename"},
+            {StateRole, "state"},
+            {ProgressRole, "progress"}};
 }
 
 QVariant CatalogModel::data(const QModelIndex &index, int role) const
@@ -94,20 +133,34 @@ QVariant CatalogModel::data(const QModelIndex &index, int role) const
     const CatalogEntry &e = m_all.at(m_rows.at(index.row()));
     switch (role) {
     case Qt::DisplayRole:
-    case TitleRole: return e.title;
-    case SummaryRole: return e.summary;
-    case NameRole: return e.name;
-    case CategoryRole: return e.category;
-    case FlavourRole: return e.flavour;
-    case LanguageRole: return e.language;
-    case DateRole: return e.date.toString(Qt::ISODate);
-    case SizeRole: return double(e.size);
-    case ArticleCountRole: return double(e.articleCount);
-    case IllustrationRole: return e.illustration;
-    case HasFulltextRole: return e.hasFulltextIndex();
-    case FilenameRole: return e.filename;
-    case StateRole: return stateOf(e);
-    case ProgressRole: return m_downloading.value(e.filename, 0.0);
+    case TitleRole:
+        return e.title;
+    case SummaryRole:
+        return e.summary;
+    case NameRole:
+        return e.name;
+    case CategoryRole:
+        return e.category;
+    case FlavourRole:
+        return e.flavour;
+    case LanguageRole:
+        return e.language;
+    case DateRole:
+        return e.date.toString(Qt::ISODate);
+    case SizeRole:
+        return double(e.size);
+    case ArticleCountRole:
+        return double(e.articleCount);
+    case IllustrationRole:
+        return e.illustration;
+    case HasFulltextRole:
+        return e.hasFulltextIndex();
+    case FilenameRole:
+        return e.filename;
+    case StateRole:
+        return stateOf(e);
+    case ProgressRole:
+        return m_downloading.value(e.filename, 0.0);
     }
     return {};
 }
@@ -119,7 +172,7 @@ QString CatalogModel::stateOf(const CatalogEntry &e) const
     if (m_downloading.contains(e.filename))
         return QStringLiteral("downloading");
     if (const auto v = m_installedVersions.constFind(e.base); v != m_installedVersions.cend() && *v < e.version)
-        return QStringLiteral("update");  // an older version of this very library is installed
+        return QStringLiteral("update"); // an older version of this very library is installed
     return QStringLiteral("available");
 }
 
@@ -224,7 +277,9 @@ void CatalogModel::apply()
             continue;
         if (!words.isEmpty()) {
             const QString hay = (e.title + QLatin1Char(' ') + e.summary + QLatin1Char(' ') + e.name + QLatin1Char(' ') + e.category).toLower();
-            if (!std::all_of(words.cbegin(), words.cend(), [&](const QString &w) { return hay.contains(w); }))
+            if (!std::all_of(words.cbegin(), words.cend(), [&](const QString &w) {
+                    return hay.contains(w);
+                }))
                 continue;
         }
         m_rows.append(i);
@@ -239,7 +294,7 @@ void CatalogModel::apply()
         if (m_sort == QLatin1String("smallest"))
             return x.size < y.size;
         const int c = QString::localeAwareCompare(x.title, y.title);
-        return c != 0 ? c < 0 : x.size < y.size;  // the same library in its flavours: smallest first
+        return c != 0 ? c < 0 : x.size < y.size; // the same library in its flavours: smallest first
     });
     endResetModel();
     if (before != m_rows.size())
@@ -255,9 +310,17 @@ int DownloadsModel::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> DownloadsModel::roleNames() const
 {
-    return {{IdRole, "downloadId"}, {TitleRole, "title"}, {FilenameRole, "filename"}, {StatusRole, "status"},
-            {ErrorRole, "error"}, {ProgressRole, "progress"}, {DoneRole, "done"}, {TotalRole, "total"},
-            {SpeedRole, "speed"}, {EtaRole, "eta"}, {ActiveRole, "active"}};
+    return {{IdRole, "downloadId"},
+            {TitleRole, "title"},
+            {FilenameRole, "filename"},
+            {StatusRole, "status"},
+            {ErrorRole, "error"},
+            {ProgressRole, "progress"},
+            {DoneRole, "done"},
+            {TotalRole, "total"},
+            {SpeedRole, "speed"},
+            {EtaRole, "eta"},
+            {ActiveRole, "active"}};
 }
 
 QVariant DownloadsModel::data(const QModelIndex &index, int role) const
@@ -266,18 +329,29 @@ QVariant DownloadsModel::data(const QModelIndex &index, int role) const
         return {};
     const DownloadRecord &r = m_records.at(index.row());
     switch (role) {
-    case IdRole: return r.id;
+    case IdRole:
+        return r.id;
     case Qt::DisplayRole:
-    case TitleRole: return r.title.isEmpty() ? r.filename : r.title;
-    case FilenameRole: return r.filename;
-    case StatusRole: return r.status;
-    case ErrorRole: return r.error;
-    case ProgressRole: return r.progress();
-    case DoneRole: return double(r.doneBytes);
-    case TotalRole: return double(r.totalBytes);
-    case SpeedRole: return double(r.speed);
-    case EtaRole: return r.etaSeconds;
-    case ActiveRole: return r.isActive();
+    case TitleRole:
+        return r.title.isEmpty() ? r.filename : r.title;
+    case FilenameRole:
+        return r.filename;
+    case StatusRole:
+        return r.status;
+    case ErrorRole:
+        return r.error;
+    case ProgressRole:
+        return r.progress();
+    case DoneRole:
+        return double(r.doneBytes);
+    case TotalRole:
+        return double(r.totalBytes);
+    case SpeedRole:
+        return double(r.speed);
+    case EtaRole:
+        return r.etaSeconds;
+    case ActiveRole:
+        return r.isActive();
     }
     return {};
 }

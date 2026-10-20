@@ -82,7 +82,7 @@ Kirigami.ApplicationWindow {
     }
     // a chat about one article opens with its article, the panel beside it; a project's chat in its project
     // `onTop`: opened from inside a page (a project's sources), so Back returns there; from the Chats list it replaces
-    // the stack. (Opening an attached chat from a project threw the project away; the review.)
+    // the stack. (Opening an attached chat from a project must keep the project.)
     function openChat(chatId, articleLibraryId, articlePath, projectId, onTop) {
         if (projectId > 0) {
             show(projectsPage);
@@ -118,7 +118,7 @@ Kirigami.ApplicationWindow {
     }
 
     // Each page's title in the header, with a back button when there is somewhere to go back to (a breadcrumb trail
-    // of every page, with back and forward arrows, looked dated: the user, 2026-10-19)
+    // of every page, with back and forward arrows, looks dated)
     pageStack.columnView.columnResizeMode: Kirigami.ColumnView.SingleColumn
     pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.ToolBar
     pageStack.globalToolBar.showNavigationButtons: Kirigami.ApplicationHeaderStyle.ShowBackButton

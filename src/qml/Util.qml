@@ -18,8 +18,8 @@ QtObject {
 
     // Text from a ZIM, the catalog or the model, for the places that cannot be told to show plain text (tooltips, menu
     // items, buttons, combo boxes, placeholder messages): Qt reads a string as rich text when its first line holds anything
-    // tag-like, and a ZIM title "<img src=http://…>" then fetched from the web and styled the app's own UI (the review,
-    // 2026-10-19). "<" becomes a look-alike, so nothing can be read as markup.
+    // tag-like, and a ZIM title "<img src=http://…>" would then fetch from the web and style the app's own UI.
+    // "<" becomes a look-alike, so nothing can be read as markup.
     function plain(text) {
         return String(text ?? "").replace(/</g, "\u2039");
     }
@@ -44,7 +44,7 @@ QtObject {
     }
 
     // A page title from outside text, for the breadcrumb: plain, and short enough that the trail keeps its parents
-    // (a long project name was clipped mid-word and pushed the parent crumbs off; the review)
+    // (a long project name is clipped mid-word and pushes the parent crumbs off)
     function pageTitle(text) {
         const t = plain(text).trim();
         return t.length > 48 ? t.slice(0, 47).trim() + "…" : t;

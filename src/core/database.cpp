@@ -161,21 +161,21 @@ const QList<QStringList> &migrations()
                            " name TEXT NOT NULL,"
                            " parent_name TEXT NOT NULL DEFAULT '',"
                            " max_zoom INTEGER NOT NULL,"
-                           " shape TEXT NOT NULL DEFAULT '',"  // GeoJSON geometry: what the map is cut to
-                           " pbf TEXT NOT NULL DEFAULT '',"  // its OpenStreetMap extract ('' for the world overview)
+                           " shape TEXT NOT NULL DEFAULT ''," // GeoJSON geometry: what the map is cut to
+                           " pbf TEXT NOT NULL DEFAULT ''," // its OpenStreetMap extract ('' for the world overview)
                            " west REAL NOT NULL, south REAL NOT NULL, east REAL NOT NULL, north REAL NOT NULL,"
-                           " status TEXT NOT NULL DEFAULT 'queued',"  // queued | downloading | indexing | complete | failed | cancelled
+                           " status TEXT NOT NULL DEFAULT 'queued'," // queued | downloading | indexing | complete | failed | cancelled
                            " error TEXT NOT NULL DEFAULT '',"
                            " file TEXT NOT NULL DEFAULT '',"
                            " size INTEGER NOT NULL DEFAULT 0,"
-                           " build TEXT NOT NULL DEFAULT '',"  // the planet build it was cut from ("20261019")
+                           " build TEXT NOT NULL DEFAULT ''," // the planet build it was cut from ("20261019")
                            " places INTEGER NOT NULL DEFAULT 0,"
                            " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
                            " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
             QStringLiteral("CREATE TABLE map_places ("
                            " id INTEGER PRIMARY KEY,"
                            " region_id INTEGER NOT NULL REFERENCES map_regions (id) ON DELETE CASCADE,"
-                           " osm TEXT NOT NULL,"  // n123 | w123 | r123
+                           " osm TEXT NOT NULL," // n123 | w123 | r123
                            " name TEXT NOT NULL,"
                            " name_en TEXT NOT NULL DEFAULT '',"
                            " kind TEXT NOT NULL DEFAULT '',"
@@ -186,7 +186,7 @@ const QList<QStringList> &migrations()
                            " wikipedia_en TEXT NOT NULL DEFAULT '',"
                            " wikidata TEXT NOT NULL DEFAULT '',"
                            " population INTEGER NOT NULL DEFAULT 0,"
-                           " outline BLOB NOT NULL DEFAULT '')"),  // an area's edges, simplified (MapPlaces::encodeOutline)
+                           " outline BLOB NOT NULL DEFAULT '')"), // an area's edges, simplified (MapPlaces::encodeOutline)
             QStringLiteral("CREATE INDEX map_places_osm ON map_places (osm)"),
             QStringLiteral("CREATE INDEX map_places_region ON map_places (region_id)"),
             QStringLiteral("CREATE INDEX map_places_name ON map_places (name COLLATE NOCASE)"),
@@ -202,7 +202,7 @@ const QList<QStringList> &migrations()
                            " path TEXT NOT NULL,"
                            " title TEXT NOT NULL DEFAULT '',"
                            " text TEXT NOT NULL,"
-                           " color TEXT NOT NULL DEFAULT 'yellow',"  // yellow | green | blue | pink
+                           " color TEXT NOT NULL DEFAULT 'yellow'," // yellow | green | blue | pink
                            " note TEXT NOT NULL DEFAULT '',"
                            " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
                            " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
@@ -231,8 +231,8 @@ const QList<QStringList> &migrations()
                            " title TEXT NOT NULL,"
                            " level TEXT NOT NULL,"
                            " focus TEXT NOT NULL DEFAULT '',"
-                           " length TEXT NOT NULL DEFAULT 'standard',"  // short | standard | long
-                           " status TEXT NOT NULL DEFAULT 'new',"  // new | planning | ready | failed
+                           " length TEXT NOT NULL DEFAULT 'standard'," // short | standard | long
+                           " status TEXT NOT NULL DEFAULT 'new'," // new | planning | ready | failed
                            " error TEXT NOT NULL DEFAULT '',"
                            " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
                            " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
@@ -271,7 +271,7 @@ const QList<QStringList> &migrations()
                            " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
                            " lesson_id INTEGER REFERENCES course_lessons (id) ON DELETE CASCADE,"
                            " unit_id INTEGER REFERENCES course_units (id) ON DELETE CASCADE,"
-                           " kind TEXT NOT NULL,"  // lesson | unit
+                           " kind TEXT NOT NULL," // lesson | unit
                            " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
             QStringLiteral("CREATE INDEX quizzes_lesson ON quizzes (lesson_id)"),
             QStringLiteral("CREATE INDEX quizzes_unit ON quizzes (unit_id)"),
@@ -280,17 +280,17 @@ const QList<QStringList> &migrations()
                            " quiz_id INTEGER NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,"
                            " position INTEGER NOT NULL,"
                            " question TEXT NOT NULL,"
-                           " options TEXT NOT NULL,"  // JSON ["…", "…", "…", "…"]
-                           " answer INTEGER NOT NULL,"  // index into options
+                           " options TEXT NOT NULL," // JSON ["…", "…", "…", "…"]
+                           " answer INTEGER NOT NULL," // index into options
                            " explanation TEXT NOT NULL DEFAULT '',"
-                           " evidence TEXT NOT NULL DEFAULT '',"  // the passage it was written from
+                           " evidence TEXT NOT NULL DEFAULT ''," // the passage it was written from
                            " library_id INTEGER, path TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',"
-                           " lesson_id INTEGER)"),  // which lesson it tests (a unit test has several)
+                           " lesson_id INTEGER)"), // which lesson it tests (a unit test has several)
             QStringLiteral("CREATE INDEX quiz_questions_quiz ON quiz_questions (quiz_id, position)"),
             QStringLiteral("CREATE TABLE quiz_attempts ("
                            " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                            " quiz_id INTEGER NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,"
-                           " answers TEXT NOT NULL,"  // JSON [chosen index per question, -1 none]
+                           " answers TEXT NOT NULL," // JSON [chosen index per question, -1 none]
                            " score INTEGER NOT NULL,"
                            " total INTEGER NOT NULL,"
                            " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
@@ -344,8 +344,7 @@ bool Database::open(const QString &path, QString *error)
         return false;
     }
     // A database that cannot be used is closed, never left open half-usable: a newer build's database must not be written
-    // by this one, and a failed migration must not leave the app saving into a schema it does not expect (the review found
-    // both, 2026-10-19)
+    // by this one, and a failed migration must not leave the app saving into a schema it does not expect
     auto refuse = [&db]() {
         db.close();
         return false;

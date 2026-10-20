@@ -22,7 +22,7 @@ struct ChatLine {
     QString text;
     bool done = false;
     QString error;
-    QJsonObject json;  // the whole line: the last one carries eval_count, eval_duration, done_reason
+    QJsonObject json; // the whole line: the last one carries eval_count, eval_duration, done_reason
 };
 ChatLine parseChatLine(const QByteArray &line);
 
@@ -30,8 +30,7 @@ ChatLine parseChatLine(const QByteArray &line);
 std::optional<QList<Vector>> parseEmbeddings(const QByteArray &body, QString *error);
 
 // What to tell the user when a request failed: Ollama not running, a model not installed, or Ollama's own message
-QString errorMessage(QNetworkReply::NetworkError error, int httpStatus, const QByteArray &body, const QString &baseUrl,
-                     const QString &model = {});
+QString errorMessage(QNetworkReply::NetworkError error, int httpStatus, const QByteArray &body, const QString &baseUrl, const QString &model = {});
 }
 
 class OllamaClient : public QObject
@@ -42,7 +41,10 @@ public:
     explicit OllamaClient(QObject *parent = nullptr);
 
     void setBaseUrl(const QString &url);
-    QString baseUrl() const { return m_baseUrl; }
+    QString baseUrl() const
+    {
+        return m_baseUrl;
+    }
 
     // Callbacks run on this object's thread, only while `context` lives, and never for a request that was aborted.
     // Every call returns its reply so the caller can abort() it.

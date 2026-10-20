@@ -32,7 +32,7 @@ int main(int argc, char **argv)
             printf("  (%lld tiles, %.1f MB to fetch)", extract.tileCount(), extract.totalBytes() / 1e6);
         printf("\n");
         fflush(stdout);
-        if (p == MapExtract::Tiles && qEnvironmentVariableIsSet("DRY")) {  // DRY=1: say how big, fetch nothing
+        if (p == MapExtract::Tiles && qEnvironmentVariableIsSet("DRY")) { // DRY=1: say how big, fetch nothing
             extract.cancel();
             app.exit(0);
         }

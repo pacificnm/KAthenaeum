@@ -18,15 +18,15 @@ namespace Dictionary
 {
 struct Sense {
     QString definition;
-    QString example;  // the first usage example, if there is one
+    QString example; // the first usage example, if there is one
 };
 struct PartOfSpeech {
-    QString name;  // "Noun"
+    QString name; // "Noun"
     QList<Sense> senses;
 };
 struct Entry {
     QString word;
-    QString pronunciation;  // the first IPA ("/ˈhæpi/")
+    QString pronunciation; // the first IPA ("/ˈhæpi/")
     QList<PartOfSpeech> parts;
 };
 

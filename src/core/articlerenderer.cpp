@@ -6,8 +6,8 @@
 
 #include <QRegularExpression>
 #include <QSet>
-#include <cmath>
 #include <QUrl>
+#include <cmath>
 
 #include <libxml/HTMLparser.h>
 #include <libxml/HTMLtree.h>
@@ -25,16 +25,17 @@ const char *DropXPath =
 // NOT target/rel: the code below adds exactly those itself
 const QSet<QByteArray> &keepAttributes()
 {
-    static const QSet<QByteArray> value = {"class", "id", "href", "src", "alt", "title", "colspan", "rowspan", "scope",
-                                             "style", "lang", "dir", "width", "height"};
+    static const QSet<QByteArray> value =
+        {"class", "id", "href", "src", "alt", "title", "colspan", "rowspan", "scope", "style", "lang", "dir", "width", "height"};
     return value;
 }
 
-// A backslash anywhere: CSS escapes spell anything ("u\\72l(" is url(), which got past this filter; the review, 2026-10-19)
+// A backslash anywhere: CSS escapes can spell anything ("u\\72l(" is url())
 const QRegularExpression &badStyle()
 {
-    static const QRegularExpression value(QStringLiteral("\\\\|url\\s*\\(|image-set|src\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
-                                      QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression value(
+        QStringLiteral("\\\\|url\\s*\\(|image-set|src\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
+        QRegularExpression::CaseInsensitiveOption);
     return value;
 }
 const QRegularExpression &external()
@@ -50,7 +51,11 @@ const QRegularExpression &scripting()
 
 struct Doc {
     htmlDocPtr doc = nullptr;
-    ~Doc() { if (doc) xmlFreeDoc(doc); }
+    ~Doc()
+    {
+        if (doc)
+            xmlFreeDoc(doc);
+    }
 };
 
 struct XPathResult {
@@ -58,12 +63,17 @@ struct XPathResult {
     xmlXPathObjectPtr obj = nullptr;
     ~XPathResult()
     {
-        if (obj) xmlXPathFreeObject(obj);
-        if (ctx) xmlXPathFreeContext(ctx);
+        if (obj)
+            xmlXPathFreeObject(obj);
+        if (ctx)
+            xmlXPathFreeContext(ctx);
     }
     // A query libxml2 could not finish (a document past its limits) is not an empty one: the sanitiser must not treat
-    // "nothing found to drop" as safe (it failed open on a huge page, the review found)
-    bool ok() const { return obj != nullptr; }
+    // "nothing found to drop" as safe (it would fail open on a huge page)
+    bool ok() const
+    {
+        return obj != nullptr;
+    }
     QList<xmlNodePtr> nodes() const
     {
         QList<xmlNodePtr> out;
@@ -191,7 +201,7 @@ QString ArticleRenderer::resolve(const QString &basePath, const QString &href)
         if (segment == QLatin1String("..") && !parts.isEmpty() && parts.last() != QLatin1String(".."))
             parts.removeLast();
         else
-            parts.append(segment);  // a ".." that climbs out stays, so the path matches nothing in the ZIM
+            parts.append(segment); // a ".." that climbs out stays, so the path matches nothing in the ZIM
     }
     return parts.join(QLatin1Char('/'));
 }
@@ -234,7 +244,7 @@ void wrap(xmlNodePtr node, qsizetype from, qsizetype to, const Highlight &h, boo
         xmlNewProp(mark, reinterpret_cast<const xmlChar *>("title"), reinterpret_cast<const xmlChar *>(h.label.toUtf8().constData()));
     xmlAddChild(mark, xmlNewText(reinterpret_cast<const xmlChar *>(text.mid(from, to - from).toUtf8().constData())));
     xmlAddNextSibling(node, mark);
-    if (to < text.size())  // may merge into a text node after the mark: the same text, in the same place
+    if (to < text.size()) // may merge into a text node after the mark: the same text, in the same place
         xmlAddNextSibling(mark, xmlNewText(reinterpret_cast<const xmlChar *>(text.mid(to).toUtf8().constData())));
 }
 
@@ -246,11 +256,11 @@ bool highlight(xmlNodePtr root, const Highlight &h)
         if (!c.isSpace())
             needle += c.toLower();
     if (needle.size() < 8)
-        return false;  // too short to place reliably
+        return false; // too short to place reliably
     QList<xmlNodePtr> nodes;
     textNodes(root, nodes);
     QString hay;
-    QList<std::pair<int, int>> where;  // for each character of `hay`: (node, offset in it)
+    QList<std::pair<int, int>> where; // for each character of `hay`: (node, offset in it)
     QList<QString> texts;
     for (int i = 0; i < nodes.size(); ++i) {
         texts << contentOf(nodes.at(i));
@@ -280,8 +290,12 @@ bool highlight(xmlNodePtr root, const Highlight &h)
 }
 }
 
-std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, const QString &path, const QString &urlPrefix,
-                                                       const HasEntry &hasEntry, QString *error, const QList<Highlight> &highlights)
+std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
+                                                       const QString &path,
+                                                       const QString &urlPrefix,
+                                                       const HasEntry &hasEntry,
+                                                       QString *error,
+                                                       const QList<Highlight> &highlights)
 {
     auto fail = [error](const QString &why) -> std::optional<RenderedArticle> {
         if (error)
@@ -293,7 +307,10 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         return fail(QStringLiteral("empty page"));
 
     Doc d;
-    d.doc = htmlReadMemory(raw.constData(), int(raw.size()), nullptr, "UTF-8",
+    d.doc = htmlReadMemory(raw.constData(),
+                           int(raw.size()),
+                           nullptr,
+                           "UTF-8",
                            HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_NONET | HTML_PARSE_NOBLANKS);
     if (!d.doc)
         return fail(QStringLiteral("not an HTML page"));
@@ -408,7 +425,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
             const QString target = resolve(path, href);
             if (!target.isEmpty() && hasEntry(target)) {
                 setAttr(a, "href", urlPrefix + encodePath(target) + (fragment.isEmpty() ? QString() : QLatin1Char('#') + fragment));
-            } else {  // the linked article is not in this library: plain, dimmed text
+            } else { // the linked article is not in this library: plain, dimmed text
                 xmlNodeSetName(a, reinterpret_cast<const xmlChar *>("span"));
                 removeAttr(a, "href");
                 addClass(a, "wl-missing");

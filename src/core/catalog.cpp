@@ -17,7 +17,7 @@
 
 namespace
 {
-constexpr qint64 MaxFeedBytes = 32 << 20;  // the English catalog is about 1.5 MB
+constexpr qint64 MaxFeedBytes = 32 << 20; // the English catalog is about 1.5 MB
 constexpr QLatin1StringView Acquisition("http://opds-spec.org/acquisition/open-access");
 constexpr QLatin1StringView Thumbnail("http://opds-spec.org/image/thumbnail");
 
@@ -34,7 +34,7 @@ CatalogEntry readEntry(QXmlStreamReader &xml, const QUrl &feedUrl)
                 e.url = href;
                 e.size = xml.attributes().value(QLatin1String("length")).toLongLong();
             } else if (rel == Thumbnail && Catalog::isIllustrationUrl(href)) {
-                e.illustration = href;  // shown by QML, which may fetch from kiwix.org only (see main.cpp)
+                e.illustration = href; // shown by QML, which may fetch from kiwix.org only (see main.cpp)
             }
             xml.skipCurrentElement();
         } else if (tag == QLatin1String("author") || tag == QLatin1String("publisher")) {
@@ -100,7 +100,7 @@ QList<CatalogEntry> Catalog::parse(const QByteArray &data, const QUrl &feedUrl, 
                 continue;
             }
             CatalogEntry e = readEntry(xml, feedUrl);
-            if (e.url.isValid() && isValidFilename(e.filename))  // an entry we could not download is no use
+            if (e.url.isValid() && isValidFilename(e.filename)) // an entry we could not download is no use
                 entries.append(std::move(e));
         }
     } else if (!xml.hasError()) {
@@ -236,7 +236,7 @@ void CatalogFeed::finished()
         return;
     }
     QDir().mkpath(QFileInfo(m_cacheFile).absolutePath());
-    QSaveFile cache(m_cacheFile);  // written whole or not at all, so a crash never leaves half a catalog
+    QSaveFile cache(m_cacheFile); // written whole or not at all, so a crash never leaves half a catalog
     if (cache.open(QIODevice::WriteOnly)) {
         cache.write(data);
         cache.commit();

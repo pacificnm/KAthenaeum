@@ -76,8 +76,9 @@ private Q_SLOTS:
 
     void referenceLikeSectionsAreSkipped()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<p>%1</p><h2>References</h2><p>%2</p><h2>External links</h2><ul><li>link one is here for sure</li></ul>")
-                                                 .arg(QStringLiteral("Real content here. ").repeated(5), QStringLiteral("Cited paper. ").repeated(9))));
+        const auto a =
+            Extract::extract(page(QStringLiteral("<p>%1</p><h2>References</h2><p>%2</p><h2>External links</h2><ul><li>link one is here for sure</li></ul>")
+                                      .arg(QStringLiteral("Real content here. ").repeated(5), QStringLiteral("Cited paper. ").repeated(9))));
         QCOMPARE(a.passages.size(), 1);
         QVERIFY(!a.passages[0].text.contains(QLatin1String("Cited")));
     }
@@ -92,15 +93,18 @@ private Q_SLOTS:
 
     void tablesScriptsStylesAndCitationsRemoved()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<style>.x{}</style><script>alert(1)</script><table><tr><td>TABLEDATA</td></tr></table>"
-                                                            "<p>Some real prose that is long enough to keep.<sup class='reference'>[1]</sup></p>")));
+        const auto a =
+            Extract::extract(page(QStringLiteral("<style>.x{}</style><script>alert(1)</script><table><tr><td>TABLEDATA</td></tr></table>"
+                                                 "<p>Some real prose that is long enough to keep.<sup class='reference'>[1]</sup></p>")));
         const QString t = a.passages[0].text;
-        QVERIFY(!t.contains(QLatin1String("alert")) && !t.contains(QLatin1String("TABLEDATA")) && !t.contains(QLatin1String("[1]")) && !t.contains(QLatin1String(".x{")));
+        QVERIFY(!t.contains(QLatin1String("alert")) && !t.contains(QLatin1String("TABLEDATA")) && !t.contains(QLatin1String("[1]"))
+                && !t.contains(QLatin1String(".x{")));
     }
 
     void listItemsKeepTheirMarkerAndNestedOnesAreNotDuplicated()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<ul><li>Outer item one of the list with enough words to keep <ul><li>inner item</li></ul></li></ul>")));
+        const auto a =
+            Extract::extract(page(QStringLiteral("<ul><li>Outer item one of the list with enough words to keep <ul><li>inner item</li></ul></li></ul>")));
         QCOMPARE(a.passages[0].text.count(QLatin1String("inner item")), 1);
         QVERIFY(a.passages[0].text.startsWith(QLatin1String("- ")));
     }
@@ -113,29 +117,36 @@ private Q_SLOTS:
 
     void emptyAndOddPagesDoNotCrash()
     {
-        for (const QByteArray &raw : {QByteArray("<html></html>"), page(QString()), page(QStringLiteral("<p></p><p>   </p>")),
-                                      QByteArray("<html><body>plain text only, no content div that is long</body></html>"), QByteArray()})
+        for (const QByteArray &raw : {QByteArray("<html></html>"),
+                                      page(QString()),
+                                      page(QStringLiteral("<p></p><p>   </p>")),
+                                      QByteArray("<html><body>plain text only, no content div that is long</body></html>"),
+                                      QByteArray()})
             Extract::extract(raw);
     }
 
     void subHeadingInsideASkippedSectionStaysSkippedButLaterSiblingsReturn()
     {
-        const auto a = Extract::extract(page(
-            QStringLiteral("<h2>Intro</h2><p>%1</p><h3>References</h3><p>%2</p><h3>Other</h3><p>%3</p><h4>Z</h4><p>%4</p><h2>Notes</h2><h3>Sub</h3><p>%5</p><h2>Uses</h2><p>%6</p>")
-                .arg(QStringLiteral("Intro text is here and long enough. ").repeated(3), QStringLiteral("cited stuff here. ").repeated(5),
-                     QStringLiteral("Other real content is here too. ").repeated(3), QStringLiteral("More real content here. ").repeated(3),
-                     QStringLiteral("skipped note text here. ").repeated(4), QStringLiteral("Uses are described here. ").repeated(3))));
+        const auto a = Extract::extract(page(QStringLiteral("<h2>Intro</h2><p>%1</p><h3>References</h3><p>%2</p><h3>Other</h3><p>%3</p><h4>Z</h4><p>%4</"
+                                                            "p><h2>Notes</h2><h3>Sub</h3><p>%5</p><h2>Uses</h2><p>%6</p>")
+                                                 .arg(QStringLiteral("Intro text is here and long enough. ").repeated(3),
+                                                      QStringLiteral("cited stuff here. ").repeated(5),
+                                                      QStringLiteral("Other real content is here too. ").repeated(3),
+                                                      QStringLiteral("More real content here. ").repeated(3),
+                                                      QStringLiteral("skipped note text here. ").repeated(4),
+                                                      QStringLiteral("Uses are described here. ").repeated(3))));
         QCOMPARE(sections(a), (QStringList{QStringLiteral("Intro"), QStringLiteral("Other"), QStringLiteral("Z"), QStringLiteral("Uses")}));
     }
 
     void definitionListsAndBlockQuotesAreReadOnce()
     {
         const auto a = Extract::extract(page(QStringLiteral("<p>%1</p><dl><dt>Term</dt><dd>%2</dd></dl><blockquote><p>%3</p></blockquote>")
-                                                 .arg(QStringLiteral("Lead sentence of the article. ").repeated(2), QStringLiteral("The definition of the term is here. ").repeated(2),
+                                                 .arg(QStringLiteral("Lead sentence of the article. ").repeated(2),
+                                                      QStringLiteral("The definition of the term is here. ").repeated(2),
                                                       QStringLiteral("A quoted passage with plenty of words. ").repeated(2))));
         const QString t = all(a);
         QVERIFY(t.contains(QLatin1String("definition of the term")));
-        QCOMPARE(t.count(QLatin1String("quoted passage")), 2);  // twice in the source, and no more
+        QCOMPARE(t.count(QLatin1String("quoted passage")), 2); // twice in the source, and no more
     }
 
     void paragraphInsideAListItemIsNotDuplicated()
@@ -146,8 +157,9 @@ private Q_SLOTS:
 
     void lineBreaksSeparateWordsAndMathIsDropped()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<p>First line goes here<br>second line follows right after it, long enough to keep.</p>"
-                                                            "<p>Formula <math><mi>x</mi></math> then plenty more words after it so that it is kept ok.</p>")));
+        const auto a =
+            Extract::extract(page(QStringLiteral("<p>First line goes here<br>second line follows right after it, long enough to keep.</p>"
+                                                 "<p>Formula <math><mi>x</mi></math> then plenty more words after it so that it is kept ok.</p>")));
         const QString t = all(a);
         QVERIFY(t.contains(QLatin1String("here second line")));
         QVERIFY(!t.contains(QLatin1String("heresecond")));
@@ -155,7 +167,8 @@ private Q_SLOTS:
 
     void shortSectionsAreMergedNotLost()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<p>%1</p><h2>Tiny</h2><p>Short one.</p>").arg(QStringLiteral("A decent opening paragraph of text. ").repeated(2))));
+        const auto a = Extract::extract(
+            page(QStringLiteral("<p>%1</p><h2>Tiny</h2><p>Short one.</p>").arg(QStringLiteral("A decent opening paragraph of text. ").repeated(2))));
         QVERIFY(all(a).contains(QLatin1String("Short one.")));
         QCOMPARE(Extract::extract(page(QStringLiteral("<p>One short sentence here.</p>"))).passages.size(), 1);
     }
@@ -163,12 +176,13 @@ private Q_SLOTS:
     void aClassOnTheRootElementDoesNotDropThePage()
     {
         // real mwoffliner pages: the html element's class list contains "thumb", which the drop rules match
-        const QByteArray raw = "<html class=\"client-nojs skin-thumbsize-clientpref-standard\"><head><title>T</title></head><body>"
-                               "<div class='mw-parser-output'><p>Water is an inorganic compound with the chemical formula H2O.</p>"
-                               "<table class='infobox'><tr><td><ul><li>Hydrogen oxide</li></ul></td></tr></table><style>.x{color:red}</style></div></body></html>";
+        const QByteArray raw =
+            "<html class=\"client-nojs skin-thumbsize-clientpref-standard\"><head><title>T</title></head><body>"
+            "<div class='mw-parser-output'><p>Water is an inorganic compound with the chemical formula H2O.</p>"
+            "<table class='infobox'><tr><td><ul><li>Hydrogen oxide</li></ul></td></tr></table><style>.x{color:red}</style></div></body></html>";
         const auto a = Extract::extract(raw);
         QCOMPARE(a.passages.size(), 1);
-        QVERIFY(!a.passages[0].text.contains(QLatin1String("Hydrogen oxide")));  // and the drop rules still apply below the root
+        QVERIFY(!a.passages[0].text.contains(QLatin1String("Hydrogen oxide"))); // and the drop rules still apply below the root
         QVERIFY(!a.passages[0].text.contains(QLatin1String("color")));
     }
 
@@ -202,11 +216,11 @@ private Q_SLOTS:
     {
         const auto a = Extract::extract(page(QStringLiteral(
             "<table class='infobox ib-chembox'><tbody>"
-            "<tr><th colspan='2'>Ethanol</th></tr>"                                                // a heading: one cell
-            "<tr><td><span typeof='mw:File'><img src='x'/></span></td><td>Skeletal formula</td></tr>"  // pictures and captions
+            "<tr><th colspan='2'>Ethanol</th></tr>" // a heading: one cell
+            "<tr><td><span typeof='mw:File'><img src='x'/></span></td><td>Skeletal formula</td></tr>" // pictures and captions
             "<tr><td>CAS Number</td><td><a rel='mw:ExtLink nofollow' href='https://x'>64-17-5</a><sup><span style='display:none'>Y</span></sup></td></tr>"
-            "<tr><td>Density</td><td>0.78945 g/cm<sup>3</sup> (at 20 °C)</td></tr>"                 // td/td, as in chemboxes
-            "<tr><th>Boiling point</th><td>78.23 °C<sup class='reference'>[4]</sup></td></tr>"      // th/td, as in most infoboxes
+            "<tr><td>Density</td><td>0.78945 g/cm<sup>3</sup> (at 20 °C)</td></tr>" // td/td, as in chemboxes
+            "<tr><th>Boiling point</th><td>78.23 °C<sup class='reference'>[4]</sup></td></tr>" // th/td, as in most infoboxes
             "<tr><th>Instruments</th><td><div class='plainlist'><ul><li>Vocals</li><li>piano</li></ul></div></td></tr>"
             "<tr><th>Born</th><td>Ray Charles Robinson<br/><span style='display: none'>(1930-09-23)</span>September 23, 1930</td></tr>"
             "<tr><th>Spouses</th><td>Eileen Williams\u200b (m. 1951)</td></tr>"
@@ -214,17 +228,19 @@ private Q_SLOTS:
             "<p>Ethanol is an organic compound with the chemical formula CH3CH2OH, found in drinks.</p>"
             "<h2>Uses</h2><p>Ethanol is used as a solvent, as a fuel and in medicine in many countries.</p>")));
         QCOMPARE(sections(a), (QStringList{QString(), QStringLiteral("Key facts"), QStringLiteral("Uses")}));
-        QCOMPARE(a.passages[1].text, QStringLiteral("Density: 0.78945 g/cm^3 (at 20 °C)\n"
-                                                    "Boiling point: 78.23 °C\n"
-                                                    "Instruments: Vocals, piano\n"
-                                                    "Born: Ray Charles Robinson September 23, 1930\n"
-                                                    "Spouses: Eileen Williams (m. 1951)"));
+        QCOMPARE(a.passages[1].text,
+                 QStringLiteral("Density: 0.78945 g/cm^3 (at 20 °C)\n"
+                                "Boiling point: 78.23 °C\n"
+                                "Instruments: Vocals, piano\n"
+                                "Born: Ray Charles Robinson September 23, 1930\n"
+                                "Spouses: Eileen Williams (m. 1951)"));
     }
 
     void aPageWithoutAnInfoboxHasNoKeyFacts()
     {
-        const auto a = Extract::extract(page(QStringLiteral("<p>Plain article text that is long enough to be a passage.</p>"
-                                                            "<table><tr><th>Year</th><td>1990</td></tr></table>")));
+        const auto a =
+            Extract::extract(page(QStringLiteral("<p>Plain article text that is long enough to be a passage.</p>"
+                                                 "<table><tr><th>Year</th><td>1990</td></tr></table>")));
         QCOMPARE(sections(a), QStringList{QString()});
     }
 

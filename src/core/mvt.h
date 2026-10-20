@@ -13,14 +13,19 @@
 // feature's layer, properties and geometry in tile units (0..extent).
 namespace Mvt
 {
-enum GeomType { Unknown = 0, Point = 1, LineString = 2, Polygon = 3 };
+enum GeomType {
+    Unknown = 0,
+    Point = 1,
+    LineString = 2,
+    Polygon = 3
+};
 
 struct Feature {
     QString layer;
     quint64 id = 0;
     GeomType type = Unknown;
     QVariantMap properties;
-    QList<QList<QPointF>> parts;  // points: one part of points; lines and polygons: one part per line or ring
+    QList<QList<QPointF>> parts; // points: one part of points; lines and polygons: one part per line or ring
     int extent = 4096;
 };
 

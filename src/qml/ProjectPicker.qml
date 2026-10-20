@@ -22,7 +22,7 @@ Kirigami.Dialog {
     preferredWidth: Kirigami.Units.gridUnit * 26
     standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
 
-    // a new project needs a name: OK did nothing (and closed) with an empty one (the review)
+    // a new project needs a name: OK would do nothing (and close) with an empty one
     readonly property bool canAccept: combo.currentValue !== -1 || newTitle.text.trim() !== ""
     onCanAcceptChanged: updateOk()
     function updateOk() {

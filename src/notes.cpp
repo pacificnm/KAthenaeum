@@ -76,7 +76,7 @@ QColor Notes::swatch(const QString &color) const
         return QColor(0x60, 0xa5, 0xfa);
     if (color == QLatin1String("pink"))
         return QColor(0xf4, 0x72, 0xb6);
-    return QColor(0xfa, 0xcc, 0x15);  // yellow, the default
+    return QColor(0xfa, 0xcc, 0x15); // yellow, the default
 }
 
 QString Notes::colorName(const QString &color) const
@@ -92,7 +92,7 @@ QString Notes::colorName(const QString &color) const
 
 void Notes::touched()
 {
-    ArticleStore::clear();  // the article shows its highlights as they now are
+    ArticleStore::clear(); // the article shows its highlights as they now are
     Q_EMIT changed();
 }
 

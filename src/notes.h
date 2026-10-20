@@ -32,8 +32,8 @@ public:
     Q_INVOKABLE QString colorName(const QString &color) const;
 
     // The highlight's id, or 0 (with a message: the passage is too short to find again in the page)
-    Q_INVOKABLE qint64 add(qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &color = {},
-                           const QString &note = {});
+    Q_INVOKABLE qint64
+    add(qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &color = {}, const QString &note = {});
     Q_INVOKABLE bool tooShort(const QString &text) const;
     Q_INVOKABLE bool setNote(qint64 id, const QString &note);
     Q_INVOKABLE bool setColor(qint64 id, const QString &color);

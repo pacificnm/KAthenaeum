@@ -9,19 +9,19 @@
 #include <QStringList>
 
 // Finding articles in libraries that have no index, through the ZIM itself: a port of Athenaeum's zimsearch.py, same
-// rules and weights (see CLAUDE.md, "How a question is answered"). Search results and Ask both start here.
+// rules and weights (see HACKING.md, "How a question is answered"). Search results and Ask both start here.
 namespace ZimSearch
 {
 constexpr int RrfK = 60;
-constexpr double TitleWeight = 3.0;   // an exact title is the strongest signal
-constexpr double TitlePrefix = 1.5;   // a title starting with the query's words
-constexpr double LeaveOneOut = 0.6;   // "every word but one", against 1.0 for every word
+constexpr double TitleWeight = 3.0; // an exact title is the strongest signal
+constexpr double TitlePrefix = 1.5; // a title starting with the query's words
+constexpr double LeaveOneOut = 0.6; // "every word but one", against 1.0 for every word
 constexpr double SingleWord = 0.3;
-constexpr int PerLibrary = 10;        // articles taken from each Xapian query
-constexpr int AndMin = 5;             // fewer distinct articles than this and the query is widened to single words
+constexpr int PerLibrary = 10; // articles taken from each Xapian query
+constexpr int AndMin = 5; // fewer distinct articles than this and the query is widened to single words
 constexpr int MaxTerms = 8;
 constexpr int MaxNgramHits = 6;
-constexpr double AboutnessFloor = 0.25;  // score x (floor + share of the query's words in the title and introduction)
+constexpr double AboutnessFloor = 0.25; // score x (floor + share of the query's words in the title and introduction)
 
 // ---- the words of a query (pure functions) ----
 
@@ -45,15 +45,15 @@ struct Found {
     QString path;
     QString title;
     double score = 0;
-    bool titleMatch = false;  // the query named this article exactly
-    bool named = false;       // its title is the query or a run of its words ("Ethanol" in "boiling point of ethanol")
+    bool titleMatch = false; // the query named this article exactly
+    bool named = false; // its title is the query or a run of its words ("Ethanol" in "boiling point of ethanol")
 };
 
 struct Hit {
     qint64 libraryId = 0;
     QString path;
     QString title;
-    QString section;  // where the snippet comes from, empty for the introduction
+    QString section; // where the snippet comes from, empty for the introduction
     QString snippet;
     double score = 0;
     bool titleMatch = false;

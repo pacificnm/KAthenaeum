@@ -17,7 +17,7 @@ private Q_SLOTS:
         QString error;
         const auto entries = Catalog::parse(file.readAll(), Catalog::defaultFeedUrl(), &error);
         QVERIFY2(error.isEmpty(), qPrintable(error));
-        QCOMPARE(entries.size(), 3);  // the entry whose link is not a ZIM is dropped
+        QCOMPARE(entries.size(), 3); // the entry whose link is not a ZIM is dropped
 
         const CatalogEntry &chem = entries[0];
         QCOMPARE(chem.name, QStringLiteral("wikipedia_en_chemistry"));
@@ -47,11 +47,15 @@ private Q_SLOTS:
     void onlyIllustrationsMayBeLoadedByTheInterface()
     {
         // the one address shape the QML engine may fetch; anything else on kiwix.org could carry text away in its query
-        QVERIFY(Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?size=48"))));
-        QVERIFY(Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
-        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?q=what+did+I+ask"))));
+        QVERIFY(Catalog::isIllustrationUrl(
+            QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?size=48"))));
+        QVERIFY(
+            Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
+        QVERIFY(!Catalog::isIllustrationUrl(
+            QUrl(QStringLiteral("https://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/?q=what+did+I+ask"))));
         QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://library.kiwix.org/?q=secret"))));
-        QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("http://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
+        QVERIFY(
+            !Catalog::isIllustrationUrl(QUrl(QStringLiteral("http://opds.library.kiwix.org/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
         QVERIFY(!Catalog::isIllustrationUrl(QUrl(QStringLiteral("https://evil.example/catalog/v2/illustration/9528fea1-132e-9621-e133-e8a6c200e8c7/"))));
     }
 
@@ -67,10 +71,11 @@ private Q_SLOTS:
 
     void refusesEntityBombs()
     {
-        const QByteArray bomb = "<?xml version=\"1.0\"?><!DOCTYPE feed [<!ENTITY a \"aaaaaaaaaa\">"
-                                "<!ENTITY b \"&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;\"><!ENTITY c \"&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;\">"
-                                "<!ENTITY d \"&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;\"><!ENTITY e \"&d;&d;&d;&d;&d;&d;&d;&d;&d;&d;\">]>"
-                                "<feed><entry><title>&e;&e;&e;&e;&e;&e;&e;&e;&e;&e;</title></entry></feed>";
+        const QByteArray bomb =
+            "<?xml version=\"1.0\"?><!DOCTYPE feed [<!ENTITY a \"aaaaaaaaaa\">"
+            "<!ENTITY b \"&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;\"><!ENTITY c \"&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;\">"
+            "<!ENTITY d \"&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;\"><!ENTITY e \"&d;&d;&d;&d;&d;&d;&d;&d;&d;&d;\">]>"
+            "<feed><entry><title>&e;&e;&e;&e;&e;&e;&e;&e;&e;&e;</title></entry></feed>";
         QString error;
         QVERIFY(Catalog::parse(bomb, QUrl(), &error).isEmpty());
         QVERIFY(!error.isEmpty());

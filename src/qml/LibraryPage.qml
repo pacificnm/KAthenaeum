@@ -12,7 +12,7 @@ Kirigami.ScrollablePage {
 
     required property var libraryId
     // read again when the installed libraries change: a method call in a binding is never re-run, so a removed
-    // library's home stayed as it was (the review, 2026-10-19)
+    // library's home would stay as it was
     property var info: LibraryBrowser.libraryInfo(libraryId)
     property var overviews: LibraryBrowser.overviews(libraryId)
     readonly property bool available: info.available === true

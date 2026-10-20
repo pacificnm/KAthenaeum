@@ -15,7 +15,7 @@ namespace ArticleStore
 {
 struct Article {
     qint64 libraryId = 0;
-    QString path;  // after redirects
+    QString path; // after redirects
     RenderedArticle rendered;
 };
 
@@ -24,7 +24,7 @@ QUrl url(qint64 libraryId, const QString &path, const QString &fragment = {});
 bool parse(const QUrl &url, qint64 *libraryId, QString *path);
 
 std::optional<Article> article(qint64 libraryId, const QString &path);
-void clear();  // after a library is removed
+void clear(); // after a library is removed
 
 // The page the web view shows: the article in a document styled from the desktop's colours
 QByteArray page(const Article &article, const QPalette &palette);

@@ -18,7 +18,7 @@ AppState *AppState::instance()
 AppState *AppState::create(QQmlEngine *, QJSEngine *)
 {
     auto *state = instance();
-    QQmlEngine::setObjectOwnership(state, QQmlEngine::CppOwnership);  // a static: QML must never delete it
+    QQmlEngine::setObjectOwnership(state, QQmlEngine::CppOwnership); // a static: QML must never delete it
     return state;
 }
 

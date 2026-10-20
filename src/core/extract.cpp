@@ -38,15 +38,25 @@ const char *ContainedQuote = "ancestor::dd or ancestor::blockquote";
 
 const QSet<QString> &skipSections()
 {
-    static const QSet<QString> value = {QStringLiteral("references"), QStringLiteral("external links"), QStringLiteral("see also"),
-                                        QStringLiteral("notes"), QStringLiteral("further reading"), QStringLiteral("bibliography"),
-                                        QStringLiteral("citations"), QStringLiteral("sources"), QStringLiteral("footnotes")};
+    static const QSet<QString> value = {QStringLiteral("references"),
+                                        QStringLiteral("external links"),
+                                        QStringLiteral("see also"),
+                                        QStringLiteral("notes"),
+                                        QStringLiteral("further reading"),
+                                        QStringLiteral("bibliography"),
+                                        QStringLiteral("citations"),
+                                        QStringLiteral("sources"),
+                                        QStringLiteral("footnotes")};
     return value;
 }
 
 struct Doc {
     htmlDocPtr doc = nullptr;
-    ~Doc() { if (doc) xmlFreeDoc(doc); }
+    ~Doc()
+    {
+        if (doc)
+            xmlFreeDoc(doc);
+    }
 };
 
 // `ok`, when given, says whether the query ran: a query libxml2 could not finish (a page past its limits) is not an empty
@@ -137,7 +147,7 @@ bool hidden(xmlNodePtr n)
     if (name == QLatin1String("style") || name == QLatin1String("script"))
         return true;
     if (name == QLatin1String("sup") && (attr(n, "class").contains(QLatin1String("reference")) || attr(n, "class").contains(QLatin1String("noprint"))))
-        return true;  // footnote markers ([a], [1]), not exponents
+        return true; // footnote markers ([a], [1]), not exponents
     if (attr(n, "style").remove(QLatin1Char(' ')).contains(QLatin1String("display:none")))
         return true;
     // a link out of the encyclopedia: database identifiers (CAS Number, PubChem) and websites
@@ -159,7 +169,7 @@ void cellText(xmlNodePtr n, QString &out)
             // out or the audio icon leaves nothing.
             QString inner;
             cellText(c, inner);
-            inner = inner.remove(QChar(0x24D8)).trimmed();  // ⓘ
+            inner = inner.remove(QChar(0x24D8)).trimmed(); // ⓘ
             if (!inner.isEmpty())
                 out += QLatin1Char('^') + inner;
             continue;
@@ -167,7 +177,7 @@ void cellText(xmlNodePtr n, QString &out)
         if (name == QLatin1String("br"))
             out += QLatin1Char(' ');
         else if (name == QLatin1String("li") && !out.trimmed().isEmpty())
-            out += QStringLiteral(", ");  // "Vocals, piano", not "Vocals piano"
+            out += QStringLiteral(", "); // "Vocals, piano", not "Vocals piano"
         cellText(c, out);
         if (name == QLatin1String("div") || name == QLatin1String("p"))
             out += QLatin1Char(' ');
@@ -184,9 +194,9 @@ QStringList infoboxFacts(htmlDocPtr doc)
             if (c->type == XML_ELEMENT_NODE && (tag(c) == QLatin1String("th") || tag(c) == QLatin1String("td")))
                 cells << c;
         if (cells.size() != 2)
-            continue;  // a heading, an image, a caption: not a label and a value
+            continue; // a heading, an image, a caption: not a label and a value
         if (!nodes(doc, cells[0], ".//img|.//*[@typeof='mw:File']").isEmpty())
-            continue;  // pictures side by side with their captions
+            continue; // pictures side by side with their captions
         QString label, value;
         cellText(cells[0], label);
         cellText(cells[1], value);
@@ -211,7 +221,7 @@ QStringList infoboxFacts(htmlDocPtr doc)
         cur = cur.isEmpty() ? l : cur + QLatin1Char('\n') + l;
     }
     if (!cur.isEmpty() && cur.size() < Extract::MinChars && !out.isEmpty())
-        out.last() += QLatin1Char('\n') + cur;  // a scrap is not worth a passage of its own
+        out.last() += QLatin1Char('\n') + cur; // a scrap is not worth a passage of its own
     else if (!cur.isEmpty())
         out << cur;
     return out;
@@ -282,8 +292,8 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     if (raw.trimmed().isEmpty())
         return out;
     Doc d;
-    d.doc = htmlReadMemory(raw.constData(), int(raw.size()), nullptr, "UTF-8",
-                           HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_NONET);
+    d.doc =
+        htmlReadMemory(raw.constData(), int(raw.size()), nullptr, "UTF-8", HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_NONET);
     if (!d.doc)
         return out;
 
@@ -294,7 +304,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     for (const auto breaks = nodes(d.doc, "//br"); xmlNodePtr br : breaks)
         xmlAddNextSibling(br, xmlNewText(reinterpret_cast<const xmlChar *>(" ")));
 
-    const QStringList facts = infoboxFacts(d.doc);  // before the tables are dropped
+    const QStringList facts = infoboxFacts(d.doc); // before the tables are dropped
 
     {
         // Decide before freeing (see ArticleRenderer): drop only the outermost matches. Never the root element: real pages
@@ -305,7 +315,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         bool ran = false;
         const QList<xmlNodePtr> matches = nodes(d.doc, DropXPath, &ran);
         if (!ran)
-            return {};  // fail closed: scripts and styles must never reach passages or a prompt
+            return {}; // fail closed: scripts and styles must never reach passages or a prompt
         for (xmlNodePtr n : matches) {
             const bool root = !n->parent || n->parent->type == XML_HTML_DOCUMENT_NODE || n->parent->type == XML_DOCUMENT_NODE;
             if (n->type == XML_ELEMENT_NODE && !root)
@@ -322,7 +332,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     }
 
     QString section;
-    int skipLevel = 0;  // heading level of the skipped section we are inside, 0 if none
+    int skipLevel = 0; // heading level of the skipped section we are inside, 0 if none
     QList<Passage> blocks;
     for (const auto elements = nodes(d.doc, BlocksXPath); xmlNodePtr el : elements) {
         QString text = clean(el);
@@ -330,9 +340,9 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         if (t == QLatin1String("h2") || t == QLatin1String("h3") || t == QLatin1String("h4")) {
             const int level = QStringView(t).mid(1).toInt();
             if (skipLevel && level > skipLevel)
-                continue;  // a sub-heading of a skipped section (an h3 inside "Notes") stays skipped
+                continue; // a sub-heading of a skipped section (an h3 inside "Notes") stays skipped
             section = text;
-            skipLevel = skipSections().contains(text.toLower()) ? level : 0;  // a heading of the same or a higher level ends the skip
+            skipLevel = skipSections().contains(text.toLower()) ? level : 0; // a heading of the same or a higher level ends the skip
             continue;
         }
         if (skipLevel || text.isEmpty())

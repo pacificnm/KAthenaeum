@@ -18,10 +18,10 @@ class QNetworkReply;
 
 namespace Teaching
 {
-constexpr int CandidateArticles = 6;  // articles read for each lesson, to choose its readings from
+constexpr int CandidateArticles = 6; // articles read for each lesson, to choose its readings from
 constexpr int ReadingsPerLesson = 2;
 // How close an article's opening must be to the lesson (nomic-embed-text, query against document) to be one of its
-// readings: below it, the article only shares words with the lesson. Measured on real courses (2026-10-20): every
+// readings: below it, the article only shares words with the lesson. Measured on real courses: every
 // wrong article was 0.70 or less ("Animal Locomotion" for plate tectonics, 0.659; "Contemporary Turkish literature" for
 // "Contemporary Issues in Literature", 0.695), and right first readings 0.74 and up.
 constexpr double ReadingMin = 0.70;
@@ -31,7 +31,7 @@ constexpr double SecondReadingGap = 0.04;
 
 struct Choice {
     ZimSearch::Found found;
-    double similarity = -1;  // -1: no embedding (ranked by search alone)
+    double similarity = -1; // -1: no embedding (ranked by search alone)
 };
 // The lesson's readings from the articles found for it: the closest above ReadingMin (or, with no similarities, the
 // search's own order), at most `n`, preferring articles no earlier lesson uses
@@ -61,17 +61,32 @@ public:
     // passages, each kept only if its answer is in its passage. subject() is then the lesson or unit.
     void writeQuiz(const QString &kind, qint64 targetId, const Models &models);
     void stop();
-    bool running() const { return m_running; }
-    QString job() const { return m_job; }  // "plan" | "intro" | "quiz"
-    qint64 subject() const { return m_subjectId; }  // the course or lesson being worked on
-    QString planText() const { return m_planText; }  // the syllabus as the model wrote it (for measuring)
+    bool running() const
+    {
+        return m_running;
+    }
+    QString job() const
+    {
+        return m_job;
+    } // "plan" | "intro" | "quiz"
+    qint64 subject() const
+    {
+        return m_subjectId;
+    } // the course or lesson being worked on
+    QString planText() const
+    {
+        return m_planText;
+    } // the syllabus as the model wrote it (for measuring)
     // every article considered for each lesson, with its similarity, as "lesson\tsimilarity\ttitle" (for measuring)
-    QStringList considered() const { return m_considered; }
+    QStringList considered() const
+    {
+        return m_considered;
+    }
 
 Q_SIGNALS:
     void progress(int step, int total, const QString &label);
-    void textAdded(const QString &text);  // an introduction as it is written
-    void finished(const QString &status, const QString &error);  // done | stopped | error
+    void textAdded(const QString &text); // an introduction as it is written
+    void finished(const QString &status, const QString &error); // done | stopped | error
 
 private:
     void complete(const QString &prompt, int numPredict, std::function<void(const QString &, const QString &)> done, bool stream = false);
@@ -101,23 +116,23 @@ private:
     QList<qint64> m_libraries;
     QList<qint64> m_simpleFirst;
     QList<Classroom::Unit> m_units;
-    QList<std::pair<int, int>> m_order;  // (unit, lesson) in the order their readings are found
+    QList<std::pair<int, int>> m_order; // (unit, lesson) in the order their readings are found
     int m_next = 0;
-    QSet<QString> m_used;  // "libraryId/path" of readings already given to a lesson
+    QSet<QString> m_used; // "libraryId/path" of readings already given to a lesson
     QString m_planText;
     QStringList m_considered;
     // a quiz
     QString m_quizKind;
     QList<Classroom::Lesson> m_quizLessons;
-    QList<std::pair<qint64, QList<ZimSearch::Article>>> m_quizRead;  // (lesson, its readings)
-    int m_quizRank = 0;  // the lesson whose passages are being ranked
+    QList<std::pair<qint64, QList<ZimSearch::Article>>> m_quizRead; // (lesson, its readings)
+    int m_quizRank = 0; // the lesson whose passages are being ranked
     struct QuizPassage {
         qint64 lessonId;
         QString lessonTitle;
         Rag::Candidate passage;
     };
-    QList<QuizPassage> m_quizQueue;  // in the order questions are written
-    QHash<qint64, int> m_quizWanted;  // questions still wanted per lesson
+    QList<QuizPassage> m_quizQueue; // in the order questions are written
+    QHash<qint64, int> m_quizWanted; // questions still wanted per lesson
     QList<Classroom::Question> m_questions;
     int m_quizTried = 0;
     // an introduction

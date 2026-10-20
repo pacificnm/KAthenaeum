@@ -64,7 +64,7 @@ void SearchController::search(const QString &query, qint64 libraryId)
     }
     const auto libraries = searchable(libraryId);
     const QList<qint64> ids = libraries.keys();
-    ZimSearch::prepare(ids);  // opens the archives here: the worker cannot read the database
+    ZimSearch::prepare(ids); // opens the archives here: the worker cannot read the database
 
     m_running = true;
     Q_EMIT runningChanged();
@@ -74,7 +74,7 @@ void SearchController::search(const QString &query, qint64 libraryId)
     connect(watcher, &QFutureWatcher<QList<ZimSearch::Hit>>::finished, this, [this, watcher, generation, libraries, timer] {
         watcher->deleteLater();
         if (generation != m_generation)
-            return;  // someone searched again meanwhile
+            return; // someone searched again meanwhile
         m_results.clear();
         for (const auto hits = watcher->result(); const ZimSearch::Hit &h : hits)
             m_results.append(QVariantMap{{QStringLiteral("libraryId"), h.libraryId},

@@ -20,17 +20,17 @@ struct Aria2Progress {
     qint64 done = 0;
     qint64 total = 0;
     int percent = 0;
-    qint64 speed = 0;     // bytes per second
-    int etaSeconds = -1;  // -1 = unknown
+    qint64 speed = 0; // bytes per second
+    int etaSeconds = -1; // -1 = unknown
 };
 
 namespace Aria2
 {
 std::optional<Aria2Progress> parseLine(QStringView line);
-qint64 parseSize(QStringView text);     // "1.1MiB" -> 1153433, "0B" -> 0, -1 if unreadable
-int parseDuration(QStringView text);    // "1h2m3s" -> 3723, -1 if unreadable
+qint64 parseSize(QStringView text); // "1.1MiB" -> 1153433, "0B" -> 0, -1 if unreadable
+int parseDuration(QStringView text); // "1h2m3s" -> 3723, -1 if unreadable
 QStringList arguments(const QString &folder, const QUrl &url);
-QString explainExitCode(int code);      // aria2c's documented exit codes, in words
+QString explainExitCode(int code); // aria2c's documented exit codes, in words
 }
 
 struct DownloadRecord {
@@ -41,7 +41,7 @@ struct DownloadRecord {
     QString title;
     qint64 totalBytes = 0;
     qint64 doneBytes = 0;
-    QString status;  // queued | downloading | verifying | complete | failed | cancelled
+    QString status; // queued | downloading | verifying | complete | failed | cancelled
     QString error;
     // live only, not stored
     qint64 speed = 0;
@@ -49,7 +49,7 @@ struct DownloadRecord {
 
     QString path() const;
     bool isActive() const;
-    double progress() const;  // 0..1
+    double progress() const; // 0..1
 };
 
 // Runs aria2c, one process per download, and proves each finished file is a complete ZIM before it is registered.
@@ -72,11 +72,11 @@ public:
     // Forgets a finished, failed or cancelled download; a partial file is deleted with it.
     bool remove(qint64 id);
 
-    QList<DownloadRecord> list() const;  // newest first
+    QList<DownloadRecord> list() const; // newest first
     std::optional<DownloadRecord> byId(qint64 id) const;
     int activeCount() const;
 
-    static QString aria2Program();  // empty if aria2c is not installed
+    static QString aria2Program(); // empty if aria2c is not installed
 
 Q_SIGNALS:
     void changed(qint64 id);

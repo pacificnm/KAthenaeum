@@ -21,7 +21,7 @@ bool AppSettings::setValue(const QString &key, const QString &value)
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value"));
     q.addBindValue(key);
-    q.addBindValue(Database::text(value));  // a null QString would bind as NULL, and the column is NOT NULL
+    q.addBindValue(Database::text(value)); // a null QString would bind as NULL, and the column is NOT NULL
     return q.exec();
 }
 

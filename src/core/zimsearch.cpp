@@ -32,7 +32,7 @@ const QSet<QString> &stopWords()
             "happen happens get gets many much long called known");
         QSet<QString> out;
         for (const auto qLatin1Char = list.split(QLatin1Char(' '), Qt::SkipEmptyParts); QString w : qLatin1Char)
-            out.insert(w.remove(QLatin1Char('\'')));  // matched after apostrophes are removed: don't -> dont
+            out.insert(w.remove(QLatin1Char('\''))); // matched after apostrophes are removed: don't -> dont
         return out;
     }();
     return words;
@@ -54,8 +54,10 @@ QStringList words(const QString &query)
 
 const QRegularExpression &lead()
 {
-    static const QRegularExpression re(QStringLiteral("^(?:(?:what|who|whom|where|when|why|how)\\s+(?:is|are|was|were|does|do|did)|define|explain|tell me about|about)\\s+(?:an?\\s+|the\\s+)?"),
-                                       QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression re(
+        QStringLiteral(
+            "^(?:(?:what|who|whom|where|when|why|how)\\s+(?:is|are|was|were|does|do|did)|define|explain|tell me about|about)\\s+(?:an?\\s+|the\\s+)?"),
+        QRegularExpression::CaseInsensitiveOption);
     return re;
 }
 
@@ -67,12 +69,12 @@ QString stripEnd(const QString &q)
     return s.trimmed();
 }
 
-QString capitalize(const QString &s)  // Python str.capitalize
+QString capitalize(const QString &s) // Python str.capitalize
 {
     return s.isEmpty() ? s : s.left(1).toUpper() + s.mid(1).toLower();
 }
 
-QString titleCase(const QString &s)  // Python str.title, for the words we produce
+QString titleCase(const QString &s) // Python str.title, for the words we produce
 {
     QStringList parts = s.split(QLatin1Char(' '));
     for (QString &p : parts)
@@ -141,7 +143,7 @@ std::optional<Resolved> resolve(const zim::Archive &z, const QString &path, bool
             return std::nullopt;
         return Resolved{p, t};
     } catch (const std::exception &) {
-        return std::nullopt;  // a redirect loop, a broken target
+        return std::nullopt; // a redirect loop, a broken target
     }
 }
 
@@ -155,7 +157,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
     QList<std::pair<QStringList, double>> lists;
 
     std::optional<QString> exact;
-    QStringList named;  // paths whose title the query names
+    QStringList named; // paths whose title the query names
     for (const auto titles = titleCandidates(q); const QString &candidate : titles) {
         if ((exact = pathOfTitle(z, candidate))) {
             lists.append({{*exact}, TitleWeight});
@@ -167,9 +169,9 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
     for (const auto grams = ngramTitles(q); const auto &[gram, weight] : grams) {
         if (hits >= MaxNgramHits)
             break;
-        QStringList variants{capitalize(gram)};  // "Boiling point"
+        QStringList variants{capitalize(gram)}; // "Boiling point"
         if (titleCase(gram) != variants.first())
-            variants << titleCase(gram);  // "Albert Einstein"
+            variants << titleCase(gram); // "Albert Einstein"
         for (const QString &v : std::as_const(variants)) {
             if (const auto p = pathOfTitle(z, v)) {
                 lists.append({{*p}, weight});
@@ -197,7 +199,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
         // single article matches word for word is widened by hand: every word, then every word but one, then each word
         // alone. An article matching more of the words is in more lists and ranks higher.
         lists.append({xapian(z, ws.join(QLatin1Char(' ')), PerLibrary), 1.0});
-        if (ws.size() > 2)  // always blend in "every word but one": an extra word must not bury the article that has the rest
+        if (ws.size() > 2) // always blend in "every word but one": an extra word must not bury the article that has the rest
             for (int i = 0; i < ws.size(); ++i) {
                 QStringList rest = ws;
                 rest.removeAt(i);
@@ -232,7 +234,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
     best = best.mid(0, limit);
 
     QString exactPath;
-    if (exact)  // the exact title may be a redirect: the article it leads to is the title match
+    if (exact) // the exact title may be a redirect: the article it leads to is the title match
         if (const auto r = resolve(z, *exact, true))
             exactPath = r->path;
     QSet<QString> namedPaths;
@@ -282,14 +284,14 @@ bool ZimSearch::isQuestion(const QString &query)
 
 QList<std::pair<QString, double>> ZimSearch::ngramTitles(const QString &query)
 {
-    static const QHash<int, double> weight = {{1, 0.8}, {2, 1.0}, {3, 1.2}, {4, 1.2}};  // a longer exact title is more specific
+    static const QHash<int, double> weight = {{1, 0.8}, {2, 1.0}, {3, 1.2}, {4, 1.2}}; // a longer exact title is more specific
     const QStringList w = words(query);
     QList<std::pair<QString, double>> out;
     for (int n = 4; n >= 1; --n) {
         for (int i = 0; i + n <= w.size(); ++i) {
             const QStringList gram = w.mid(i, n);
             if (stopWords().contains(gram.first()) || stopWords().contains(gram.last()) || (n == 1 && gram.first().size() < 3))
-                continue;  // "of ethanol" is not a title; neither is "the"
+                continue; // "of ethanol" is not a title; neither is "the"
             out.append({gram.join(QLatin1Char(' ')), weight.value(n)});
         }
     }
@@ -346,7 +348,7 @@ double aboutness(const QStringList &stems, const QString &title, const QString &
 QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
     // One reference to each archive for the whole search: removing a library meanwhile drops it from the cache, and
-    // looking it up again later in the search found nothing and crashed on it (found by the review, 2026-10-19)
+    // looking it up again later in the search would find nothing and crash on it
     QHash<qint64, std::shared_ptr<zim::Archive>> archives;
     for (qint64 id : libraryIds)
         if (auto a = ZimArchives::opened(id))
@@ -375,7 +377,7 @@ QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &
         }
         QList<Passage> passages = Extract::extract(raw).passages;
         if (passages.isEmpty())
-            continue;  // not a readable Wikipedia-layout article (another kind of ZIM, a stub, a data table)
+            continue; // not a readable Wikipedia-layout article (another kind of ZIM, a stub, a data table)
         // Rank fusion is per library, so each library's best article scores much the same, however loosely it matches:
         // "Ray Charles" contains "water" and "Polar Music Prize" and topped its library for "why is water polar", level
         // with "Chemical polarity". An article about the query names it in its title or opening; one that merely
@@ -422,8 +424,13 @@ QList<ZimSearch::Hit> ZimSearch::search(const QString &query, const QList<qint64
             }
         }
         const QString text = c.passages.at(best).text.trimmed();
-        out.append({c.found.libraryId, c.found.path, c.found.title, c.passages.at(best).section,
-                    text.size() > 360 ? text.left(360) + QStringLiteral("…") : text, c.found.score, c.found.titleMatch});
+        out.append({c.found.libraryId,
+                    c.found.path,
+                    c.found.title,
+                    c.passages.at(best).section,
+                    text.size() > 360 ? text.left(360) + QStringLiteral("…") : text,
+                    c.found.score,
+                    c.found.titleMatch});
     }
     return out;
 }

@@ -39,7 +39,7 @@ void TimelineModel::loadProject(qint64 projectId)
     QList<ArticleRef> articles;
     for (const auto qStringLiteral = Projects::items(projectId, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
         articles << i.article;
-    std::reverse(articles.begin(), articles.end());  // as they were added
+    std::reverse(articles.begin(), articles.end()); // as they were added
     load(p ? p->title : QString(), articles);
 }
 
@@ -57,7 +57,7 @@ void TimelineModel::load(const QString &title, const QList<ArticleRef> &articles
     for (const ArticleRef &a : articles)
         if (!open.contains(a.libraryId))
             open << a.libraryId;
-    ZimSearch::prepare(open);  // archives opened here: opening reads the database
+    ZimSearch::prepare(open); // archives opened here: opening reads the database
     const int now = QDate::currentDate().year();
     auto *watcher = new QFutureWatcher<QList<Timeline::Event>>(this);
     connect(watcher, &QFutureWatcher<QList<Timeline::Event>>::finished, this, [this, watcher, generation] {
@@ -149,7 +149,7 @@ QVariantList TimelineModel::events() const
 qint64 TimelineModel::toProject(qint64 projectId) const
 {
     QString md = Timeline::markdown(m_title, shown());
-    md = md.section(QLatin1Char('\n'), 2);  // the document's own title is its heading
+    md = md.section(QLatin1Char('\n'), 2); // the document's own title is its heading
     const qint64 id = Projects::createDocument(projectId, i18n("Timeline: %1", m_title), md.trimmed() + QLatin1Char('\n'));
     if (id > 0)
         Q_EMIT ProjectsNotifier::instance()->changed();

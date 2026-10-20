@@ -36,11 +36,12 @@ QString Rag::retrievalQuery(const QString &question, const QStringList &earlierQ
     const QString q = question.trimmed();
     if (earlierQuestions.isEmpty() || q.split(QLatin1Char(' '), Qt::SkipEmptyParts).size() >= 6)
         return q;
-    // Athenaeum borrowed for every short question, so "What is a noble gas?" asked after a question about Ray Charles
-    // was searched as one about Ray Charles (seen 2026-10-19). Borrow only for what reads as a follow-up: it points back
+    // Borrowing for every short question would search "What is a noble gas?", asked after a question about Ray Charles,
+    // as one about Ray Charles. Borrow only for what reads as a follow-up: it points back
     // ("its", "he", "that"), starts like a continuation ("and…", "what about…"), or names nothing itself.
-    static const QRegularExpression pointsBack(QStringLiteral("\\b(?:it|its|it's|he|him|his|she|her|hers|they|them|their|theirs|this|that|these|those|ones)\\b"),
-                                               QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression pointsBack(
+        QStringLiteral("\\b(?:it|its|it's|he|him|his|she|her|hers|they|them|their|theirs|this|that|these|those|ones)\\b"),
+        QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression continues(QStringLiteral("^(?:and|also|but|or|so|then|what about|how about)\\b"),
                                               QRegularExpression::CaseInsensitiveOption);
     const QString plain = QString(q).replace(QChar(0x2019), QLatin1Char('\''));
@@ -57,8 +58,8 @@ QList<Rag::Candidate> Rag::pickPassages(const QString &query, const QList<ZimSea
         QList<Candidate> candidates;
         for (int i = 0; i < a.passages.size(); ++i) {
             const Passage &p = a.passages.at(i);
-            candidates.append({a.found.libraryId, a.found.path, a.found.title, p.section, p.text,
-                               ZimSearch::overlap(s, p.section + QLatin1Char(' ') + p.text), i, 0, {}});
+            candidates.append(
+                {a.found.libraryId, a.found.path, a.found.title, p.section, p.text, ZimSearch::overlap(s, p.section + QLatin1Char(' ') + p.text), i, 0, {}});
         }
         if (candidates.isEmpty())
             continue;
@@ -66,7 +67,9 @@ QList<Rag::Candidate> Rag::pickPassages(const QString &query, const QList<ZimSea
         std::stable_sort(keep.begin(), keep.end(), byKeywords);
         keep = keep.mid(0, PerArticle);
         // the introduction defines the topic; keep it even when its words do not match
-        if (std::none_of(keep.cbegin(), keep.cend(), [](const Candidate &c) { return c.index == 0; }))
+        if (std::none_of(keep.cbegin(), keep.cend(), [](const Candidate &c) {
+                return c.index == 0;
+            }))
             keep.last() = candidates.first();
         perArticle.append(keep);
     }
@@ -191,7 +194,9 @@ Rag::Context Rag::buildContext(const QList<Candidate> &ranked, bool bySection, c
             blocks << QStringLiteral("[%1] %2%3\n%4")
                           .arg(s.n)
                           .arg(s.title,
-                               !s.section.isEmpty() ? QStringLiteral(" - ") + s.section : bySection ? QStringLiteral(" - Introduction") : QString(),
+                               !s.section.isEmpty() ? QStringLiteral(" - ") + s.section
+                                   : bySection      ? QStringLiteral(" - Introduction")
+                                                    : QString(),
                                s.evidence);
             out.sources.append(s);
         }
@@ -212,7 +217,7 @@ QList<Rag::Clip> Rag::rankClips(const QList<Clip> &clips, const Vector &question
     for (const Clip &c : clips)
         (c.vector.isEmpty() ? unembedded : usable) << c;
     if (usable.isEmpty() || question.isEmpty())
-        return clips.mid(0, 2);  // nothing to compare: the two newest are the best guess
+        return clips.mid(0, 2); // nothing to compare: the two newest are the best guess
     QList<std::pair<double, int>> sims;
     for (int i = 0; i < usable.size(); ++i)
         sims.append({Embedding::cosine(question, usable.at(i).vector), i});
@@ -223,7 +228,7 @@ QList<Rag::Clip> Rag::rankClips(const QList<Clip> &clips, const Vector &question
     for (const auto &[sim, i] : sims)
         if (sim >= ClipMinSim && out.size() < MaxClips)
             out << usable.at(i);
-    out += unembedded.mid(0, 2);  // saved while Ollama was down: offer the newest
+    out += unembedded.mid(0, 2); // saved while Ollama was down: offer the newest
     return out.mid(0, MaxClips);
 }
 
@@ -265,23 +270,25 @@ QString Rag::systemPrompt()
 QString Rag::articleSystemPrompt(const QString &title)
 {
     return systemPrompt()
-        + QStringLiteral("\n\nThe user is reading the article \"%1\" and asking about it. The sources are numbered sections of that one "
-                         "article. If the article does not answer the question, say so plainly instead of using outside knowledge.")
+        + QStringLiteral(
+              "\n\nThe user is reading the article \"%1\" and asking about it. The sources are numbered sections of that one "
+              "article. If the article does not answer the question, say so plainly instead of using outside knowledge.")
               .arg(title);
 }
 
 QString Rag::projectSystemPrompt(const QString &title, const QString &goal, bool withLibrary)
 {
     const QString g = goal.trimmed().isEmpty() ? QString() : QStringLiteral("\nProject goal: ") + goal.trimmed();
-    const QString where = withLibrary
-        ? QStringLiteral("Sources come in two groups: the project's own material, and 'Other library articles' from outside the project. "
-                         "Prefer the project's material. If it does not answer the question, answer from the other library articles and say "
-                         "that the answer comes from outside the project.")
-        : QStringLiteral("The sources are only the project's own articles and the excerpts the user saved from them.");
+    const QString where = withLibrary ? QStringLiteral(
+                                            "Sources come in two groups: the project's own material, and 'Other library articles' from outside the project. "
+                                            "Prefer the project's material. If it does not answer the question, answer from the other library articles and say "
+                                            "that the answer comes from outside the project.")
+                                      : QStringLiteral("The sources are only the project's own articles and the excerpts the user saved from them.");
     return systemPrompt()
-        + QStringLiteral("\n\nYou are helping with a research project titled \"%1\".%2\n%3 A source titled \"Saved excerpt\" is a passage "
-                         "the user chose to keep. If the sources do not cover the question, say so plainly and suggest adding relevant "
-                         "articles to the project.")
+        + QStringLiteral(
+              "\n\nYou are helping with a research project titled \"%1\".%2\n%3 A source titled \"Saved excerpt\" is a passage "
+              "the user chose to keep. If the sources do not cover the question, say so plainly and suggest adding relevant "
+              "articles to the project.")
               .arg(title, g, where);
 }
 
@@ -291,7 +298,7 @@ QString Rag::userMessage(const Context &context, const QString &question, const 
     if (!earlierQuestions.isEmpty()) {
         QStringList quoted;
         for (const auto size = earlierQuestions.mid(qMax<qsizetype>(0, earlierQuestions.size() - MaxEarlierQuestions)); const QString &q : size)
-            quoted << QStringLiteral("\"%1\"").arg(q.simplified().left(300));  // enough to know what "it" is
+            quoted << QStringLiteral("\"%1\"").arg(q.simplified().left(300)); // enough to know what "it" is
         earlier = QStringLiteral("Earlier in this conversation the user asked: %1\n").arg(quoted.join(QStringLiteral(", then ")));
     }
     return QStringLiteral("Sources:\n\n%1\n\n%2Question: %3").arg(context.text, earlier, question.trimmed());
@@ -325,7 +332,7 @@ QString tidyOnce(const QString &answer)
             const auto m = it.next();
             QString before = out.left(m.capturedStart());
             while (!before.isEmpty() && (before.back().isSpace() || before.back() == QLatin1Char('*') || before.back() == QLatin1Char('_')))
-                before.chop(1);  // "**Xenon:** one source…" starts a sentence too
+                before.chop(1); // "**Xenon:** one source…" starts a sentence too
             const bool sentenceStart = before.isEmpty() || before.endsWith(QLatin1Char('.')) || before.endsWith(QLatin1Char('\n'))
                 || before.endsWith(QLatin1Char('!')) || before.endsWith(QLatin1Char('?')) || before.endsWith(QLatin1Char(':'));
             result += out.mid(last, m.capturedStart() - last) + (sentenceStart ? upper : lower);
@@ -344,12 +351,12 @@ QString tidyOnce(const QString &answer)
 
 QString Rag::tidyAnswer(const QString &answer)
 {
-    // No images: the model was told by an article to end its answer with ![](http://host/?q=<the question>) and did (the
-    // review, 2026-10-19). The interface fetches nothing outside kiwix.org anyway; the alt text is kept.
+    // No images: an article can tell the model to end its answer with ![](http://host/?q=<the question>), and it does.
+    // The interface fetches nothing outside kiwix.org anyway; the alt text is kept.
     static const QRegularExpression image(QStringLiteral("!\\[([^\\]\\n]*)\\]\\([^)\\n]*\\)"));
     QString out = QString(answer).replace(image, QStringLiteral("\\1"));
     // Until nothing changes: removing a marker can leave a line that is now only a list of sources, and citations are
-    // offsets into this text, so tidying it again must give the same text (the review found 6 in 300,000 that did not)
+    // offsets into this text, so tidying it again must give the same text (6 in 300,000 did not after one pass)
     for (int i = 0; i < 4; ++i) {
         const QString next = tidyOnce(out);
         if (next == out)
@@ -394,13 +401,12 @@ bool Rag::isRefusal(const QString &sentence)
     // ("Hydrogen is not in the same group as the alkali metals") must not match. Widened from Athenaeum's with "state",
     // "give", "list" and "specify", which qwen3.5:4b used ("The provided sources do not state the boiling point").
     static const QRegularExpression neutral(
-        QStringLiteral(
-            "\\b(?:could not|couldn't|cannot|can't|unable to) find\\b"
-            "|\\bno (?:relevant |further |specific )?information\\b"
-            "|\\bnot (?:directly |specifically |explicitly |clearly )?(?:covered|addressed|discussed|mentioned|included|stated|"
-            "provided|found|available|contained|given|listed|specified) (?:in|by|within) (?:the|these|this|any|those)\\b"
-            "|\\b(?:sources?|articles?|passages?|excerpts?|material|text|library|documents?)\\b[^.!?]{0,60}\\b(?:do|does|did)(?: not|n't) "
-            "(?:contain|cover|mention|include|address|say|provide|discuss|state|give|list|specify)\\b"),
+        QStringLiteral("\\b(?:could not|couldn't|cannot|can't|unable to) find\\b"
+                       "|\\bno (?:relevant |further |specific )?information\\b"
+                       "|\\bnot (?:directly |specifically |explicitly |clearly )?(?:covered|addressed|discussed|mentioned|included|stated|"
+                       "provided|found|available|contained|given|listed|specified) (?:in|by|within) (?:the|these|this|any|those)\\b"
+                       "|\\b(?:sources?|articles?|passages?|excerpts?|material|text|library|documents?)\\b[^.!?]{0,60}\\b(?:do|does|did)(?: not|n't) "
+                       "(?:contain|cover|mention|include|address|say|provide|discuss|state|give|list|specify)\\b"),
         QRegularExpression::CaseInsensitiveOption);
     return neutral.match(QString(sentence).replace(QChar(0x2019), QLatin1Char('\''))).hasMatch();
 }
@@ -424,7 +430,7 @@ QStringList Rag::ungroundedNumbers(const QString &sentence, const QString &evide
 {
     static const QRegularExpression number(QStringLiteral("\\d+(?:[.,]\\d+)*"));
     static const QRegularExpression thousands(QStringLiteral("(?<=\\d),(?=\\d)"));
-    const QString plain = QString(evidence).remove(thousands);  // 1,000 and 1000 are the same figure
+    const QString plain = QString(evidence).remove(thousands); // 1,000 and 1000 are the same figure
     QStringList missing;
     auto it = number.globalMatch(sentence);
     while (it.hasNext()) {
@@ -438,8 +444,8 @@ QStringList Rag::ungroundedNumbers(const QString &sentence, const QString &evide
     return missing;
 }
 
-QList<Rag::Citation> Rag::attribute(const QString &answer, const QList<std::pair<int, int>> &spans, const QList<Vector> &sentenceVectors,
-                                    const QList<Source> &sources)
+QList<Rag::Citation>
+Rag::attribute(const QString &answer, const QList<std::pair<int, int>> &spans, const QList<Vector> &sentenceVectors, const QList<Source> &sources)
 {
     QList<Citation> out;
     if (spans.size() != sentenceVectors.size())
@@ -450,7 +456,7 @@ QList<Rag::Citation> Rag::attribute(const QString &answer, const QList<std::pair
     const QString allEvidence = evidence.join(QLatin1Char(' '));
 
     for (int k = 0; k < spans.size(); ++k) {
-        QList<std::pair<double, int>> hits;  // (similarity, source number)
+        QList<std::pair<double, int>> hits; // (similarity, source number)
         for (const Source &s : sources)
             for (const Vector &v : s.vectors)
                 hits.append({Embedding::cosine(sentenceVectors.at(k), v), s.n});
@@ -481,7 +487,7 @@ QString Rag::annotate(const QString &answer, const QList<Citation> &citations)
         return citations.at(a).end > citations.at(b).end;
     });
     QString out = answer;
-    for (int i : std::as_const(order)) {  // from the end, so earlier offsets stay valid
+    for (int i : std::as_const(order)) { // from the end, so earlier offsets stay valid
         const Citation &c = citations.at(i);
         QString chips;
         for (int n : c.sources)

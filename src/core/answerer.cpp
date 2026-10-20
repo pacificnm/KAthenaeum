@@ -116,7 +116,7 @@ void Answerer::start(const AnswerRequest &request)
         }));
         return;
     }
-    ZimSearch::prepare(request.libraryIds);  // opens the archives here: the worker cannot read the database
+    ZimSearch::prepare(request.libraryIds); // opens the archives here: the worker cannot read the database
     watcher->setFuture(QtConcurrent::run([query = m_query, ids = request.libraryIds] {
         return Pools{Rag::pickPassages(query, ZimSearch::readArticles(query, ids, Rag::Articles)), {}};
     }));
@@ -147,37 +147,38 @@ void Answerer::rankAndAsk(Pools pools)
             input << Embedding::formatDocument(model, clips.at(i).text.left(3000));
         }
     const quint64 generation = m_generation;
-    m_reply = m_client->embed(model, input, this, [this, pools, clips, unembedded, model, generation](const QList<Vector> &vectors, const QString &error) mutable {
-        if (generation != m_generation)
-            return;
-        m_result.stats.embedMs = int(m_clock.elapsed()) - m_result.stats.findMs;
-        Vector question;
-        QString note;
-        if (error.isEmpty()) {
-            int k = 0;
-            question = vectors.at(k++);
-            for (Rag::Candidate &c : pools.own)
-                c.vector = vectors.at(k++);
-            for (Rag::Candidate &c : pools.library)
-                c.vector = vectors.at(k++);
-            QList<std::pair<qint64, Vector>> fresh;
-            for (int i : std::as_const(unembedded)) {
-                clips[i].vector = vectors.at(k++);
-                fresh.append({clips.at(i).id, clips.at(i).vector});
+    m_reply =
+        m_client->embed(model, input, this, [this, pools, clips, unembedded, model, generation](const QList<Vector> &vectors, const QString &error) mutable {
+            if (generation != m_generation)
+                return;
+            m_result.stats.embedMs = int(m_clock.elapsed()) - m_result.stats.findMs;
+            Vector question;
+            QString note;
+            if (error.isEmpty()) {
+                int k = 0;
+                question = vectors.at(k++);
+                for (Rag::Candidate &c : pools.own)
+                    c.vector = vectors.at(k++);
+                for (Rag::Candidate &c : pools.library)
+                    c.vector = vectors.at(k++);
+                QList<std::pair<qint64, Vector>> fresh;
+                for (int i : std::as_const(unembedded)) {
+                    clips[i].vector = vectors.at(k++);
+                    fresh.append({clips.at(i).id, clips.at(i).vector});
+                }
+                if (!fresh.isEmpty())
+                    Q_EMIT clipsEmbedded(fresh, model);
+            } else {
+                m_degraded = true;
+                note = error;
             }
-            if (!fresh.isEmpty())
-                Q_EMIT clipsEmbedded(fresh, model);
-        } else {
-            m_degraded = true;
-            note = error;
-        }
-        const QList<Rag::Candidate> own = Rag::rank(pools.own, question);
-        const QList<Rag::Candidate> library = Rag::rank(pools.library, question);
-        m_result.stats.passages = int(own.size() + library.size());
-        m_context = Rag::buildContext(own, m_request.article.isSet(), Rag::rankClips(clips, question), library);
-        Q_EMIT sourcesReady(m_context.sources, m_degraded, note);
-        ask();
-    });
+            const QList<Rag::Candidate> own = Rag::rank(pools.own, question);
+            const QList<Rag::Candidate> library = Rag::rank(pools.library, question);
+            m_result.stats.passages = int(own.size() + library.size());
+            m_context = Rag::buildContext(own, m_request.article.isSet(), Rag::rankClips(clips, question), library);
+            Q_EMIT sourcesReady(m_context.sources, m_degraded, note);
+            ask();
+        });
 }
 
 void Answerer::ask()
@@ -194,7 +195,7 @@ void Answerer::ask()
             finish(QStringLiteral("error"), error);
             return;
         }
-        const QString system = m_request.article.isSet() ? Rag::articleSystemPrompt(m_request.article.title)
+        const QString system = m_request.article.isSet()                       ? Rag::articleSystemPrompt(m_request.article.title)
             : m_request.project.isSet() && !m_request.project.system.isEmpty() ? m_request.project.system
             : m_request.project.isSet() ? Rag::projectSystemPrompt(m_request.project.title, m_request.project.goal, m_request.project.alsoLibrary)
                                         : Rag::systemPrompt();
@@ -203,13 +204,15 @@ void Answerer::ask()
                                     {QStringLiteral("content"), Rag::userMessage(m_context, m_request.question, m_request.earlierQuestions)}});
         QJsonObject body{{QStringLiteral("model"), model},
                          {QStringLiteral("messages"), messages},
-                         {QStringLiteral("options"), QJsonObject{{QStringLiteral("temperature"), Rag::Temperature},
-                                                                 {QStringLiteral("num_ctx"), Rag::NumCtx},
-                                                                 {QStringLiteral("num_predict"), Rag::NumPredict}}}};
+                         {QStringLiteral("options"),
+                          QJsonObject{{QStringLiteral("temperature"), Rag::Temperature},
+                                      {QStringLiteral("num_ctx"), Rag::NumCtx},
+                                      {QStringLiteral("num_predict"), Rag::NumPredict}}}};
         if (capabilities.contains(QStringLiteral("thinking")))
             body.insert(QStringLiteral("think"), false);
         m_reply = m_client->chat(
-            body, this,
+            body,
+            this,
             [this, generation](const QString &text) {
                 if (generation != m_generation)
                     return;
@@ -274,7 +277,7 @@ void Answerer::stop()
 
 void Answerer::finish(const QString &status, const QString &error)
 {
-    ++m_generation;  // whatever is still on its way belongs to this answer
+    ++m_generation; // whatever is still on its way belongs to this answer
     m_reply.clear();
     m_running = false;
     m_result.status = status;

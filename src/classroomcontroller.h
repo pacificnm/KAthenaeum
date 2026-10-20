@@ -23,13 +23,13 @@ class ClassroomController : public QObject
     Q_PROPERTY(QVariantList levels READ levels CONSTANT)
     Q_PROPERTY(QVariantList grades READ grades CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY stateChanged)
-    Q_PROPERTY(QString job READ job NOTIFY stateChanged)  // "plan" | "intro" | ""
-    Q_PROPERTY(qint64 jobSubject READ jobSubject NOTIFY stateChanged)  // the course being planned, or the lesson (or unit)
-    Q_PROPERTY(QString quizKind READ quizKind NOTIFY stateChanged)  // a quiz being written: "lesson" or "unit"
+    Q_PROPERTY(QString job READ job NOTIFY stateChanged) // "plan" | "intro" | ""
+    Q_PROPERTY(qint64 jobSubject READ jobSubject NOTIFY stateChanged) // the course being planned, or the lesson (or unit)
+    Q_PROPERTY(QString quizKind READ quizKind NOTIFY stateChanged) // a quiz being written: "lesson" or "unit"
     Q_PROPERTY(int step READ step NOTIFY stateChanged)
     Q_PROPERTY(int total READ total NOTIFY stateChanged)
     Q_PROPERTY(QString label READ label NOTIFY stateChanged)
-    Q_PROPERTY(QString streamed READ streamed NOTIFY stateChanged)  // an introduction as it is written
+    Q_PROPERTY(QString streamed READ streamed NOTIFY stateChanged) // an introduction as it is written
 
 public:
     explicit ClassroomController(QObject *parent = nullptr);
@@ -43,15 +43,30 @@ public:
     bool busy() const;
     QString job() const;
     qint64 jobSubject() const;
-    int step() const { return m_step; }
-    int total() const { return m_total; }
-    QString label() const { return m_label; }
-    QString streamed() const { return m_streamed; }
-    QString quizKind() const { return m_quizKind; }
+    int step() const
+    {
+        return m_step;
+    }
+    int total() const
+    {
+        return m_total;
+    }
+    QString label() const
+    {
+        return m_label;
+    }
+    QString streamed() const
+    {
+        return m_streamed;
+    }
+    QString quizKind() const
+    {
+        return m_quizKind;
+    }
 
     // {name, grade, interests, goals}
     Q_INVOKABLE bool saveProfile(const QVariantMap &profile);
-    Q_INVOKABLE QString defaultLevel() const;  // the level after the learner's highest grade
+    Q_INVOKABLE QString defaultLevel() const; // the level after the learner's highest grade
     Q_INVOKABLE QString levelLabel(const QString &level) const;
     Q_INVOKABLE QVariantMap subject(const QString &key) const;
     // Which installed libraries a course would read: {ok, libraries: [title], suggestion: catalog title to get when none
@@ -95,8 +110,7 @@ public:
     // {id, title} of the course a project is kept for, or an empty map
     Q_INVOKABLE QVariantMap courseForProject(qint64 projectId) const;
     // A highlight made in one of the lesson's readings, kept in its course's project too (when it has one)
-    Q_INVOKABLE bool keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text,
-                                   const QString &note);
+    Q_INVOKABLE bool keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &note);
 
 Q_SIGNALS:
     void profileChanged();

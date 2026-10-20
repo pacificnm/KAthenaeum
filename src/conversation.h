@@ -33,16 +33,16 @@ class Conversation : public QAbstractListModel
 
 public:
     enum Role {
-        RoleRole = Qt::UserRole + 1,  // user | assistant
-        TextRole,       // the question as typed, or the answer as Markdown with citation links
-        StatusRole,     // working | done | stopped | error
-        PhaseRole,      // what is happening now, while working
+        RoleRole = Qt::UserRole + 1, // user | assistant
+        TextRole, // the question as typed, or the answer as Markdown with citation links
+        StatusRole, // working | done | stopped | error
+        PhaseRole, // what is happening now, while working
         ErrorRole,
-        NoteRole,       // e.g. why the sources were ranked by words only
-        SourcesRole,    // [{n, libraryId, libraryTitle, path, title, section, snippet}]
-        CitationsRole,  // [{start, end, sources, score, reason, numbers}]
-        StatsRole,      // a line of timings
-        ContentRole,    // the answer as written, without citation links (for saving it)
+        NoteRole, // e.g. why the sources were ranked by words only
+        SourcesRole, // [{n, libraryId, libraryTitle, path, title, section, snippet}]
+        CitationsRole, // [{start, end, sources, score, reason, numbers}]
+        StatsRole, // a line of timings
+        ContentRole, // the answer as written, without citation links (for saving it)
     };
     Q_ENUM(Role)
 
@@ -53,19 +53,40 @@ public:
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    qint64 chatId() const { return m_chatId; }
+    qint64 chatId() const
+    {
+        return m_chatId;
+    }
     void setChatId(qint64 id);
-    QString title() const { return m_title; }
+    QString title() const
+    {
+        return m_title;
+    }
     bool busy() const;
-    qint64 articleLibraryId() const { return m_article.libraryId; }
+    qint64 articleLibraryId() const
+    {
+        return m_article.libraryId;
+    }
     void setArticleLibraryId(qint64 id);
-    QString articlePath() const { return m_article.path; }
+    QString articlePath() const
+    {
+        return m_article.path;
+    }
     void setArticlePath(const QString &path);
-    QString articleTitle() const { return m_article.title; }
+    QString articleTitle() const
+    {
+        return m_article.title;
+    }
     void setArticleTitle(const QString &title);
-    qint64 projectId() const { return m_projectId; }
+    qint64 projectId() const
+    {
+        return m_projectId;
+    }
     void setProjectId(qint64 id);
-    qint64 lessonId() const { return m_lessonId; }
+    qint64 lessonId() const
+    {
+        return m_lessonId;
+    }
     void setLessonId(qint64 id);
 
     Q_INVOKABLE void ask(const QString &question);
@@ -89,7 +110,7 @@ private:
     struct Message {
         qint64 id = 0;
         QString role;
-        QString content;  // raw: what was typed, or the answer as the model wrote it (tidied)
+        QString content; // raw: what was typed, or the answer as the model wrote it (tidied)
         QString status = QStringLiteral("done");
         QString phase;
         QString error;
@@ -112,9 +133,9 @@ private:
     qint64 m_projectId = 0;
     qint64 m_lessonId = 0;
     bool m_alsoLibrary = false;
-    QString m_answerModel;     // the models of the answer being written, as asked (Settings may change meanwhile)
+    QString m_answerModel; // the models of the answer being written, as asked (Settings may change meanwhile)
     QString m_embeddingModel;
     QString m_title;
     QList<Message> m_messages;
-    int m_answering = -1;  // the row being answered
+    int m_answering = -1; // the row being answered
 };

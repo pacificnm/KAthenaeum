@@ -80,9 +80,9 @@ int main(int argc, char **argv)
     });
     QObject::connect(&answerer, &Answerer::finished, &answerer, [&](const AnswerResult &r) {
         const AnswerStats &s = r.stats;
-        out << "  find " << s.findMs << " ms, embed " << s.embedMs << " ms (" << s.passages << " ranked), first word at " << s.firstTokenMs
-            << " ms, cite " << s.citeMs << " ms, total " << s.totalMs << " ms, " << s.tokens << " tokens at " << QString::number(s.tokensPerSecond, 'f', 1)
-            << " tok/s" << (s.truncated ? " TRUNCATED" : "") << Qt::endl;
+        out << "  find " << s.findMs << " ms, embed " << s.embedMs << " ms (" << s.passages << " ranked), first word at " << s.firstTokenMs << " ms, cite "
+            << s.citeMs << " ms, total " << s.totalMs << " ms, " << s.tokens << " tokens at " << QString::number(s.tokensPerSecond, 'f', 1) << " tok/s"
+            << (s.truncated ? " TRUNCATED" : "") << Qt::endl;
         if (r.status != QLatin1String("done"))
             out << "  " << r.status.toUpper() << ": " << r.error << Qt::endl;
         QString shown = r.answer;

@@ -65,7 +65,7 @@ ClassroomController::ClassroomController(QObject *parent)
     : QObject(parent)
     , m_teacher(new Teacher(ModelSettings::instance()->client(), this))
 {
-    Classroom::reconcile();  // a plan the last run left unfinished
+    Classroom::reconcile(); // a plan the last run left unfinished
     connect(m_teacher, &Teacher::progress, this, [this](int step, int total, const QString &label) {
         m_step = step;
         m_total = total;
@@ -85,7 +85,7 @@ ClassroomController::ClassroomController(QObject *parent)
         Q_EMIT coursesChanged();
         if (job == QLatin1String("plan")) {
             const auto c = Classroom::course(subject);
-            if (status == QLatin1String("done") && c && c->projectId > 0) {  // the new lessons' readings go into its project
+            if (status == QLatin1String("done") && c && c->projectId > 0) { // the new lessons' readings go into its project
                 Classroom::syncCourse(subject);
                 Q_EMIT ProjectsNotifier::instance()->changed();
             }
@@ -99,7 +99,7 @@ ClassroomController::ClassroomController(QObject *parent)
             else if (status == QLatin1String("error"))
                 Q_EMIT failed(i18n("The quiz could not be written: %1", error));
         } else if (status == QLatin1String("done")) {
-            if (Classroom::syncLesson(subject))  // the introduction, as a document of the course's project
+            if (Classroom::syncLesson(subject)) // the introduction, as a document of the course's project
                 Q_EMIT ProjectsNotifier::instance()->changed();
             Q_EMIT introReady(subject);
         } else if (status == QLatin1String("error")) {
@@ -127,8 +127,10 @@ bool ClassroomController::hasProfile() const
 
 bool ClassroomController::saveProfile(const QVariantMap &profile)
 {
-    const bool ok = Classroom::saveProfile({profile.value(QStringLiteral("name")).toString(), profile.value(QStringLiteral("grade")).toString(),
-                                            profile.value(QStringLiteral("interests")).toString(), profile.value(QStringLiteral("goals")).toString()});
+    const bool ok = Classroom::saveProfile({profile.value(QStringLiteral("name")).toString(),
+                                            profile.value(QStringLiteral("grade")).toString(),
+                                            profile.value(QStringLiteral("interests")).toString(),
+                                            profile.value(QStringLiteral("goals")).toString()});
     Q_EMIT profileChanged();
     return ok;
 }
@@ -149,7 +151,10 @@ QVariantList ClassroomController::subjects() const
 {
     QVariantList out;
     for (const auto allSubjects = Classroom::subjects(); const Classroom::Subject &s : allSubjects)
-        out.append(QVariantMap{{QStringLiteral("key"), s.key}, {QStringLiteral("name"), s.name}, {QStringLiteral("icon"), s.icon}, {QStringLiteral("blurb"), s.blurb}});
+        out.append(QVariantMap{{QStringLiteral("key"), s.key},
+                               {QStringLiteral("name"), s.name},
+                               {QStringLiteral("icon"), s.icon},
+                               {QStringLiteral("blurb"), s.blurb}});
     return out;
 }
 
@@ -188,7 +193,8 @@ QVariantMap ClassroomController::coverage(const QString &subject, const QString 
     QVariantMap out{{QStringLiteral("ok"), !libraries.isEmpty()}, {QStringLiteral("libraries"), titles}};
     // suggestions are Kiwix catalog titles, searched for in the catalog: data, not interface text, so never translated
     if (libraries.isEmpty())
-        out.insert(QStringLiteral("suggestion"), Classroom::isYoung(level) ? QStringLiteral("Wikipedia in simple English") : Classroom::subject(subject).suggestion);
+        out.insert(QStringLiteral("suggestion"),
+                   Classroom::isYoung(level) ? QStringLiteral("Wikipedia in simple English") : Classroom::subject(subject).suggestion);
     else if (Classroom::isYoung(level) && !simple)
         out.insert(QStringLiteral("simpleSuggestion"), QStringLiteral("Wikipedia in simple English"));
     return out;
@@ -437,8 +443,7 @@ QVariantMap ClassroomController::courseForProject(qint64 projectId) const
     return {{QStringLiteral("id"), c->id}, {QStringLiteral("title"), c->title}};
 }
 
-bool ClassroomController::keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text,
-                                        const QString &note)
+bool ClassroomController::keepHighlight(qint64 lessonId, qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &note)
 {
     const bool kept = Classroom::keepHighlight(lessonId, text, {libraryId, path, title}, note) > 0;
     if (kept)

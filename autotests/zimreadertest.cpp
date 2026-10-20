@@ -73,7 +73,7 @@ private Q_SLOTS:
             QVERIFY(e);
             const auto c = ZimReader::content(m_id, e->path);
             QVERIFY(c);
-            QCOMPARE(c->path, e->path);  // not a redirect
+            QCOMPARE(c->path, e->path); // not a redirect
             QVERIFY(c->mimetype.startsWith(QLatin1String("text/html")));
         }
     }
@@ -82,7 +82,7 @@ private Q_SLOTS:
     {
         QVERIFY(!ZimReader::content(m_id, QStringLiteral("No_such_article_here")));
         QVERIFY(!ZimReader::hasEntry(m_id, QStringLiteral("No_such_article_here")));
-        QVERIFY(!ZimReader::content(999999, QStringLiteral("Water")));  // no such library
+        QVERIFY(!ZimReader::content(999999, QStringLiteral("Water"))); // no such library
         const auto e = ZimReader::randomArticle(m_id);
         QVERIFY(ZimReader::hasEntry(m_id, e->path));
     }
@@ -127,7 +127,7 @@ private Q_SLOTS:
         QCOMPARE(recent[0].path, QStringLiteral("A"));
         QCOMPARE(recent[0].title, QStringLiteral("Alpha again"));
         QVERIFY(Library::remove(m_id, false));
-        QVERIFY(History::recent(m_id, 10).isEmpty());  // goes with its library
+        QVERIFY(History::recent(m_id, 10).isEmpty()); // goes with its library
     }
 };
 

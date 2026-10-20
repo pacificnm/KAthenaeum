@@ -12,7 +12,7 @@
 namespace MapTiling
 {
 using Ring = QList<QPointF>;
-using Polygon = QList<Ring>;          // the first ring is the outside, the others holes
+using Polygon = QList<Ring>; // the first ring is the outside, the others holes
 using MultiPolygon = QList<Polygon>;
 
 // Web Mercator, in tiles at zoom z (x to the east, y to the south)
@@ -21,7 +21,7 @@ double latToY(double lat, int z);
 double xToLon(double x, int z);
 double yToLat(double y, int z);
 
-QRectF bounds(const MultiPolygon &shape);  // x = west, y = south, width and height in degrees
+QRectF bounds(const MultiPolygon &shape); // x = west, y = south, width and height in degrees
 // Is the point inside the shape (holes left out)? Not its bounding box: a region across the 180° meridian (the US
 // Pacific islands) has a box round the whole world.
 bool contains(const MultiPolygon &shape, double lon, double lat);

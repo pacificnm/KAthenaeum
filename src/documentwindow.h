@@ -33,8 +33,8 @@ public:
 };
 
 // A project document in a window of its own: Kate's editor (KTextEditor) beside a live Markdown preview. Widgets, not
-// QML, because Kate's editor is a widget, and embedded in a QML page it covered every menu, notification and dialog drawn
-// over it (tried 2026-10-19).
+// QML, because Kate's editor is a widget, and embedded in a QML page it covers every menu, notification and dialog
+// drawn over it.
 class DocumentWindow : public QMainWindow
 {
     Q_OBJECT

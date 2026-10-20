@@ -41,7 +41,7 @@ LibraryRecord fromQuery(const QSqlQuery &q)
     r.sizeBytes = q.value(13).toLongLong();
     r.hasFulltextIndex = q.value(14).toBool();
     r.addedAt = QDateTime::fromString(q.value(15).toString(), Qt::ISODate);
-    r.addedAt.setTimeZone(QTimeZone::UTC);  // CURRENT_TIMESTAMP is UTC
+    r.addedAt.setTimeZone(QTimeZone::UTC); // CURRENT_TIMESTAMP is UTC
     return r;
 }
 }
@@ -106,8 +106,9 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     }
     if (id == 0) {
         QSqlQuery before;
-        before.prepare(QStringLiteral("SELECT id FROM removed_libraries WHERE ((uuid <> '' AND uuid = ?) OR path = ?) "
-                                      "AND id NOT IN (SELECT id FROM libraries) ORDER BY (uuid = ?) DESC, removed_at DESC LIMIT 1"));
+        before.prepare(
+            QStringLiteral("SELECT id FROM removed_libraries WHERE ((uuid <> '' AND uuid = ?) OR path = ?) "
+                           "AND id NOT IN (SELECT id FROM libraries) ORDER BY (uuid = ?) DESC, removed_at DESC LIMIT 1"));
         before.addBindValue(Database::text(info->uuid));
         before.addBindValue(path);
         before.addBindValue(Database::text(info->uuid));
@@ -125,14 +126,14 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     }
 
     QSqlQuery q;
-    q.prepare(QStringLiteral(
-        "INSERT INTO libraries (id, path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid,"
-        " article_count, size_bytes, has_fulltext, illustration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        " ON CONFLICT (path) DO UPDATE SET name = excluded.name, title = excluded.title, description = excluded.description,"
-        " language = excluded.language, creator = excluded.creator, publisher = excluded.publisher, zim_date = excluded.zim_date,"
-        " flavour = excluded.flavour, scraper = excluded.scraper, uuid = excluded.uuid, article_count = excluded.article_count,"
-        " size_bytes = excluded.size_bytes, has_fulltext = excluded.has_fulltext, illustration = excluded.illustration"
-        " RETURNING id"));
+    q.prepare(
+        QStringLiteral("INSERT INTO libraries (id, path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid,"
+                       " article_count, size_bytes, has_fulltext, illustration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                       " ON CONFLICT (path) DO UPDATE SET name = excluded.name, title = excluded.title, description = excluded.description,"
+                       " language = excluded.language, creator = excluded.creator, publisher = excluded.publisher, zim_date = excluded.zim_date,"
+                       " flavour = excluded.flavour, scraper = excluded.scraper, uuid = excluded.uuid, article_count = excluded.article_count,"
+                       " size_bytes = excluded.size_bytes, has_fulltext = excluded.has_fulltext, illustration = excluded.illustration"
+                       " RETURNING id"));
     q.addBindValue(id);
     q.addBindValue(path);
     q.addBindValue(Database::text(info->name));
@@ -157,7 +158,7 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     const qint64 added = q.value(0).toLongLong();
     q.finish();
     QSqlQuery back;
-    back.prepare(QStringLiteral("DELETE FROM removed_libraries WHERE id = ?"));  // it is installed again
+    back.prepare(QStringLiteral("DELETE FROM removed_libraries WHERE id = ?")); // it is installed again
     back.addBindValue(added);
     back.exec();
     return added;
@@ -175,7 +176,7 @@ Library::ScanResult Library::scan(const QString &folder)
     const QDir dir(folder);
     for (const auto qStringLiteral = dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files); const QFileInfo &file : qStringLiteral) {
         if (QFileInfo::exists(file.filePath() + QStringLiteral(".aria2")))
-            continue;  // aria2 writes to the final name while downloading
+            continue; // aria2 writes to the final name while downloading
         if (known.contains(file.canonicalFilePath()))
             continue;
         QString error;
@@ -212,9 +213,10 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
         db.rollback();
         return false;
     }
-    q.prepare(QStringLiteral("INSERT INTO removed_libraries (id, uuid, path, title) VALUES (?, ?, ?, ?) "
-                             "ON CONFLICT (id) DO UPDATE SET uuid = excluded.uuid, path = excluded.path, title = excluded.title, "
-                             "removed_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
+    q.prepare(
+        QStringLiteral("INSERT INTO removed_libraries (id, uuid, path, title) VALUES (?, ?, ?, ?) "
+                       "ON CONFLICT (id) DO UPDATE SET uuid = excluded.uuid, path = excluded.path, title = excluded.title, "
+                       "removed_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
     q.addBindValue(id);
     q.addBindValue(Database::text(record->uuid));
     q.addBindValue(Database::text(record->path));
@@ -233,6 +235,6 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
         return false;
     }
     if (deleteFile && record->fileExists() && !QFile::remove(record->path) && error)
-        *error = i18n("could not delete %1", record->path);  // removed all the same: see the header
+        *error = i18n("could not delete %1", record->path); // removed all the same: see the header
     return true;
 }

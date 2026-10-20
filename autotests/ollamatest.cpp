@@ -20,7 +20,7 @@ public:
     QByteArray head = "HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nConnection: close\r\n\r\n";
     QList<QByteArray> pieces;
     QByteArray lastRequest;
-    bool hang = false;  // send the head, then nothing
+    bool hang = false; // send the head, then nothing
 
     FakeOllama()
     {
@@ -44,15 +44,26 @@ public:
                 int delay = 0;
                 for (const QByteArray &p : std::as_const(pieces)) {
                     delay += 20;
-                    QTimer::singleShot(delay, s, [s, p] { s->write(p); s->flush(); });
+                    QTimer::singleShot(delay, s, [s, p] {
+                        s->write(p);
+                        s->flush();
+                    });
                 }
-                QTimer::singleShot(delay + 20, s, [s] { s->disconnectFromHost(); });
+                QTimer::singleShot(delay + 20, s, [s] {
+                    s->disconnectFromHost();
+                });
             });
         });
     }
 
-    QString url() const { return QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort()); }
-    QJsonObject requestBody() const { return QJsonDocument::fromJson(lastRequest.mid(lastRequest.indexOf("\r\n\r\n") + 4)).object(); }
+    QString url() const
+    {
+        return QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort());
+    }
+    QJsonObject requestBody() const
+    {
+        return QJsonDocument::fromJson(lastRequest.mid(lastRequest.indexOf("\r\n\r\n") + 4)).object();
+    }
 };
 
 class OllamaTest : public QObject
@@ -118,8 +129,16 @@ private Q_SLOTS:
         QStringList texts;
         QJsonObject last;
         QString error = QStringLiteral("unset");
-        client.chat({{QStringLiteral("model"), QStringLiteral("m")}}, this, [&](const QString &t) { texts << t; },
-                    [&](const QJsonObject &l, const QString &e) { last = l; error = e; });
+        client.chat(
+            {{QStringLiteral("model"), QStringLiteral("m")}},
+            this,
+            [&](const QString &t) {
+                texts << t;
+            },
+            [&](const QJsonObject &l, const QString &e) {
+                last = l;
+                error = e;
+            });
         QTRY_VERIFY(error != QLatin1String("unset"));
         QCOMPARE(error, QString());
         QCOMPARE(texts, (QStringList{QStringLiteral("Hello"), QStringLiteral(" world")}));
@@ -131,15 +150,21 @@ private Q_SLOTS:
     void anErrorInTheMiddleOfAnAnswerIsReported()
     {
         FakeOllama fake;
-        fake.pieces = {line(QStringLiteral("Partial")), "{\"error\":\"llama runner process has terminated\"}" "\n"};
+        fake.pieces = {line(QStringLiteral("Partial")),
+                       "{\"error\":\"llama runner process has terminated\"}"
+                       "\n"};
         OllamaClient client;
         client.setBaseUrl(fake.url());
         QString error;
         bool finished = false;
-        client.chat({{QStringLiteral("model"), QStringLiteral("m")}}, this, [](const QString &) {}, [&](const QJsonObject &, const QString &e) {
-            error = e;
-            finished = true;
-        });
+        client.chat(
+            {{QStringLiteral("model"), QStringLiteral("m")}},
+            this,
+            [](const QString &) {},
+            [&](const QJsonObject &, const QString &e) {
+                error = e;
+                finished = true;
+            });
         QTRY_VERIFY(finished);
         QCOMPARE(error, QStringLiteral("Ollama: llama runner process has terminated"));
     }
@@ -152,7 +177,9 @@ private Q_SLOTS:
         OllamaClient client;
         client.setBaseUrl(fake.url());
         QString error;
-        client.embed(QStringLiteral("qwen9"), {QStringLiteral("x")}, this, [&](const QList<Vector> &, const QString &e) { error = e; });
+        client.embed(QStringLiteral("qwen9"), {QStringLiteral("x")}, this, [&](const QList<Vector> &, const QString &e) {
+            error = e;
+        });
         QTRY_VERIFY(!error.isEmpty());
         QVERIFY2(error.contains(QLatin1String("ollama pull qwen9")), qPrintable(error));
     }
@@ -179,7 +206,9 @@ private Q_SLOTS:
         fake.pieces = {"{\"embeddings\":[[1,0]]}"};
         fake.lastRequest.clear();
         error = QStringLiteral("unset");
-        client.embed(QStringLiteral("m"), {QStringLiteral("a"), QStringLiteral("b")}, this, [&](const QList<Vector> &, const QString &e) { error = e; });
+        client.embed(QStringLiteral("m"), {QStringLiteral("a"), QStringLiteral("b")}, this, [&](const QList<Vector> &, const QString &e) {
+            error = e;
+        });
         QTRY_VERIFY(error != QLatin1String("unset"));
         QVERIFY(!error.isEmpty());
     }
@@ -191,8 +220,15 @@ private Q_SLOTS:
         OllamaClient client;
         client.setBaseUrl(fake.url());
         bool called = false;
-        QNetworkReply *reply = client.chat({{QStringLiteral("model"), QStringLiteral("m")}}, this, [&](const QString &) { called = true; },
-                                           [&](const QJsonObject &, const QString &) { called = true; });
+        QNetworkReply *reply = client.chat(
+            {{QStringLiteral("model"), QStringLiteral("m")}},
+            this,
+            [&](const QString &) {
+                called = true;
+            },
+            [&](const QJsonObject &, const QString &) {
+                called = true;
+            });
         QTRY_VERIFY(!fake.lastRequest.isEmpty());
         OllamaClient::cancel(reply);
         QTest::qWait(100);
@@ -204,11 +240,13 @@ private Q_SLOTS:
         QTcpServer probe;
         probe.listen(QHostAddress::LocalHost);
         const quint16 port = probe.serverPort();
-        probe.close();  // a port nobody is listening on
+        probe.close(); // a port nobody is listening on
         OllamaClient client;
         client.setBaseUrl(QStringLiteral("http://127.0.0.1:%1").arg(port));
         QString error;
-        client.installed(this, [&](const QStringList &, const QString &e) { error = e; });
+        client.installed(this, [&](const QStringList &, const QString &e) {
+            error = e;
+        });
         QTRY_VERIFY(!error.isEmpty());
         QVERIFY2(error.contains(QLatin1String("Is it running?")), qPrintable(error));
     }
@@ -221,12 +259,16 @@ private Q_SLOTS:
         OllamaClient client;
         client.setBaseUrl(fake.url());
         QStringList caps;
-        client.capabilities(QStringLiteral("qwen3.5:2b"), this, [&](const QStringList &c, const QString &) { caps = c; });
+        client.capabilities(QStringLiteral("qwen3.5:2b"), this, [&](const QStringList &c, const QString &) {
+            caps = c;
+        });
         QTRY_VERIFY(!caps.isEmpty());
         QVERIFY(caps.contains(QStringLiteral("thinking")));
-        fake.server.close();  // the second answer must come from the cache
+        fake.server.close(); // the second answer must come from the cache
         caps.clear();
-        client.capabilities(QStringLiteral("qwen3.5:2b"), this, [&](const QStringList &c, const QString &) { caps = c; });
+        client.capabilities(QStringLiteral("qwen3.5:2b"), this, [&](const QStringList &c, const QString &) {
+            caps = c;
+        });
         QVERIFY(caps.contains(QStringLiteral("thinking")));
     }
 
@@ -242,10 +284,12 @@ private Q_SLOTS:
         QString error = QStringLiteral("unset");
         client.embed(model,
                      {Embedding::formatQuery(model, QStringLiteral("why is water a polar molecule")),
-                      Embedding::formatDocument(model, QStringLiteral("Water is a polar molecule: the oxygen atom pulls the shared electrons "
-                                                                      "towards itself, leaving the hydrogen atoms slightly positive.")),
+                      Embedding::formatDocument(model,
+                                                QStringLiteral("Water is a polar molecule: the oxygen atom pulls the shared electrons "
+                                                               "towards itself, leaving the hydrogen atoms slightly positive.")),
                       Embedding::formatDocument(model, QStringLiteral("Ray Charles was an American singer and pianist who helped shape soul music."))},
-                     this, [&](const QList<Vector> &r, const QString &e) {
+                     this,
+                     [&](const QList<Vector> &r, const QString &e) {
                          v = r;
                          error = e;
                      });

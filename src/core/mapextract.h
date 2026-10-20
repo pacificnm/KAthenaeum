@@ -62,8 +62,14 @@ class FileRangeReader : public RangeReader
 public:
     explicit FileRangeReader(const QString &path, QObject *parent = nullptr);
     void read(quint64 offset, quint64 length, Done done) override;
-    void cancel() override { m_cancelled = true; }
-    int reads() const { return m_reads; }
+    void cancel() override
+    {
+        m_cancelled = true;
+    }
+    int reads() const
+    {
+        return m_reads;
+    }
 
 private:
     QFile m_file;
@@ -77,21 +83,37 @@ class MapExtract : public QObject
 {
     Q_OBJECT
 public:
-    enum Phase { Directories, Tiles, Writing };
+    enum Phase {
+        Directories,
+        Tiles,
+        Writing
+    };
     Q_ENUM(Phase)
 
     MapExtract(RangeReader *source, const MapTiling::MultiPolygon &shape, int maxZoom, const QString &outPath, QObject *parent = nullptr);
     ~MapExtract() override;
 
-    void setSource(RangeReader *source) { m_source = source; }
+    void setSource(RangeReader *source)
+    {
+        m_source = source;
+    }
     void start();
     void cancel();
     // Stop once the directories have been read: finished() then reports only how big the map would be
-    void setEstimateOnly(bool estimate) { m_estimateOnly = estimate; }
+    void setEstimateOnly(bool estimate)
+    {
+        m_estimateOnly = estimate;
+    }
 
     // after Directories: what the region's map will take
-    qint64 totalBytes() const { return m_totalBytes; }
-    qint64 tileCount() const { return m_tileCount; }
+    qint64 totalBytes() const
+    {
+        return m_totalBytes;
+    }
+    qint64 tileCount() const
+    {
+        return m_tileCount;
+    }
 
     // ranges closer than this are fetched as one (a little wasted data instead of many small requests)
     static constexpr quint64 MergeGap = 256 * 1024;
@@ -100,12 +122,12 @@ public:
 Q_SIGNALS:
     void phaseChanged(MapExtract::Phase phase);
     void progress(qint64 done, qint64 total);
-    void finished(const QString &error);  // empty when the file is complete
+    void finished(const QString &error); // empty when the file is complete
 
 private:
     struct Found {
         quint64 tileId;
-        quint64 offset;  // in the source's tile data
+        quint64 offset; // in the source's tile data
         quint32 length;
     };
     void gotRoot(const QByteArray &data);
@@ -117,7 +139,7 @@ private:
     void write();
     void writeFile();
     void fail(const QString &error);
-    bool wanted(quint64 from, quint64 to) const;  // any wanted id in [from, to)
+    bool wanted(quint64 from, quint64 to) const; // any wanted id in [from, to)
 
     QPointer<RangeReader> m_source;
     MapTiling::MultiPolygon m_shape;
@@ -128,7 +150,7 @@ private:
     std::vector<quint64> m_wanted;
     QList<Found> m_found;
     struct Leaf {
-        quint64 offset, length, end;  // end: the first tile id after the leaf's range
+        quint64 offset, length, end; // end: the first tile id after the leaf's range
         int depth;
     };
     // the PMTiles writers nest leaves one level deep; a deeper chain (a leaf pointing at itself) is a broken or hostile
@@ -137,7 +159,7 @@ private:
     QList<Leaf> m_leaves;
     int m_pending = 0;
     QFile m_data;
-    QHash<quint64, quint64> m_newOffset;  // source offset -> offset in the new archive's tile data
+    QHash<quint64, quint64> m_newOffset; // source offset -> offset in the new archive's tile data
     qint64 m_totalBytes = 0;
     qint64 m_tileCount = 0;
     qint64 m_doneBytes = 0;

@@ -18,7 +18,7 @@ public:
     {
     }
 
-    bool next()  // reads the next field's key; false at the end or on bad data
+    bool next() // reads the next field's key; false at the end or on bad data
     {
         if (m_pos >= m_data.size())
             return false;
@@ -29,10 +29,22 @@ public:
         m_wire = int(key & 7);
         return true;
     }
-    bool atEnd() const { return m_pos >= m_data.size(); }
-    int field() const { return m_field; }
-    int wire() const { return m_wire; }
-    bool ok() const { return m_ok; }
+    bool atEnd() const
+    {
+        return m_pos >= m_data.size();
+    }
+    int field() const
+    {
+        return m_field;
+    }
+    int wire() const
+    {
+        return m_wire;
+    }
+    bool ok() const
+    {
+        return m_ok;
+    }
 
     bool varint(quint64 &v)
     {

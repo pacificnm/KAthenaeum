@@ -5,7 +5,7 @@ import org.kde.kirigami as Kirigami
 import KAthenaeum
 
 // Ask a question: a local model answers from passages of the installed libraries, and the app links each sentence to
-// the source it matches (see CLAUDE.md, "Ask")
+// the source it matches (see HACKING.md, "How a question is answered")
 Kirigami.Page {
     id: page
 

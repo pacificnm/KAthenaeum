@@ -48,7 +48,7 @@ private Q_SLOTS:
         QVERIFY(!Timeline::findDate(QStringLiteral("A population of 1200 inhabitants was recorded there."), 2026));
         QVERIFY(!Timeline::findDate(QStringLiteral("Its catalogue number is #1999 in the list of stars."), 2026));
         QVERIFY(!Timeline::findDate(QStringLiteral("The value rose to 2.1999 after the change in method."), 2026));
-        QVERIFY(!Timeline::findDate(QStringLiteral("In May 5 cases were reported in the town."), 2026));  // "May 5" is not a year
+        QVERIFY(!Timeline::findDate(QStringLiteral("In May 5 cases were reported in the town."), 2026)); // "May 5" is not a year
         // the Battle of Hastings: "1000–2000 cavalry" is a count, not a year
         QVERIFY(!Timeline::findDate(QStringLiteral("Estimates of William's forces: men including 1000–2000 cavalry and archers."), 2026));
         QVERIFY(!Timeline::findDate(QStringLiteral("The fleet numbered 1200 ships when it sailed for the coast."), 2026));
@@ -61,18 +61,19 @@ private Q_SLOTS:
         const QList<Passage> passages = {
             {QString(), QStringLiteral("Portland is a city in Oregon. It was named in 1845 after a coin toss. The railroad arrived in 1886.")},
             {QStringLiteral("Key facts"), QStringLiteral("Founded: 1845. Incorporated: 1851.")},
-            {QStringLiteral("History"), QStringLiteral("The Clackamas people lived here for at least 10,000 years before settlers. The 1840s brought settlers.")},
+            {QStringLiteral("History"),
+             QStringLiteral("The Clackamas people lived here for at least 10,000 years before settlers. The 1840s brought settlers.")},
         };
         const ArticleRef portland{2, QStringLiteral("Portland,_Oregon"), QStringLiteral("Portland, Oregon")};
         const auto events = Timeline::fromPassages(passages, portland, 2026);
-        QCOMPARE(events.size(), 3);  // not the infobox, not the undated sentence, not "10,000 years" (not "ago")
+        QCOMPARE(events.size(), 3); // not the infobox, not the undated sentence, not "10,000 years" (not "ago")
         QCOMPARE(events[0].date.label, QStringLiteral("1845"));
         QCOMPARE(events[2].section, QStringLiteral("History"));
 
-        const auto ordered = Timeline::sorted(events + events);  // repeats dropped
+        const auto ordered = Timeline::sorted(events + events); // repeats dropped
         QCOMPARE(ordered.size(), 3);
         QCOMPARE(ordered[0].date.label, QStringLiteral("1845"));
-        QCOMPARE(ordered[1].date.label, QStringLiteral("1840s"));  // a year before the approximate decade it falls in
+        QCOMPARE(ordered[1].date.label, QStringLiteral("1840s")); // a year before the approximate decade it falls in
         QCOMPARE(ordered[2].date.label, QStringLiteral("1886"));
         QVERIFY(Timeline::fromPassages(passages, portland, 2026, 1).size() == 1);
     }
@@ -100,9 +101,13 @@ private Q_SLOTS:
 
     void asMarkdown()
     {
-        const Timeline::Event e{{1845, QStringLiteral("1845"), 1}, QStringLiteral("Named after a coin toss."), {2, QStringLiteral("Portland,_Oregon"), QStringLiteral("Portland, Oregon")}, {}};
-        QCOMPARE(Timeline::markdown(QStringLiteral("Portland"), {e}),
-                 QStringLiteral("# Timeline: Portland\n\n## 1800s\n\n- **1845**: Named after a coin toss. ([Portland, Oregon](zim://lib2/Portland,_Oregon))\n"));
+        const Timeline::Event e{{1845, QStringLiteral("1845"), 1},
+                                QStringLiteral("Named after a coin toss."),
+                                {2, QStringLiteral("Portland,_Oregon"), QStringLiteral("Portland, Oregon")},
+                                {}};
+        QCOMPARE(
+            Timeline::markdown(QStringLiteral("Portland"), {e}),
+            QStringLiteral("# Timeline: Portland\n\n## 1800s\n\n- **1845**: Named after a coin toss. ([Portland, Oregon](zim://lib2/Portland,_Oregon))\n"));
     }
 };
 

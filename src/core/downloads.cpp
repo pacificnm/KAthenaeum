@@ -11,6 +11,7 @@
 
 #include <algorithm>
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -21,7 +22,6 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QStorageInfo>
-#include <QCoreApplication>
 #include <QtConcurrentRun>
 
 #include <csignal>
@@ -105,26 +105,44 @@ QStringList Aria2::arguments(const QString &folder, const QUrl &url)
     // .meta4 file is left beside the ZIM; aria2 checks the metalink's hashes itself, and we check the ZIM afterwards.
     // --no-conf: the user's own ~/.aria2/aria2.conf must not change how this download behaves (no certificate checks, a
     // command run on completion, another folder); certificates are checked whatever it says.
-    return {QStringLiteral("--no-conf=true"), QStringLiteral("--check-certificate=true"), QStringLiteral("-x8"), QStringLiteral("-s8"), QStringLiteral("-c"),
-            QStringLiteral("--file-allocation=none"), QStringLiteral("--auto-file-renaming=false"),
-            QStringLiteral("--follow-metalink=mem"), QStringLiteral("--summary-interval=1"),
-            QStringLiteral("--show-console-readout=false"), QStringLiteral("--console-log-level=warn"),
-            QStringLiteral("--dir"), folder, url.toString(QUrl::FullyEncoded)};
+    return {QStringLiteral("--no-conf=true"),
+            QStringLiteral("--check-certificate=true"),
+            QStringLiteral("-x8"),
+            QStringLiteral("-s8"),
+            QStringLiteral("-c"),
+            QStringLiteral("--file-allocation=none"),
+            QStringLiteral("--auto-file-renaming=false"),
+            QStringLiteral("--follow-metalink=mem"),
+            QStringLiteral("--summary-interval=1"),
+            QStringLiteral("--show-console-readout=false"),
+            QStringLiteral("--console-log-level=warn"),
+            QStringLiteral("--dir"),
+            folder,
+            url.toString(QUrl::FullyEncoded)};
 }
 
 QString Aria2::explainExitCode(int code)
 {
     switch (code) {
-    case 3: return i18nc("@info reason a download failed", "the file was not found on the server");
-    case 6: return i18nc("@info reason a download failed", "a network problem stopped the download");
-    case 9: return i18nc("@info reason a download failed", "there is not enough free disk space");
-    case 13: return i18nc("@info reason a download failed", "a file with that name already exists");
+    case 3:
+        return i18nc("@info reason a download failed", "the file was not found on the server");
+    case 6:
+        return i18nc("@info reason a download failed", "a network problem stopped the download");
+    case 9:
+        return i18nc("@info reason a download failed", "there is not enough free disk space");
+    case 13:
+        return i18nc("@info reason a download failed", "a file with that name already exists");
     case 15:
-    case 16: return i18nc("@info reason a download failed", "the file could not be written");
-    case 19: return i18nc("@info reason a download failed", "the server name could not be resolved (are you online?)");
-    case 24: return i18nc("@info reason a download failed", "the server refused the request");
-    case 32: return i18nc("@info reason a download failed", "the downloaded data did not match its checksum");
-    default: return i18nc("@info reason a download failed, %1 is an exit code", "aria2c stopped with error %1", code);
+    case 16:
+        return i18nc("@info reason a download failed", "the file could not be written");
+    case 19:
+        return i18nc("@info reason a download failed", "the server name could not be resolved (are you online?)");
+    case 24:
+        return i18nc("@info reason a download failed", "the server refused the request");
+    case 32:
+        return i18nc("@info reason a download failed", "the downloaded data did not match its checksum");
+    default:
+        return i18nc("@info reason a download failed, %1 is an exit code", "aria2c stopped with error %1", code);
     }
 }
 
@@ -162,7 +180,7 @@ DownloadManager::DownloadManager(QObject *parent)
 
 DownloadManager::~DownloadManager()
 {
-    m_stopVerifying->store(true);  // the pool's thread returns within one read; the row stays "verifying" for next time
+    m_stopVerifying->store(true); // the pool's thread returns within one read; the row stays "verifying" for next time
     // SIGTERM, not a kill, so aria2c writes its control file and Resume loses nothing
     for (QProcess *p : std::as_const(m_processes)) {
         p->disconnect(this);
@@ -256,7 +274,7 @@ QString DownloadManager::start(const QUrl &url, const QString &filename, const Q
     q.addBindValue(size);
     q.addBindValue(have);
     if (!q.exec() || !q.next()) {
-        if (q.lastError().nativeErrorCode() == QLatin1String("2067"))  // SQLITE_CONSTRAINT_UNIQUE: the index on active downloads
+        if (q.lastError().nativeErrorCode() == QLatin1String("2067")) // SQLITE_CONSTRAINT_UNIQUE: the index on active downloads
             return i18n("%1 is already downloading", filename);
         return i18n("could not record the download: %1", q.lastError().text());
     }
@@ -291,7 +309,7 @@ QString DownloadManager::launch(qint64 id)
     proc->setArguments(Aria2::arguments(r->folder, r->url));
     proc->setProcessChannelMode(QProcess::MergedChannels);
     // In the child, before exec: the kernel sends SIGTERM if KAthenaeum dies, so no orphan keeps writing a file that the
-    // database no longer tracks. (Athenaeum learned this the hard way.)
+    // database no longer tracks.
     proc->setChildProcessModifier([] {
         ::prctl(PR_SET_PDEATHSIG, SIGTERM);
     });
@@ -324,7 +342,7 @@ void DownloadManager::readOutput(qint64 id)
             latest = p;
         else if (!line.isEmpty() && !line.startsWith(QLatin1Char('*')) && !line.startsWith(QLatin1Char('=')) && !line.startsWith(QLatin1Char('-'))
                  && !line.startsWith(QLatin1String("FILE:")))
-            tail = QString(tail + line + QLatin1Char('\n')).right(2000);  // QStringBuilder: materialise before right()
+            tail = QString(tail + line + QLatin1Char('\n')).right(2000); // QStringBuilder: materialise before right()
     }
     if (!latest)
         return;
@@ -360,7 +378,7 @@ void DownloadManager::processFinished(qint64 id, int exitCode)
     }
     if (exitCode != 0) {
         const QString why = exitCode == -2 ? i18nc("@info reason a download failed", "aria2c could not be started")
-                          : exitCode == -1 ? i18nc("@info reason a download failed", "aria2c crashed")
+            : exitCode == -1               ? i18nc("@info reason a download failed", "aria2c crashed")
                                            : Aria2::explainExitCode(exitCode);
         const QString message = tail.isEmpty() ? why : i18nc("@info %1 is why a download failed, %2 is aria2c's own message", "%1: %2", why, tail.right(300));
         setStatus(id, QStringLiteral("failed"), message);
@@ -394,7 +412,7 @@ void DownloadManager::verified(qint64 id, const QString &problem)
     if (!r || problem == ZimArchive::Stopped)
         return;
     if (!problem.isEmpty()) {
-        removePartial(r->path());  // a corrupt file must not be registered, and resuming it would not fix it
+        removePartial(r->path()); // a corrupt file must not be registered, and resuming it would not fix it
         const QString message = i18n("The download finished but did not check out: %1. The file was removed; start it again.", problem);
         setStatus(id, QStringLiteral("failed"), message);
         Q_EMIT failed(id, message);
@@ -422,7 +440,7 @@ bool DownloadManager::cancel(qint64 id)
     if (!proc)
         return false;
     m_cancelled.insert(id);
-    proc->terminate();  // aria2c saves its control file on SIGTERM, so a cancelled download can still be resumed
+    proc->terminate(); // aria2c saves its control file on SIGTERM, so a cancelled download can still be resumed
     return true;
 }
 
@@ -431,7 +449,7 @@ bool DownloadManager::remove(qint64 id)
     const auto r = byId(id);
     if (!r || r->isActive())
         return false;
-    bool installed = false;  // never delete a file a library uses, whatever this row says
+    bool installed = false; // never delete a file a library uses, whatever this row says
     for (const auto rows = Library::all(); const LibraryRecord &lib : rows)
         installed = installed || QFileInfo(lib.path) == QFileInfo(r->path());
     if (r->status != QLatin1String("complete") && !installed)

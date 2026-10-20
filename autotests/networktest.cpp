@@ -33,7 +33,10 @@ public:
         });
         listen(QHostAddress::LocalHost);
     }
-    QUrl url() const { return QUrl(QStringLiteral("http://127.0.0.1:%1/file").arg(serverPort())); }
+    QUrl url() const
+    {
+        return QUrl(QStringLiteral("http://127.0.0.1:%1/file").arg(serverPort()));
+    }
     int requests = 0;
 
 private:
@@ -55,11 +58,11 @@ class NetworkTest : public QObject
 private Q_SLOTS:
     void aRedirectToPlainHttpIsNotFollowed()
     {
-        Redirector target;  // where the redirect points: it must never be asked
+        Redirector target; // where the redirect points: it must never be asked
         Redirector first(target.url().toEncoded());
         QNetworkAccessManager nam;
         QNetworkReply *reply = get(nam, first.url(), [](const QUrl &) {
-            return true;  // even a host the caller allows: not over plain http
+            return true; // even a host the caller allows: not over plain http
         });
         QSignalSpy finished(reply, &QNetworkReply::finished);
         QVERIFY(finished.wait(5000));

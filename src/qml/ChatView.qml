@@ -7,7 +7,7 @@ import org.kde.kirigami as Kirigami
 import KAthenaeum
 
 // A chat: what is missing to answer (Ollama, a model), the questions and cited answers, and the question box. The Ask
-// page and the article panel both show one (see CLAUDE.md, "Ask").
+// page and the article panel both show one.
 ColumnLayout {
     id: view
 
@@ -328,7 +328,7 @@ ColumnLayout {
             spacing: Kirigami.Units.smallSpacing
             QQC2.TextField {
                 id: input
-                // a pasted page as a question pushed the sources out of the model's context (num_ctx 6144; the review)
+                // a pasted page as a question would push the sources out of the model's context (num_ctx 6144)
                 maximumLength: 2000
                 Layout.fillWidth: true
                 placeholderText: list.count > 0 ? i18n("Ask a follow-up question…")

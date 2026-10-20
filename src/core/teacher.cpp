@@ -66,18 +66,20 @@ Teacher::~Teacher()
 
 void Teacher::complete(const QString &prompt, int numPredict, std::function<void(const QString &, const QString &)> done, bool stream)
 {
-    QJsonObject body{{QStringLiteral("model"), m_models.answer},
-                     {QStringLiteral("messages"), QJsonArray{QJsonObject{{QStringLiteral("role"), QStringLiteral("user")},
-                                                                         {QStringLiteral("content"), prompt}}}},
-                     {QStringLiteral("options"), QJsonObject{{QStringLiteral("temperature"), Rag::Temperature},
-                                                             {QStringLiteral("num_ctx"), Rag::NumCtx},
-                                                             {QStringLiteral("num_predict"), numPredict}}}};
+    QJsonObject body{
+        {QStringLiteral("model"), m_models.answer},
+        {QStringLiteral("messages"), QJsonArray{QJsonObject{{QStringLiteral("role"), QStringLiteral("user")}, {QStringLiteral("content"), prompt}}}},
+        {QStringLiteral("options"),
+         QJsonObject{{QStringLiteral("temperature"), Rag::Temperature},
+                     {QStringLiteral("num_ctx"), Rag::NumCtx},
+                     {QStringLiteral("num_predict"), numPredict}}}};
     if (m_think)
         body.insert(QStringLiteral("think"), false);
     auto text = std::make_shared<QString>();
     const quint64 generation = m_generation;
     m_reply = m_client->chat(
-        body, this,
+        body,
+        this,
         [this, text, stream, generation](const QString &piece) {
             if (generation != m_generation)
                 return;
@@ -138,7 +140,7 @@ void Teacher::planCourse(qint64 courseId, const QList<qint64> &libraries, const 
     m_course = *course;
     m_profile = Classroom::profile();
     Classroom::setStatus(courseId, QStringLiteral("planning"));
-    ZimSearch::prepare(libraries);  // archives opened here: opening reads the database
+    ZimSearch::prepare(libraries); // archives opened here: opening reads the database
     Q_EMIT progress(0, 1, i18nc("@info:progress", "Planning the syllabus"));
     withCapabilities([this] {
         const auto [units, lessons] = Classroom::shape(m_course.length);
@@ -148,7 +150,9 @@ void Teacher::planCourse(qint64 courseId, const QList<qint64> &libraries, const 
                 return;
             }
             m_planText = text;
-            m_units = Classroom::parseSyllabus(Rag::tidyAnswer(text), m_course.title, std::min(units + 1, Classroom::MaxUnits),
+            m_units = Classroom::parseSyllabus(Rag::tidyAnswer(text),
+                                               m_course.title,
+                                               std::min(units + 1, Classroom::MaxUnits),
                                                std::min(lessons + 1, Classroom::MaxLessonsPerUnit));
             if (m_units.isEmpty()) {
                 finish(QStringLiteral("error"), i18n("The teacher could not plan this course. Try again, or say more about what it should cover."));
@@ -232,27 +236,31 @@ void Teacher::readingsFound(const QList<ZimSearch::Article> &articles)
     }
     const QString lessonText = lesson.title + lesson.article;
     const quint64 generation = m_generation;
-    m_reply = m_client->embed(m_models.embedding, input, this, [this, generation, choices, store, lessonText](const QList<Vector> &vectors, const QString &error) mutable {
-        if (generation != m_generation)
-            return;
-        m_reply.clear();
-        if (error.isEmpty() && vectors.size() == choices.size() + 1) {
-            for (int i = 0; i < choices.size(); ++i) {
-                choices[i].similarity = Embedding::cosine(vectors.at(0), vectors.at(i + 1));
-                if (m_simpleFirst.contains(choices.at(i).found.libraryId))
-                    choices[i].similarity += 0.03;  // a young learner's version, when it is about as close
-                // "Roman Republic (1849–1850)" beside "Roman Republic": a title in brackets is another thing of the same
-                // name, unless the lesson asked for one
-                if (choices.at(i).found.title.contains(QLatin1Char('(')) && !lessonText.contains(QLatin1Char('(')))
-                    choices[i].similarity -= 0.03;
-            }
-        }
-        for (const Teaching::Choice &c : std::as_const(choices))
-            m_considered << QStringLiteral("%1\t%2\t%3").arg(m_units.at(m_order.at(m_next).first).lessons.at(m_order.at(m_next).second).title)
-                                .arg(c.similarity, 0, 'f', 3)
-                                .arg(c.found.title);
-        store(choices);
-    });
+    m_reply = m_client->embed(m_models.embedding,
+                              input,
+                              this,
+                              [this, generation, choices, store, lessonText](const QList<Vector> &vectors, const QString &error) mutable {
+                                  if (generation != m_generation)
+                                      return;
+                                  m_reply.clear();
+                                  if (error.isEmpty() && vectors.size() == choices.size() + 1) {
+                                      for (int i = 0; i < choices.size(); ++i) {
+                                          choices[i].similarity = Embedding::cosine(vectors.at(0), vectors.at(i + 1));
+                                          if (m_simpleFirst.contains(choices.at(i).found.libraryId))
+                                              choices[i].similarity += 0.03; // a young learner's version, when it is about as close
+                                          // "Roman Republic (1849–1850)" beside "Roman Republic": a title in brackets is another thing of the same
+                                          // name, unless the lesson asked for one
+                                          if (choices.at(i).found.title.contains(QLatin1Char('(')) && !lessonText.contains(QLatin1Char('(')))
+                                              choices[i].similarity -= 0.03;
+                                      }
+                                  }
+                                  for (const Teaching::Choice &c : std::as_const(choices))
+                                      m_considered << QStringLiteral("%1\t%2\t%3")
+                                                          .arg(m_units.at(m_order.at(m_next).first).lessons.at(m_order.at(m_next).second).title)
+                                                          .arg(c.similarity, 0, 'f', 3)
+                                                          .arg(c.found.title);
+                                  store(choices);
+                              });
 }
 
 void Teacher::finishPlan()
@@ -270,8 +278,9 @@ void Teacher::finishPlan()
         return u.lessons.isEmpty();
     });
     if (units.isEmpty()) {
-        finish(QStringLiteral("error"), i18n("Your libraries have no articles for this course's lessons. Install a library for the subject, "
-                                             "or describe the course differently."));
+        finish(QStringLiteral("error"),
+               i18n("Your libraries have no articles for this course's lessons. Install a library for the subject, "
+                    "or describe the course differently."));
         return;
     }
     if (!Classroom::saveSyllabus(m_course.id, units)) {
@@ -358,15 +367,17 @@ void Teacher::introSources(const QList<ZimSearch::Article> &articles)
         }
         m_context = Rag::buildContext(Rag::rank(pool, question));
         Q_EMIT progress(1, 2, i18nc("@info:progress", "Writing the introduction"));
-        complete(Classroom::introPrompt(m_course, m_profile, m_lesson, m_context.text), 800,
-                 [this](const QString &text, const QString &error) {
-                     if (!error.isEmpty()) {
-                         finish(QStringLiteral("error"), error);
-                         return;
-                     }
-                     introWritten(text);
-                 },
-                 true);
+        complete(
+            Classroom::introPrompt(m_course, m_profile, m_lesson, m_context.text),
+            800,
+            [this](const QString &text, const QString &error) {
+                if (!error.isEmpty()) {
+                    finish(QStringLiteral("error"), error);
+                    return;
+                }
+                introWritten(text);
+            },
+            true);
     });
 }
 
@@ -419,7 +430,7 @@ void Teacher::introWritten(const QString &raw)
         if (generation != m_generation)
             return;
         m_reply.clear();
-        if (!error.isEmpty() || vectors.size() != spans.size()) {  // citations are a bonus
+        if (!error.isEmpty() || vectors.size() != spans.size()) { // citations are a bonus
             save({});
             return;
         }
@@ -523,7 +534,7 @@ void Teacher::rankQuizPassages()
         if (l.id == lessonId)
             lesson = l;
     // passages with enough in them to ask about; not the infobox's facts ("the official language of Rome", asked in both
-    // a quiz and its unit's test: trivia, 2026-10-20)
+    // a quiz and its unit's test: trivia)
     QList<Rag::Candidate> pool;
     for (const auto lessonQuery = Rag::pickPassages(Classroom::lessonQuery(m_course, lesson), articles); const Rag::Candidate &c : lessonQuery)
         if (c.text.size() >= 250 && c.section != Extract::keyFactsSection())
@@ -622,7 +633,7 @@ void Teacher::stop()
 {
     if (!m_running)
         return;
-    ++m_generation;  // late answers are ignored
+    ++m_generation; // late answers are ignored
     OllamaClient::cancel(m_reply);
     finish(QStringLiteral("stopped"));
 }
@@ -632,9 +643,10 @@ void Teacher::finish(const QString &status, const QString &error)
     if (!m_running)
         return;
     m_running = false;
-    ++m_generation;  // whatever is still on its way for this job is ignored (as Answerer and Drafter do)
+    ++m_generation; // whatever is still on its way for this job is ignored (as Answerer and Drafter do)
     if (m_job == QLatin1String("plan") && status != QLatin1String("done"))
-        Classroom::setStatus(m_subjectId, QStringLiteral("failed"),
+        Classroom::setStatus(m_subjectId,
+                             QStringLiteral("failed"),
                              status == QLatin1String("stopped") ? i18n("Planning was stopped. Press Plan Again.") : error);
     else if (m_job == QLatin1String("plan"))
         Classroom::setStatus(m_subjectId, QStringLiteral("ready"));

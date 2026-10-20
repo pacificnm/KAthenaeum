@@ -25,16 +25,20 @@ private Q_SLOTS:
     void init()
     {
         QString error;
-        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error),
-                 qPrintable(error));
+        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error), qPrintable(error));
         // two installed libraries for the articles to point at
-        QVERIFY(QSqlQuery().exec(QStringLiteral("INSERT INTO libraries (id, path, name, title, zim_date) VALUES (1, '/x/chem.zim', 'wikipedia_en_chemistry', 'Chemistry', '2026-08-02'), (2, '/x/ray.zim', 'wikipedia_en_ray-charles', 'Ray Charles', '2026-08-02')")));
+        QVERIFY(
+            QSqlQuery().exec(QStringLiteral("INSERT INTO libraries (id, path, name, title, zim_date) VALUES (1, '/x/chem.zim', 'wikipedia_en_chemistry', "
+                                            "'Chemistry', '2026-08-02'), (2, '/x/ray.zim', 'wikipedia_en_ray-charles', 'Ray Charles', '2026-08-02')")));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void aProjectHasATitleAndAGoal()
     {
-        QCOMPARE(Projects::create(QStringLiteral("   ")), 0);  // no title, no project
+        QCOMPARE(Projects::create(QStringLiteral("   ")), 0); // no title, no project
         const qint64 id = Projects::create(QStringLiteral("  Water  "), QStringLiteral(" Why is water a good solvent? "));
         QVERIFY(id > 0);
         auto p = Projects::byId(id);
@@ -52,14 +56,14 @@ private Q_SLOTS:
         const ArticleRef water{1, QStringLiteral("Water"), QStringLiteral("Water")};
         const qint64 a = Projects::addArticle(p, water, QStringLiteral("the main one"));
         QVERIFY(a > 0);
-        QCOMPARE(Projects::addArticle(p, water), a);  // same item, note kept
+        QCOMPARE(Projects::addArticle(p, water), a); // same item, note kept
         QCOMPARE(Projects::items(p, QStringLiteral("article")).size(), 1);
         QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("the main one"));
-        QCOMPARE(Projects::addArticle(p, water, QStringLiteral("changed")), a);  // a new note replaces it
+        QCOMPARE(Projects::addArticle(p, water, QStringLiteral("changed")), a); // a new note replaces it
         QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("changed"));
-        QCOMPARE(Projects::addArticle(p, {2, QStringLiteral("Water"), QStringLiteral("Water")}) != a, true);  // another library's Water
+        QCOMPARE(Projects::addArticle(p, {2, QStringLiteral("Water"), QStringLiteral("Water")}) != a, true); // another library's Water
         QCOMPARE(Projects::containing(1, QStringLiteral("Water")), QList<qint64>{p});
-        QCOMPARE(Projects::addArticle(p + 100, water), 0);  // no such project
+        QCOMPARE(Projects::addArticle(p + 100, water), 0); // no such project
     }
 
     void anExcerptKeepsItsTextSourcesAndEmbedding()
@@ -73,7 +77,7 @@ private Q_SLOTS:
         QCOMPARE(clip.text, QStringLiteral("Water is polar."));
         QCOMPARE(clip.refs.size(), 2);
         QCOMPARE(clip.refs[1].title, QStringLiteral("Ice"));
-        QCOMPARE(clip.article.path, QStringLiteral("Water"));  // the first source, for lookups
+        QCOMPARE(clip.article.path, QStringLiteral("Water")); // the first source, for lookups
         QVERIFY(clip.embedding.isEmpty());
         QVERIFY(Projects::setEmbedding(c, {0.5f, -1.25f, 3.0f}, QStringLiteral("nomic-embed-text:latest")));
         clip = Projects::items(p, QStringLiteral("clip")).constFirst();
@@ -87,7 +91,7 @@ private Q_SLOTS:
     {
         const Vector v{1.0f, -0.0f, 3.25e-7f, 12345.5f};
         QCOMPARE(Embedding::fromBlob(Embedding::toBlob(v)), v);
-        QVERIFY(Embedding::fromBlob(QByteArray("abc")).isEmpty());  // not a whole number of floats
+        QVERIFY(Embedding::fromBlob(QByteArray("abc")).isEmpty()); // not a whole number of floats
         QVERIFY(Embedding::fromBlob({}).isEmpty());
     }
 
@@ -96,7 +100,7 @@ private Q_SLOTS:
         const qint64 p = Projects::create(QStringLiteral("P"));
         const qint64 other = Projects::create(QStringLiteral("Other"));
         const qint64 a = Projects::addArticle(p, {1, QStringLiteral("Water"), QStringLiteral("Water")});
-        QVERIFY(!Projects::setNote(other, a, QStringLiteral("x")));  // not that project's item
+        QVERIFY(!Projects::setNote(other, a, QStringLiteral("x"))); // not that project's item
         QVERIFY(Projects::setNote(p, a, QStringLiteral(" a note ")));
         QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("a note"));
         QVERIFY(!Projects::removeItem(other, a));
@@ -111,13 +115,13 @@ private Q_SLOTS:
         const qint64 own = Chats::create(QStringLiteral("Mine"), 0, {}, {}, p);
         const qint64 item = Projects::attachChat(p, general);
         QVERIFY(item > 0);
-        QCOMPARE(Projects::attachChat(p, general), item);  // once
-        QCOMPARE(Projects::attachChat(p, 999), 0);         // no such chat
+        QCOMPARE(Projects::attachChat(p, general), item); // once
+        QCOMPARE(Projects::attachChat(p, 999), 0); // no such chat
         QCOMPARE(Projects::items(p, QStringLiteral("chat")).constFirst().chatTitle, QStringLiteral("General"));
         QCOMPARE(Chats::inProject(p).size(), 1);
         QCOMPARE(Chats::inProject(p).constFirst().id, own);
         QCOMPARE(Projects::byId(p)->chats, 2);
-        // a chat started in the project is not attached to it as well (it was listed and counted twice; the review)
+        // a chat started in the project is not attached to it as well (it would be listed and counted twice)
         QCOMPARE(Projects::attachChat(p, own), 0);
         QCOMPARE(Projects::byId(p)->chats, 2);
         // deleting a chat detaches it
@@ -158,7 +162,7 @@ private Q_SLOTS:
         const qint64 b = Projects::create(QStringLiteral("Beta"));
         const ArticleRef water{1, QStringLiteral("Water"), QStringLiteral("Water")};
         Projects::addClip(a, QStringLiteral("Water is polar."), {water}, {}, QStringLiteral("key"));
-        Projects::addClip(b, QStringLiteral("water  is polar."), {water});           // the same passage, saved again
+        Projects::addClip(b, QStringLiteral("water  is polar."), {water}); // the same passage, saved again
         Projects::addClip(b, QStringLiteral("Ice floats."), {water});
         Projects::addClip(b, QStringLiteral("Elsewhere."), {{1, QStringLiteral("Ice"), QStringLiteral("Ice")}});
         const auto h = Projects::highlightsFor(1, QStringLiteral("Water"));
@@ -190,7 +194,8 @@ private Q_SLOTS:
 
     void linksAndQuotesForDocuments()
     {
-        QCOMPARE(Projects::articleLink({2, QStringLiteral("Ray_(film)"), QStringLiteral("Ray (film)")}), QStringLiteral("[Ray (film)](zim://lib2/Ray_%28film%29)"));
+        QCOMPARE(Projects::articleLink({2, QStringLiteral("Ray_(film)"), QStringLiteral("Ray (film)")}),
+                 QStringLiteral("[Ray (film)](zim://lib2/Ray_%28film%29)"));
         QCOMPARE(Projects::articleLink({1, QStringLiteral("A"), QStringLiteral("[weird] title")}), QStringLiteral("[(weird) title](zim://lib1/A)"));
         // a title with %1 in it is text, not a placeholder (chained arg() filled it in)
         QCOMPARE(Projects::articleLink({7, QStringLiteral("Rate_of_5%1_growth"), QStringLiteral("Rate of 5%1 growth")}),
@@ -204,16 +209,20 @@ private Q_SLOTS:
 
     void exportedDocumentsNameTheirSources()
     {
-        const QString md = QStringLiteral("See [the film](zim://lib2/Ray_%28film%29) and [Water](zim://lib1/Water), again [water](zim://lib1/Water). "
-                                          "A [web link](https://example.org) stays.");
+        const QString md = QStringLiteral(
+            "See [the film](zim://lib2/Ray_%28film%29) and [Water](zim://lib1/Water), again [water](zim://lib1/Water). "
+            "A [web link](https://example.org) stays.");
         const QDate today(2026, 10, 20);
         // each article cited once, in the style asked for, in alphabetical order
         QCOMPARE(Projects::exportMarkdown(md, Citations::Style::Mla, today),
-                 QStringLiteral("See the film and Water, again water. A [web link](https://example.org) stays.\n\n"
-                                "## Works Cited\n\n"
-                                "“Ray (film).” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Ray_(film). Offline copy via Kiwix. Accessed 20 Oct. 2026.\n\n"
-                                "“Water.” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Water. Offline copy via Kiwix. Accessed 20 Oct. 2026.\n"));
-        QVERIFY(Projects::exportMarkdown(md, Citations::Style::Apa, today).contains(QLatin1String("\n\n## References\n\nRay (film). (2026, August 2). In *Wikipedia*.")));
+                 QStringLiteral(
+                     "See the film and Water, again water. A [web link](https://example.org) stays.\n\n"
+                     "## Works Cited\n\n"
+                     "“Ray (film).” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Ray_(film). Offline copy via Kiwix. Accessed 20 Oct. "
+                     "2026.\n\n"
+                     "“Water.” *Wikipedia*, Wikimedia Foundation, 2 Aug. 2026, en.wikipedia.org/wiki/Water. Offline copy via Kiwix. Accessed 20 Oct. 2026.\n"));
+        QVERIFY(Projects::exportMarkdown(md, Citations::Style::Apa, today)
+                    .contains(QLatin1String("\n\n## References\n\nRay (film). (2026, August 2). In *Wikipedia*.")));
         QVERIFY(Projects::exportMarkdown(md, Citations::Style::Chicago, today).contains(QStringLiteral("\n\n## Bibliography\n\nWikipedia. “Ray (film).”")));
         QCOMPARE(Projects::exportMarkdown(QStringLiteral("No links.")), QStringLiteral("No links."));
         // a document with its own list keeps it, and gets no second one
@@ -231,14 +240,15 @@ private Q_SLOTS:
         water.note = QStringLiteral("the film");
         ProjectItem ice;
         ice.kind = QStringLiteral("article");
-        ice.article = {1, QStringLiteral("Ice"), QStringLiteral("Ice")};  // no note
+        ice.article = {1, QStringLiteral("Ice"), QStringLiteral("Ice")}; // no note
         ProjectItem clip;
         clip.kind = QStringLiteral("clip");
         clip.text = QStringLiteral("Water, being a polar molecule, undergoes strong hydrogen bonding.");
         clip.note = QStringLiteral("key point");
-        const QString md = QStringLiteral("See [Ray (film)](zim://lib1/Ray_%28film%29) and [Ice](zim://lib1/Ice).\n\n"
-                                          "> Water, being a polar molecule,\n> undergoes strong hydrogen bonding.\n>\n> — Water\n\nAfter.\n\n"
-                                          "> Some other quotation entirely, not saved anywhere at all.");
+        const QString md = QStringLiteral(
+            "See [Ray (film)](zim://lib1/Ray_%28film%29) and [Ice](zim://lib1/Ice).\n\n"
+            "> Water, being a polar molecule,\n> undergoes strong hydrogen bonding.\n>\n> — Water\n\nAfter.\n\n"
+            "> Some other quotation entirely, not saved anywhere at all.");
         QCOMPARE(Projects::previewMarkdown(md, {water, ice, clip}),
                  QStringLiteral("See [Ray (film)](zim://lib1/Ray_%28film%29) *(note: the film)* and [Ice](zim://lib1/Ice).\n\n"
                                 "> Water, being a polar molecule,\n> undergoes strong hydrogen bonding.\n>\n> — Water\n\n*Your note: key point*\n\nAfter.\n\n"
@@ -260,13 +270,15 @@ private Q_SLOTS:
         Projects::addArticle(p, {1, QStringLiteral("Water"), QStringLiteral("Water")}, QStringLiteral("start here"));
         Projects::addClip(p, QStringLiteral("Water is polar."), {{1, QStringLiteral("Water"), QStringLiteral("Water")}}, {}, QStringLiteral("key"));
         const QString out = Projects::exportProject(p, Citations::Style::Apa, QDate(2026, 10, 20));
-        QVERIFY2(out.startsWith(QLatin1String("# Water\n\nWhy is water a good solvent?\n\n---\n\n## First\n\nAbout Water.\n\n## References\n\n"
-                                              "Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from https://en.wikipedia.org/wiki/Water")),
+        QVERIFY2(out.startsWith(QLatin1String(
+                     "# Water\n\nWhy is water a good solvent?\n\n---\n\n## First\n\nAbout Water.\n\n## References\n\n"
+                     "Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from https://en.wikipedia.org/wiki/Water")),
                  qPrintable(out));
         QVERIFY(out.indexOf(QLatin1String("## First")) < out.indexOf(QLatin1String("## Second")));
-        QVERIFY2(out.contains(QStringLiteral("## Sources\n\n- Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from "
-                                             "https://en.wikipedia.org/wiki/Water\n  Note: start here")),
-                 qPrintable(out));
+        QVERIFY2(
+            out.contains(QStringLiteral("## Sources\n\n- Water. (2026, August 2). In *Wikipedia*. Offline copy via Kiwix. Retrieved October 20, 2026, from "
+                                        "https://en.wikipedia.org/wiki/Water\n  Note: start here")),
+            qPrintable(out));
         QCOMPARE(Projects::bibliography(p, Citations::Style::Chicago, QDate(2026, 10, 20)),
                  QStringList{QStringLiteral("Wikipedia. “Water.” Wikimedia Foundation. Offline copy of August 2, 2026, via Kiwix. Accessed October 20, 2026. "
                                             "https://en.wikipedia.org/wiki/Water.")});

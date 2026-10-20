@@ -21,7 +21,7 @@ class ZimSearchTest : public QObject
 
     QTemporaryDir m_dir;
     qint64 m_id = 0;
-    qint64 m_music = 0;  // a second library, about something else
+    qint64 m_music = 0; // a second library, about something else
 
     static std::string article(const std::string &title, const std::string &intro, const std::vector<std::pair<std::string, std::string>> &sections)
     {
@@ -35,42 +35,65 @@ class ZimSearchTest : public QObject
     {
         std::vector<std::pair<std::string, std::string>> airship;
         for (int i = 1; i <= 8; ++i)
-            airship.push_back({"Design " + std::to_string(i), "Design note " + std::to_string(i)
+            airship.push_back({"Design " + std::to_string(i),
+                               "Design note " + std::to_string(i)
                                    + ": the zeppelin type of airship keeps a rigid internal frame, and zeppelin builders in section " + std::to_string(i)
                                    + " describe gas cells, ballast and fins at length."});
         const std::vector<std::tuple<std::string, std::string, std::string>> pages = {
-            {"Photosynthesis", "Photosynthesis",
-             article("Photosynthesis", "Photosynthesis is the process by which green plants convert sunlight, water and carbon dioxide into sugar and oxygen.",
+            {"Photosynthesis",
+             "Photosynthesis",
+             article("Photosynthesis",
+                     "Photosynthesis is the process by which green plants convert sunlight, water and carbon dioxide into sugar and oxygen.",
                      {{"Chlorophyll", "Chlorophyll is the green pigment in the chloroplasts of leaves that absorbs sunlight, mostly red and blue light."},
-                      {"History", "In 1779 Jan Ingenhousz showed that plants need sunlight to purify air, which led to the modern understanding of the process."}})},
-            {"Volcano", "Volcano",
-             article("Volcano", "A volcano is an opening in the crust of a planet through which molten rock, ash and gases escape from below the surface.",
+                      {"History",
+                       "In 1779 Jan Ingenhousz showed that plants need sunlight to purify air, which led to the modern understanding of the process."}})},
+            {"Volcano",
+             "Volcano",
+             article("Volcano",
+                     "A volcano is an opening in the crust of a planet through which molten rock, ash and gases escape from below the surface.",
                      {{"Eruptions", "Eruptions happen when pressure from dissolved gases in magma rises until the magma breaks through the overlying rock."}})},
-            {"Glacier", "Glacier",
-             article("Glacier", "A glacier is a large slow-moving mass of ice formed from compacted snow over many years on land.",
+            {"Glacier",
+             "Glacier",
+             article("Glacier",
+                     "A glacier is a large slow-moving mass of ice formed from compacted snow over many years on land.",
                      {{"Movement", "Glaciers flow under their own weight and carve valleys into the rock below them as they travel downhill."}})},
-            {"Photosynthetic_bacteria", "Photosynthetic bacteria",
+            {"Photosynthetic_bacteria",
+             "Photosynthetic bacteria",
              article("Photosynthetic bacteria", "Photosynthetic bacteria are microbes that capture light energy, some without producing oxygen.", {})},
-            {"River", "River",
-             article("River", "A river is a stream of water that carves valleys and canyons as it flows downhill towards the sea.",
+            {"River",
+             "River",
+             article("River",
+                     "A river is a stream of water that carves valleys and canyons as it flows downhill towards the sea.",
                      {{"Course", "Rivers carve their valleys over thousands of years, and a glacier can carve them deeper still."}})},
-            {"Airships", "Airships", article("Airships", "An airship is a lighter-than-air craft that can steer and move through the air under its own power.", airship)},
+            {"Airships",
+             "Airships",
+             article("Airships", "An airship is a lighter-than-air craft that can steer and move through the air under its own power.", airship)},
         };
         zim::writer::Creator c;
         c.configIndexing(true, "eng");
         c.startZimCreation(file.toStdString());
         c.setMainPath("Photosynthesis");
-        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{
-                 {"Name", "t"}, {"Title", "Test"}, {"Creator", "x"}, {"Publisher", "x"}, {"Date", "2026-01-01"}, {"Description", "d"}, {"Language", "eng"}, {"Scraper", "mwoffliner test"}})
+        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{{"Name", "t"},
+                                                                                   {"Title", "Test"},
+                                                                                   {"Creator", "x"},
+                                                                                   {"Publisher", "x"},
+                                                                                   {"Date", "2026-01-01"},
+                                                                                   {"Description", "d"},
+                                                                                   {"Language", "eng"},
+                                                                                   {"Scraper", "mwoffliner test"}})
             c.addMetadata(k, v);
         for (const auto &[path, title, html] : pages)
-            c.addItem(zim::writer::StringItem::create(path, std::string("text/html"), title, zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, html));
+            c.addItem(
+                zim::writer::StringItem::create(path, std::string("text/html"), title, zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, html));
         c.addRedirection("Plants_and_sunlight", "Plants and sunlight", "Photosynthesis", {{zim::writer::HintKeys::FRONT_ARTICLE, 1}});
         // mwoffliner's other kind of redirect: a tiny HTML page forwarding to a section of another article
-        c.addItem(zim::writer::StringItem::create(std::string("Eruption_(volcano)"), std::string("text/html"), std::string("Eruption (volcano)"),
-                                                  zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
-                                                  std::string("<html><head><title>Eruption (volcano)</title><meta http-equiv=\"refresh\" content=\"0;URL='./Volcano#Eruptions'\" />"
-                                                              "</head><body><a href=\"./Volcano#Eruptions\">Eruption (volcano)</a></body></html>")));
+        c.addItem(zim::writer::StringItem::create(
+            std::string("Eruption_(volcano)"),
+            std::string("text/html"),
+            std::string("Eruption (volcano)"),
+            zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
+            std::string("<html><head><title>Eruption (volcano)</title><meta http-equiv=\"refresh\" content=\"0;URL='./Volcano#Eruptions'\" />"
+                        "</head><body><a href=\"./Volcano#Eruptions\">Eruption (volcano)</a></body></html>")));
         c.finishZimCreation();
     }
 
@@ -80,15 +103,22 @@ class ZimSearchTest : public QObject
         c.configIndexing(true, "eng");
         c.startZimCreation(file.toStdString());
         c.setMainPath("Morning_song");
-        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{
-                 {"Name", "m"}, {"Title", "Music"}, {"Date", "2026-01-01"}, {"Language", "eng"}, {"Scraper", "mwoffliner test"}})
+        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{{"Name", "m"},
+                                                                                   {"Title", "Music"},
+                                                                                   {"Date", "2026-01-01"},
+                                                                                   {"Language", "eng"},
+                                                                                   {"Scraper", "mwoffliner test"}})
             c.addMetadata(k, v);
         // like "Ray Charles" for "why is water polar": every word of the query is in it, far from its opening
-        c.addItem(zim::writer::StringItem::create(std::string("Morning_song"), std::string("text/html"), std::string("Morning song"),
+        c.addItem(zim::writer::StringItem::create(std::string("Morning_song"),
+                                                  std::string("text/html"),
+                                                  std::string("Morning song"),
                                                   zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
-                                                  article("Morning song", "Morning song is a ballad recorded in 1961 by a blues singer from Georgia.",
-                                                          {{"Awards", "The singer later won a prize in Stockholm for the record, which describes how sunlight warms "
-                                                                      "the window and turns sugar in the tea, and how plants on the sill lean towards the light."}})));
+                                                  article("Morning song",
+                                                          "Morning song is a ballad recorded in 1961 by a blues singer from Georgia.",
+                                                          {{"Awards",
+                                                            "The singer later won a prize in Stockholm for the record, which describes how sunlight warms "
+                                                            "the window and turns sugar in the tea, and how plants on the sill lean towards the light."}})));
         c.finishZimCreation();
     }
 
@@ -118,8 +148,10 @@ private Q_SLOTS:
 
     void termsKeepContentWordsOnly()
     {
-        QCOMPARE(ZimSearch::terms(QStringLiteral("Why does the sky look blue?")), (QStringList{QStringLiteral("sky"), QStringLiteral("look"), QStringLiteral("blue")}));
-        QCOMPARE(ZimSearch::terms(QStringLiteral("What's the PH of  lemon juice, juice?")), (QStringList{QStringLiteral("ph"), QStringLiteral("lemon"), QStringLiteral("juice")}));
+        QCOMPARE(ZimSearch::terms(QStringLiteral("Why does the sky look blue?")),
+                 (QStringList{QStringLiteral("sky"), QStringLiteral("look"), QStringLiteral("blue")}));
+        QCOMPARE(ZimSearch::terms(QStringLiteral("What's the PH of  lemon juice, juice?")),
+                 (QStringList{QStringLiteral("ph"), QStringLiteral("lemon"), QStringLiteral("juice")}));
         QCOMPARE(ZimSearch::terms(QStringLiteral("a an the of")), QStringList());
         QCOMPARE(ZimSearch::terms(QStringLiteral("type 2 diabetes")), (QStringList{QStringLiteral("type"), QStringLiteral("2"), QStringLiteral("diabetes")}));
         QStringList many;
@@ -141,7 +173,8 @@ private Q_SLOTS:
 
     void titleCandidatesUndoQuestionWordsAndCasing()
     {
-        QCOMPARE(ZimSearch::titleCandidates(QStringLiteral("who was Ray Charles?")).mid(0, 2), (QStringList{QStringLiteral("who was Ray Charles"), QStringLiteral("Ray Charles")}));
+        QCOMPARE(ZimSearch::titleCandidates(QStringLiteral("who was Ray Charles?")).mid(0, 2),
+                 (QStringList{QStringLiteral("who was Ray Charles"), QStringLiteral("Ray Charles")}));
         QVERIFY(ZimSearch::titleCandidates(QStringLiteral("hypertension")).contains(QStringLiteral("Hypertension")));
         QVERIFY(ZimSearch::titleCandidates(QStringLiteral("what is a noble gas")).contains(QStringLiteral("Noble Gas")));
         QCOMPARE(ZimSearch::titleCandidates(QStringLiteral("   ")), QStringList());
@@ -165,7 +198,7 @@ private Q_SLOTS:
         QVERIFY(ZimSearch::isQuestion(QStringLiteral("what is a noble gas?")));
         QVERIFY(!ZimSearch::isQuestion(QStringLiteral("noble gases")));
         QVERIFY(!ZimSearch::isQuestion(QStringLiteral("hypertension")));
-        QVERIFY(!ZimSearch::isQuestion(QStringLiteral("who was Ray Charles")));  // the rest is a name: a title lookup
+        QVERIFY(!ZimSearch::isQuestion(QStringLiteral("who was Ray Charles"))); // the rest is a name: a title lookup
     }
 
     void exactTitleAndRedirectsFindTheArticle()
@@ -173,7 +206,7 @@ private Q_SLOTS:
         const auto res = ZimSearch::search(QStringLiteral("Photosynthesis"), {m_id}, 10);
         QCOMPARE(res.first().path, QStringLiteral("Photosynthesis"));
         QVERIFY(res.first().titleMatch);
-        QVERIFY(!ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).constFirst().titleMatch);  // a text match is not a title match
+        QVERIFY(!ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).constFirst().titleMatch); // a text match is not a title match
         // an alias redirects to the real article and is not listed twice
         const QStringList p = paths(ZimSearch::findArticles(QStringLiteral("Plants and sunlight"), {m_id}, 10));
         QCOMPARE(p.first(), QStringLiteral("Photosynthesis"));
@@ -205,7 +238,7 @@ private Q_SLOTS:
     {
         QVERIFY(ZimSearch::findArticles(QStringLiteral("zzzqqq xxyyzz"), {m_id}, 10).isEmpty());
         QVERIFY(ZimSearch::findArticles(QStringLiteral("???"), {m_id}, 10).isEmpty());
-        QVERIFY(ZimSearch::findArticles(QStringLiteral("anything"), {987654}, 10).isEmpty());  // not installed
+        QVERIFY(ZimSearch::findArticles(QStringLiteral("anything"), {987654}, 10).isEmpty()); // not installed
     }
 
     void resultsShowTheMatchingPassage()
@@ -214,7 +247,7 @@ private Q_SLOTS:
         QCOMPARE(top.path, QStringLiteral("Photosynthesis"));
         QCOMPARE(top.libraryId, m_id);
         QVERIFY(top.snippet.contains(QLatin1String("pigment")));
-        QCOMPARE(top.section, QStringLiteral("Chlorophyll"));  // the best passage, not simply the introduction
+        QCOMPARE(top.section, QStringLiteral("Chlorophyll")); // the best passage, not simply the introduction
     }
 
     void anArticleAboutTheQueryBeatsOneThatOnlyMentionsIt()
@@ -265,7 +298,7 @@ private Q_SLOTS:
 
     void removingALibraryDuringASearchIsSafe()
     {
-        // found by the review (2026-10-19): the search looked an archive up again after a library was removed, and crashed
+        // a library removed during a search: the search must not look its archive up again (it crashed)
         const QList<qint64> ids{m_id, m_music};
         std::atomic<bool> done = false;
         auto future = QtConcurrent::run([&] {
@@ -289,7 +322,9 @@ private Q_SLOTS:
         // (A thread of its own: QFuture::result() may run a task that has not started yet on the waiting thread.)
         auto onWorker = [this] {
             bool found = true;
-            QThread *t = QThread::create([&found, this] { found = ZimReader::content(m_music, QStringLiteral("Morning_song")).has_value(); });
+            QThread *t = QThread::create([&found, this] {
+                found = ZimReader::content(m_music, QStringLiteral("Morning_song")).has_value();
+            });
             t->start();
             t->wait();
             delete t;
@@ -298,13 +333,13 @@ private Q_SLOTS:
         QTest::failOnWarning(QRegularExpression(QStringLiteral("does not belong to the calling thread")));
         ZimReader::close(m_music);
         QVERIFY(!onWorker());
-        QVERIFY(ZimReader::content(m_music, QStringLiteral("Morning_song")));  // the main thread opens it
+        QVERIFY(ZimReader::content(m_music, QStringLiteral("Morning_song"))); // the main thread opens it
         QVERIFY(onWorker());
     }
 
     void anEntryTooLargeToReadSafelyIsNotRead()
     {
-        // the review's "bomb": a tiny ZIM with an enormous article (it compresses to almost nothing)
+        // a "bomb": a tiny ZIM with an enormous article (it compresses to almost nothing)
         const QString file = m_dir.filePath(QStringLiteral("bomb.zim"));
         {
             zim::writer::Creator c;
@@ -313,11 +348,17 @@ private Q_SLOTS:
             c.addMetadata("Title", "Bomb");
             const std::string page = "<html><head><title>Big</title></head><body><div class='mw-parser-output'><p>"
                 + std::string(size_t(ZimReader::MaxHtmlBytes) + 1024, 'a') + "</p><script>x()</script></div></body></html>";
-            c.addItem(zim::writer::StringItem::create(std::string("Big"), std::string("text/html"), std::string("Big"),
-                                                      zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, page));
-            c.addItem(zim::writer::StringItem::create(std::string("Small"), std::string("text/html"), std::string("Small"),
+            c.addItem(zim::writer::StringItem::create(std::string("Big"),
+                                                      std::string("text/html"),
+                                                      std::string("Big"),
                                                       zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
-                                                      std::string("<html><head><title>Small</title></head><body><div class='mw-parser-output'><p>Fine.</p></div></body></html>")));
+                                                      page));
+            c.addItem(zim::writer::StringItem::create(
+                std::string("Small"),
+                std::string("text/html"),
+                std::string("Small"),
+                zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
+                std::string("<html><head><title>Small</title></head><body><div class='mw-parser-output'><p>Fine.</p></div></body></html>")));
             c.finishZimCreation();
         }
         QVERIFY(QFileInfo(file).size() < 2 << 20);
@@ -326,11 +367,14 @@ private Q_SLOTS:
         QVERIFY(!ZimReader::content(*id, QStringLiteral("Big")));
         QVERIFY(ZimReader::content(*id, QStringLiteral("Small")));
         QVERIFY(ZimReader::tooLarge(ZimReader::MaxHtmlBytes + 1, true));
-        QVERIFY(!ZimReader::tooLarge(ZimReader::MaxHtmlBytes + 1, false));  // an image may be bigger than a page
+        QVERIFY(!ZimReader::tooLarge(ZimReader::MaxHtmlBytes + 1, false)); // an image may be bigger than a page
         QVERIFY(Library::remove(*id, false));
     }
 
-    void cleanupTestCase() { Database::close(); }
+    void cleanupTestCase()
+    {
+        Database::close();
+    }
 };
 
 QTEST_GUILESS_MAIN(ZimSearchTest)

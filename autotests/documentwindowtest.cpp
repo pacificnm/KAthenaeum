@@ -43,7 +43,10 @@ private Q_SLOTS:
         Projects::addClip(m_project, QStringLiteral("An acid donates a proton."), {{1, QStringLiteral("Acid"), QStringLiteral("Acid")}});
         m_doc = Projects::createDocument(m_project, QStringLiteral("Notes"), QStringLiteral("First line."));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void typingIsSavedAndShownInThePreview()
     {
@@ -76,7 +79,7 @@ private Q_SLOTS:
         QVERIFY(cite);
         Q_EMIT cite->aboutToShow();
         QList<QAction *> actions;
-        for (const auto citeActions = cite->actions(); QAction *a : citeActions)
+        for (const auto citeActions = cite->actions(); QAction * a : citeActions)
             if (!a->isSeparator())
                 actions << a;
         QCOMPARE(actions.size(), 3);
@@ -86,7 +89,7 @@ private Q_SLOTS:
         QCOMPARE(actions[1]->text(), QStringLiteral("Acid (has a note)"));
         actions[1]->trigger();
         QCOMPARE(view->document()->text(), QStringLiteral("First line.[Acid](zim://lib1/Acid)"));
-        actions[2]->trigger();  // a quotation goes on lines of its own
+        actions[2]->trigger(); // a quotation goes on lines of its own
         QVERIFY2(view->document()->text().contains(QStringLiteral("[Acid](zim://lib1/Acid)\n\n> An acid donates a proton.\n>\n> — Acid\n\n")),
                  qPrintable(view->document()->text()));
         // now it links to an article: the list can be inserted, in the chosen style
@@ -105,7 +108,7 @@ private Q_SLOTS:
     {
         auto *w = new DocumentWindow(m_doc);
         w->findChild<KTextEditor::View *>()->document()->setText(QStringLiteral("Typed just before closing."));
-        w->close();  // deletes itself
+        w->close(); // deletes itself
         QCOMPARE(Projects::document(m_doc)->content, QStringLiteral("Typed just before closing."));
     }
 
@@ -123,7 +126,7 @@ private Q_SLOTS:
         DocumentWindows::instance()->open(m_doc);
         DocumentWindows::instance()->open(m_doc);
         int open = 0;
-        for (const auto windows = QApplication::topLevelWidgets(); QWidget *top : windows)
+        for (const auto windows = QApplication::topLevelWidgets(); QWidget * top : windows)
             if (qobject_cast<DocumentWindow *>(top) && top->isVisible())
                 ++open;
         QCOMPARE(open, 1);

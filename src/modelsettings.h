@@ -37,7 +37,10 @@ public:
     static ModelSettings *instance();
     static ModelSettings *create(QQmlEngine *, QJSEngine *);
 
-    OllamaClient *client() const { return m_client; }
+    OllamaClient *client() const
+    {
+        return m_client;
+    }
 
     QString url() const;
     void setUrl(const QString &url);
@@ -48,15 +51,36 @@ public:
     QString defaultAnswerModel() const;
     QString defaultEmbeddingModel() const;
 
-    bool checking() const { return m_checking; }
-    bool checked() const { return m_checked; }
-    bool reachable() const { return m_reachable; }
-    QString error() const { return m_error; }
-    QStringList installed() const { return m_installed; }
-    QStringList loaded() const { return m_loaded; }
+    bool checking() const
+    {
+        return m_checking;
+    }
+    bool checked() const
+    {
+        return m_checked;
+    }
+    bool reachable() const
+    {
+        return m_reachable;
+    }
+    QString error() const
+    {
+        return m_error;
+    }
+    QStringList installed() const
+    {
+        return m_installed;
+    }
+    QStringList loaded() const
+    {
+        return m_loaded;
+    }
     bool answerModelInstalled() const;
     bool embeddingModelInstalled() const;
-    bool swapping() const { return m_swapping; }
+    bool swapping() const
+    {
+        return m_swapping;
+    }
 
     // Asks Ollama what it has installed and loaded
     Q_INVOKABLE void refresh();
@@ -73,7 +97,7 @@ private:
 
     OllamaClient *m_client;
     bool m_checking = false;
-    quint64 m_refresh = 0;  // a newer refresh (another Ollama address) makes an older one's replies stale
+    quint64 m_refresh = 0; // a newer refresh (another Ollama address) makes an older one's replies stale
     bool m_checked = false;
     bool m_reachable = false;
     QString m_error;

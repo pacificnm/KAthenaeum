@@ -12,11 +12,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSqlDatabase>
 #include <QSqlQuery>
-#include <QRandomGenerator>
 #include <QTimeZone>
 
 namespace
@@ -55,7 +55,8 @@ QList<Classroom::Reading> readingsFrom(const QByteArray &json)
     for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array) {
         const QJsonObject o = v.toObject();
         Classroom::Reading r;
-        r.article = {qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(),
+        r.article = {qint64(o.value(QLatin1String("libraryId")).toDouble()),
+                     o.value(QLatin1String("path")).toString(),
                      o.value(QLatin1String("title")).toString()};
         r.score = o.value(QLatin1String("score")).toDouble();
         out << r;
@@ -118,16 +119,17 @@ QString unmarked(QString line)
 // A part of a line without what the template put there: "<the lesson's title>", "Lesson title:", "Wikipedia article:"
 QString cleanTemplate(QString part)
 {
-    static const QRegularExpression labels(QStringLiteral("^(?:the\\s+)?(?:lesson(?:'s)?\\s*title|unit(?:'s)?\\s*title|(?:wikipedia\\s+)?article(?:'s)?(?:\\s*title)?|"
-                                                          "wikipedia|title|objective|what the student will learn)\\s*[:=-]\\s*"),
-                                           QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression labels(
+        QStringLiteral("^(?:the\\s+)?(?:lesson(?:'s)?\\s*title|unit(?:'s)?\\s*title|(?:wikipedia\\s+)?article(?:'s)?(?:\\s*title)?|"
+                       "wikipedia|title|objective|what the student will learn)\\s*[:=-]\\s*"),
+        QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression placeholder(QStringLiteral("^<[^>]*>$"));
     part = part.trimmed();
     part.remove(QStringLiteral("**"));
     part.remove(labels);
     part = part.trimmed();
     if (placeholder.match(part).hasMatch())
-        return {};  // the template itself
+        return {}; // the template itself
     part.remove(QLatin1Char('<')).remove(QLatin1Char('>'));
     // quotes or brackets round an article's title: "Plate tectonics", [Plate tectonics]
     while (part.size() > 1 && QStringLiteral("\"'[(\u201C").contains(part.front()) && QStringLiteral("\"')]\u201D").contains(part.back()))
@@ -162,9 +164,10 @@ Classroom::Profile Classroom::profile()
 bool Classroom::saveProfile(const Profile &p)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("INSERT INTO learner (id, name, grade, interests, goals) VALUES (1, ?, ?, ?, ?) "
-                             "ON CONFLICT (id) DO UPDATE SET name = excluded.name, grade = excluded.grade, interests = excluded.interests, "
-                             "goals = excluded.goals, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
+    q.prepare(
+        QStringLiteral("INSERT INTO learner (id, name, grade, interests, goals) VALUES (1, ?, ?, ?, ?) "
+                       "ON CONFLICT (id) DO UPDATE SET name = excluded.name, grade = excluded.grade, interests = excluded.interests, "
+                       "goals = excluded.goals, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')"));
     q.addBindValue(Database::text(p.name.simplified().left(100)));
     q.addBindValue(Database::text(gradesCompleted().contains(p.grade) ? p.grade : QStringLiteral("none")));
     q.addBindValue(Database::text(p.interests.trimmed().left(1000)));
@@ -259,29 +262,70 @@ QList<Classroom::Subject> Classroom::subjects()
     // `suggestion` and `libraries` are Kiwix catalog titles and names: they match the catalog, so they stay English
     const QString best = QStringLiteral("Best of Wikipedia");
     return {
-        {QStringLiteral("math"), i18nc("@item school subject", "Mathematics"), QStringLiteral("applications-education-mathematics"),
-         i18nc("@info what a school subject covers", "Numbers, algebra, geometry, statistics"), {QStringLiteral("wikipedia_en_mathematics")}, QStringLiteral("Mathematics by Wikipedia")},
-        {QStringLiteral("science"), i18nc("@item school subject", "Science"), QStringLiteral("applications-education-science"),
+        {QStringLiteral("math"),
+         i18nc("@item school subject", "Mathematics"),
+         QStringLiteral("applications-education-mathematics"),
+         i18nc("@info what a school subject covers", "Numbers, algebra, geometry, statistics"),
+         {QStringLiteral("wikipedia_en_mathematics")},
+         QStringLiteral("Mathematics by Wikipedia")},
+        {QStringLiteral("science"),
+         i18nc("@item school subject", "Science"),
+         QStringLiteral("applications-education-science"),
          i18nc("@info what a school subject covers", "Physics, chemistry, biology, Earth and space"),
-         {QStringLiteral("wikipedia_en_physics"), QStringLiteral("wikipedia_en_chemistry"), QStringLiteral("wikipedia_en_molcell"),
-          QStringLiteral("wikipedia_en_astronomy"), QStringLiteral("wikipedia_en_climate-change")},
+         {QStringLiteral("wikipedia_en_physics"),
+          QStringLiteral("wikipedia_en_chemistry"),
+          QStringLiteral("wikipedia_en_molcell"),
+          QStringLiteral("wikipedia_en_astronomy"),
+          QStringLiteral("wikipedia_en_climate-change")},
          best},
-        {QStringLiteral("english"), i18nc("@item school subject", "English and Literature"), QStringLiteral("applications-education-language"),
-         i18nc("@info what a school subject covers", "Reading, writing, grammar, great books"), {}, best},
-        {QStringLiteral("history"), i18nc("@item school subject", "History"), QStringLiteral("view-calendar-timeline"),
-         i18nc("@info what a school subject covers", "People, events and civilisations"), {QStringLiteral("wikipedia_en_history")}, QStringLiteral("History by Wikipedia")},
-        {QStringLiteral("geography"), i18nc("@item school subject", "Geography"), QStringLiteral("globe"),
-         i18nc("@info what a school subject covers", "Places, landforms, climates, peoples"), {QStringLiteral("wikipedia_en_geography")}, QStringLiteral("Geography by Wikipedia")},
-        {QStringLiteral("civics"), i18nc("@item school subject", "Civics and Government"), QStringLiteral("system-users"),
-         i18nc("@info what a school subject covers", "How governments work, rights, citizenship"), {}, best},
-        {QStringLiteral("health"), i18nc("@item school subject", "Health"), QStringLiteral("love"),
-         i18nc("@info what a school subject covers", "The body, nutrition, staying well"), {QStringLiteral("wikipedia_en_medicine")}, QStringLiteral("WikiMed Medical Encyclopedia")},
-        {QStringLiteral("art"), i18nc("@item school subject", "Art"), QStringLiteral("draw-brush"),
-         i18nc("@info what a school subject covers", "Artists, movements, techniques"), {}, best},
-        {QStringLiteral("music"), i18nc("@item school subject", "Music"), QStringLiteral("audio-x-generic"),
-         i18nc("@info what a school subject covers", "Composers, instruments, styles, theory"), {}, best},
-        {QStringLiteral("computing"), i18nc("@item school subject", "Computing"), QStringLiteral("computer"),
-         i18nc("@info what a school subject covers", "How computers work, programming, the Internet"), {QStringLiteral("wikipedia_en_computer")}, QStringLiteral("Computer by Wikipedia")},
+        {QStringLiteral("english"),
+         i18nc("@item school subject", "English and Literature"),
+         QStringLiteral("applications-education-language"),
+         i18nc("@info what a school subject covers", "Reading, writing, grammar, great books"),
+         {},
+         best},
+        {QStringLiteral("history"),
+         i18nc("@item school subject", "History"),
+         QStringLiteral("view-calendar-timeline"),
+         i18nc("@info what a school subject covers", "People, events and civilisations"),
+         {QStringLiteral("wikipedia_en_history")},
+         QStringLiteral("History by Wikipedia")},
+        {QStringLiteral("geography"),
+         i18nc("@item school subject", "Geography"),
+         QStringLiteral("globe"),
+         i18nc("@info what a school subject covers", "Places, landforms, climates, peoples"),
+         {QStringLiteral("wikipedia_en_geography")},
+         QStringLiteral("Geography by Wikipedia")},
+        {QStringLiteral("civics"),
+         i18nc("@item school subject", "Civics and Government"),
+         QStringLiteral("system-users"),
+         i18nc("@info what a school subject covers", "How governments work, rights, citizenship"),
+         {},
+         best},
+        {QStringLiteral("health"),
+         i18nc("@item school subject", "Health"),
+         QStringLiteral("love"),
+         i18nc("@info what a school subject covers", "The body, nutrition, staying well"),
+         {QStringLiteral("wikipedia_en_medicine")},
+         QStringLiteral("WikiMed Medical Encyclopedia")},
+        {QStringLiteral("art"),
+         i18nc("@item school subject", "Art"),
+         QStringLiteral("draw-brush"),
+         i18nc("@info what a school subject covers", "Artists, movements, techniques"),
+         {},
+         best},
+        {QStringLiteral("music"),
+         i18nc("@item school subject", "Music"),
+         QStringLiteral("audio-x-generic"),
+         i18nc("@info what a school subject covers", "Composers, instruments, styles, theory"),
+         {},
+         best},
+        {QStringLiteral("computing"),
+         i18nc("@item school subject", "Computing"),
+         QStringLiteral("computer"),
+         i18nc("@info what a school subject covers", "How computers work, programming, the Internet"),
+         {QStringLiteral("wikipedia_en_computer")},
+         QStringLiteral("Computer by Wikipedia")},
     };
 }
 
@@ -290,14 +334,21 @@ Classroom::Subject Classroom::subject(const QString &key)
     for (const auto all = subjects(); const Subject &s : all)
         if (s.key == key)
             return s;
-    return {QStringLiteral("other"), i18nc("@item school subject", "Other"), QStringLiteral("applications-education"),
-            i18nc("@info what a school subject covers", "Anything you want to learn"), {}, QStringLiteral("Best of Wikipedia")};
+    return {QStringLiteral("other"),
+            i18nc("@item school subject", "Other"),
+            QStringLiteral("applications-education"),
+            i18nc("@info what a school subject covers", "Anything you want to learn"),
+            {},
+            QStringLiteral("Best of Wikipedia")};
 }
 
 bool Classroom::isGeneral(const LibraryRecord &library)
 {
-    static const QStringList general = {QStringLiteral("wikipedia_en_all"), QStringLiteral("wikipedia_en_top"), QStringLiteral("wikipedia_en_top1m"),
-                                        QStringLiteral("wikipedia_en-simple_all"), QStringLiteral("wikipedia_en_100")};
+    static const QStringList general = {QStringLiteral("wikipedia_en_all"),
+                                        QStringLiteral("wikipedia_en_top"),
+                                        QStringLiteral("wikipedia_en_top1m"),
+                                        QStringLiteral("wikipedia_en-simple_all"),
+                                        QStringLiteral("wikipedia_en_100")};
     return general.contains(library.name);
 }
 
@@ -310,7 +361,7 @@ QList<LibraryRecord> Classroom::librariesFor(const QString &subjectKey, const QL
 {
     const QStringList own = subject(subjectKey).libraries;
     QList<LibraryRecord> out;
-    for (const LibraryRecord &l : installed)  // its own libraries first
+    for (const LibraryRecord &l : installed) // its own libraries first
         if (l.fileExists() && own.contains(l.name))
             out << l;
     for (const LibraryRecord &l : installed)
@@ -342,7 +393,7 @@ qint64 Classroom::createCourse(const QString &subject, const QString &title, con
     q.addBindValue(levels().contains(level) ? level : QStringLiteral("adult"));
     q.addBindValue(Database::text(focus.trimmed().left(2000)));
     q.addBindValue(QStringList{QStringLiteral("short"), QStringLiteral("standard"), QStringLiteral("long")}.contains(length) ? length
-                                                                                                                          : QStringLiteral("standard"));
+                                                                                                                             : QStringLiteral("standard"));
     return q.exec() ? q.lastInsertId().toLongLong() : 0;
 }
 
@@ -397,7 +448,7 @@ bool Classroom::saveSyllabus(qint64 courseId, const QList<Unit> &units)
     bool ok = true;
     {
         QSqlQuery clear;
-        clear.prepare(QStringLiteral("DELETE FROM course_units WHERE course_id = ?"));  // their lessons go with them
+        clear.prepare(QStringLiteral("DELETE FROM course_units WHERE course_id = ?")); // their lessons go with them
         clear.addBindValue(courseId);
         ok = clear.exec();
     }
@@ -689,7 +740,7 @@ QString learnerLines(const Classroom::Profile &p)
 QString Classroom::syllabusPrompt(const Course &course, const Profile &profile, int units, int lessonsPerUnit)
 {
     // The learner's interests are left out: given them, a grade 5 Mathematics course was planned about volcanoes and
-    // hiking (2026-10-20). They shape a lesson's examples (introPrompt), not what the course teaches.
+    // hiking. They shape a lesson's examples (introPrompt), not what the course teaches.
     Q_UNUSED(profile)
     const Subject s = subject(course.subject);
     const bool core = s.key != QLatin1String("other");
@@ -704,14 +755,15 @@ QString Classroom::syllabusPrompt(const Course &course, const Profile &profile, 
         prompt += QStringLiteral("Cover the main %1 topics usually taught at this level.\n").arg(englishSubject(s.key).toLower());
     if (core)
         prompt += QStringLiteral("Every lesson must be a %1 topic.\n").arg(englishSubject(s.key).toLower());
-    prompt += QStringLiteral("\nWrite the syllabus: exactly %1 units, and exactly %2 lessons in each unit, in the order they should be learned, the basics first. "
-                             "Each lesson is one topic for this level (not one learned in earlier grades) that Wikipedia has an article about: "
-                             "give that article's exact "
-                             "title. Write each lesson on one line, with its parts separated by \"|\", and nothing else before or after:\n\n"
-                             "Unit 1: <the unit's title>\n"
-                             "- <the lesson's title> | <the Wikipedia article's title> | <one sentence on what the student will learn>\n"
-                             "(%2 lesson lines in each unit)\n\n"
-                             "Unit 2: <the unit's title>\n…\n\n(%1 units in all)")
+    prompt += QStringLiteral(
+                  "\nWrite the syllabus: exactly %1 units, and exactly %2 lessons in each unit, in the order they should be learned, the basics first. "
+                  "Each lesson is one topic for this level (not one learned in earlier grades) that Wikipedia has an article about: "
+                  "give that article's exact "
+                  "title. Write each lesson on one line, with its parts separated by \"|\", and nothing else before or after:\n\n"
+                  "Unit 1: <the unit's title>\n"
+                  "- <the lesson's title> | <the Wikipedia article's title> | <one sentence on what the student will learn>\n"
+                  "(%2 lesson lines in each unit)\n\n"
+                  "Unit 2: <the unit's title>\n…\n\n(%1 units in all)")
                   .arg(units)
                   .arg(lessonsPerUnit);
     return prompt;
@@ -724,7 +776,7 @@ QList<Classroom::Unit> Classroom::parseSyllabus(const QString &text, const QStri
                                              QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression lessonWord(QStringLiteral("^lesson\\s*\\d*\\s*[:.\\x{2014}\\x{2013}-]\\s*"), QRegularExpression::CaseInsensitiveOption);
     QList<Unit> units;
-    QSet<QString> seen;  // a lesson the model repeats
+    QSet<QString> seen; // a lesson the model repeats
     for (const auto qLatin1Char = text.split(QLatin1Char('\n')); const QString &raw : qLatin1Char) {
         const QString line = unmarked(raw);
         if (line.isEmpty())
@@ -740,7 +792,7 @@ QList<Classroom::Unit> Classroom::parseSyllabus(const QString &text, const QStri
             units << Unit{0, int(units.size()), title.left(150), {}};
             continue;
         }
-        if (line.endsWith(QLatin1Char(':')) && line.size() < 40)  // "Syllabus:"
+        if (line.endsWith(QLatin1Char(':')) && line.size() < 40) // "Syllabus:"
             continue;
         QString lessonText = line;
         lessonText.remove(lessonWord);
@@ -813,7 +865,8 @@ QString Classroom::introPrompt(const Course &course, const Profile &profile, con
                   "2. A section \"## Key words\": three to six words from the reading, each with a one-line meaning.\n"
                   "3. A section \"## As you read\": three questions to think about while reading.\n"
                   "Use only facts from the reading above, and copy figures exactly. Do not write a title, and do not write source numbers.")
-                  .arg(name, profile.interests.trimmed().isEmpty() ? QString() : QStringLiteral(" or from the student's interests where it fits naturally"),
+                  .arg(name,
+                       profile.interests.trimmed().isEmpty() ? QString() : QStringLiteral(" or from the student's interests where it fits naturally"),
                        isYoung(course.level) ? QString() : QStringLiteral(" (a serious learner: no childish comparisons)"));
     return prompt;
 }
@@ -841,8 +894,8 @@ QList<int> intsFrom(const QByteArray &json)
 std::optional<Classroom::Attempt> attemptWhere(qint64 quizId, const char *order)
 {
     QSqlQuery q;
-    q.prepare(QStringLiteral("SELECT id, answers, score, total, created_at FROM quiz_attempts WHERE quiz_id = ? ORDER BY %1 LIMIT 1")
-                  .arg(QLatin1String(order)));
+    q.prepare(
+        QStringLiteral("SELECT id, answers, score, total, created_at FROM quiz_attempts WHERE quiz_id = ? ORDER BY %1 LIMIT 1").arg(QLatin1String(order)));
     q.addBindValue(quizId);
     if (!q.exec() || !q.next())
         return std::nullopt;
@@ -868,8 +921,9 @@ qint64 Classroom::saveQuiz(const Quiz &quiz)
     for (int i = 0; ok && i < quiz.questions.size(); ++i) {
         const Question &question = quiz.questions.at(i);
         QSqlQuery insert;
-        insert.prepare(QStringLiteral("INSERT INTO quiz_questions (quiz_id, position, question, options, answer, explanation, evidence, library_id, path, "
-                                      "title, lesson_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+        insert.prepare(
+            QStringLiteral("INSERT INTO quiz_questions (quiz_id, position, question, options, answer, explanation, evidence, library_id, path, "
+                           "title, lesson_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
         insert.addBindValue(id);
         insert.addBindValue(i);
         insert.addBindValue(question.text);
@@ -900,8 +954,9 @@ std::optional<Classroom::Quiz> Classroom::quiz(qint64 id)
         return std::nullopt;
     Quiz out{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toLongLong(), q.value(3).toLongLong(), q.value(4).toString(), {}};
     QSqlQuery questions;
-    questions.prepare(QStringLiteral("SELECT id, question, options, answer, explanation, evidence, coalesce(library_id, 0), path, title, "
-                                     "coalesce(lesson_id, 0) FROM quiz_questions WHERE quiz_id = ? ORDER BY position"));
+    questions.prepare(
+        QStringLiteral("SELECT id, question, options, answer, explanation, evidence, coalesce(library_id, 0), path, title, "
+                       "coalesce(lesson_id, 0) FROM quiz_questions WHERE quiz_id = ? ORDER BY position"));
     questions.addBindValue(id);
     if (questions.exec())
         while (questions.next()) {
@@ -973,8 +1028,9 @@ QList<Classroom::Missed> Classroom::missed(qint64 courseId)
     QList<Missed> out;
     // the newest quiz of each lesson and test of each unit: older ones were replaced by new questions
     QSqlQuery q;
-    q.prepare(QStringLiteral("SELECT max(id) FROM quizzes WHERE course_id = ? GROUP BY kind, coalesce(lesson_id, 0), coalesce(unit_id, 0) "
-                             "ORDER BY max(id) DESC"));
+    q.prepare(
+        QStringLiteral("SELECT max(id) FROM quizzes WHERE course_id = ? GROUP BY kind, coalesce(lesson_id, 0), coalesce(unit_id, 0) "
+                       "ORDER BY max(id) DESC"));
     q.addBindValue(courseId);
     QList<qint64> ids;
     if (q.exec())
@@ -999,23 +1055,25 @@ QList<Classroom::Missed> Classroom::missed(qint64 courseId)
 // model prompt: stays English (the model is asked in English and its reply is parsed)
 QString Classroom::questionPrompt(const Course &course, const QString &lessonTitle, const QString &passage)
 {
-    return QStringLiteral("You are a teacher writing a quiz for the lesson \"%1\" of the course \"%2\", for a student at the level of %3.\n\n"
-                          "The passage:\n\n%4\n\n"
-                          "Write one multiple-choice question that checks the student understood an important idea or fact in this passage, "
-                          "one a student at this level should know: not a technical detail beyond the level. The options must be real answers "
-                          "to the question, not the question's own words. "
-                          "The right answer must be stated in the passage. Give four options: the right one, and three wrong ones that "
-                          "sound believable, all about the same length. Do not write \"according to the passage\". "
-                          "Use exactly this form and write nothing else:\n\n"
-                          "Question: <the question>\nA) <option>\nB) <option>\nC) <option>\nD) <option>\nAnswer: <the letter of the right "
-                          "option>\nWhy: <one sentence from the passage that shows it>")
+    return QStringLiteral(
+               "You are a teacher writing a quiz for the lesson \"%1\" of the course \"%2\", for a student at the level of %3.\n\n"
+               "The passage:\n\n%4\n\n"
+               "Write one multiple-choice question that checks the student understood an important idea or fact in this passage, "
+               "one a student at this level should know: not a technical detail beyond the level. The options must be real answers "
+               "to the question, not the question's own words. "
+               "The right answer must be stated in the passage. Give four options: the right one, and three wrong ones that "
+               "sound believable, all about the same length. Do not write \"according to the passage\". "
+               "Use exactly this form and write nothing else:\n\n"
+               "Question: <the question>\nA) <option>\nB) <option>\nC) <option>\nD) <option>\nAnswer: <the letter of the right "
+               "option>\nWhy: <one sentence from the passage that shows it>")
         .arg(lessonTitle, course.title, levelForPrompt(course.level), passage.left(2500));
 }
 
 std::optional<Classroom::Question> Classroom::parseQuestion(const QString &text)
 {
     static const QRegularExpression option(QStringLiteral("^\\(?([A-Da-d])[).:]\\s*(.+)$"));
-    static const QRegularExpression label(QStringLiteral("^(question|answer|correct answer|why|explanation)\\s*:\\s*(.*)$"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression label(QStringLiteral("^(question|answer|correct answer|why|explanation)\\s*:\\s*(.*)$"),
+                                          QRegularExpression::CaseInsensitiveOption);
     Question out;
     QString options[4];
     QString answerLetter;
@@ -1042,7 +1100,7 @@ std::optional<Classroom::Question> Classroom::parseQuestion(const QString &text)
             options[m.captured(1).toUpper().at(0).unicode() - 'A'] = m.captured(2).trimmed();
             continue;
         }
-        if (out.text.isEmpty() && line.endsWith(QLatin1Char('?')))  // a question without its label
+        if (out.text.isEmpty() && line.endsWith(QLatin1Char('?'))) // a question without its label
             out.text = line;
     }
     static const QRegularExpression letter(QStringLiteral("([A-Da-d])"));
@@ -1081,7 +1139,7 @@ bool Classroom::answerInPassage(const Question &question, const QString &passage
         return stems.isEmpty() ? (passage.contains(option, Qt::CaseInsensitive) ? 1.0 : 0.0) : ZimSearch::overlap(stems, passage);
     };
     // the question's own words too: "What ended the conflict between Caesar and Pompey?" was answered "the Battle of
-    // Actium" from a passage about Antony and Octavian (2026-10-20)
+    // Actium" from a passage about Antony and Octavian
     if (share(question.text) < 0.5)
         return false;
     // most of its words, and no wrong option more of them (a key pointing at the wrong letter is caught here)

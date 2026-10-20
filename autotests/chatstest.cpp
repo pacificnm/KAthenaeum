@@ -28,7 +28,10 @@ private Q_SLOTS:
         QString error;
         QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error), qPrintable(error));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void aChatKeepsItsMessagesInOrder()
     {
@@ -47,7 +50,7 @@ private Q_SLOTS:
         stopped.chatId = id;
         stopped.role = QStringLiteral("assistant");
         stopped.status = QStringLiteral("stopped");
-        stopped.sources.clear();  // empty JSON fields are stored as empty lists, not as nothing
+        stopped.sources.clear(); // empty JSON fields are stored as empty lists, not as nothing
         QVERIFY(Chats::addMessage(stopped));
 
         const auto ms = Chats::messages(id);

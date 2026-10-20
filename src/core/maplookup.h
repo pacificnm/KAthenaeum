@@ -16,11 +16,11 @@ class Archive;
 struct MapFeature {
     QString name;
     QString nameEn;
-    QString kind;  // Protomaps' kind: "locality", "museum", "park"
-    QString osm;  // "n123" | "w123" | "r123"
+    QString kind; // Protomaps' kind: "locality", "museum", "park"
+    QString osm; // "n123" | "w123" | "r123"
     QString wikidata;
     double lat = 0, lon = 0;
-    double distancePx = 0;  // from the click
+    double distancePx = 0; // from the click
 };
 
 namespace MapLookup

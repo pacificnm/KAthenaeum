@@ -77,7 +77,7 @@ void HttpRangeReader::send(const std::shared_ptr<Request> &r)
             error = i18n("The map server did not send part of the file (HTTP %1)", status);
         } else {
             data = reply->readAll();
-            const QByteArray range = reply->rawHeader("Content-Range");  // "bytes 0-16383/138993773823"
+            const QByteArray range = reply->rawHeader("Content-Range"); // "bytes 0-16383/138993773823"
             const QByteArray expected = QByteArray("bytes ") + QByteArray::number(r->offset) + '-';
             if (!range.startsWith(expected) || quint64(data.size()) != r->length)
                 error = i18n("The map server sent the wrong part of the file");
@@ -254,12 +254,12 @@ void MapExtract::fetchLeaves()
             if (!error.isEmpty())
                 return fail(error);
             for (const Leaf &leaf : group) {
-                const auto decoded = PMTiles::decompress(data.mid(qsizetype(leaf.offset - from), qsizetype(leaf.length)), m_header.internalCompression,
-                                                         PMTiles::DirectoryLimit);
+                const auto decoded =
+                    PMTiles::decompress(data.mid(qsizetype(leaf.offset - from), qsizetype(leaf.length)), m_header.internalCompression, PMTiles::DirectoryLimit);
                 const auto entries = decoded ? PMTiles::parseDirectory(*decoded) : std::nullopt;
                 if (!entries)
                     return fail(i18n("A directory of the map file could not be read"));
-                walk(*entries, leaf.end, leaf.depth);  // a leaf may point to further leaves
+                walk(*entries, leaf.end, leaf.depth); // a leaf may point to further leaves
                 if (m_failed)
                     return;
             }
@@ -376,7 +376,7 @@ void MapExtract::writeFile()
     h.maxZoom = quint8(m_maxZoom);
     const QRectF b = MapTiling::bounds(m_shape);
     h.minLonE7 = qint32(b.left() * 1e7);
-    h.minLatE7 = qint32(b.top() * 1e7);  // top() is the smallest y: the south edge
+    h.minLatE7 = qint32(b.top() * 1e7); // top() is the smallest y: the south edge
     h.maxLonE7 = qint32(b.right() * 1e7);
     h.maxLatE7 = qint32(b.bottom() * 1e7);
     h.centerLonE7 = qint32(b.center().x() * 1e7);

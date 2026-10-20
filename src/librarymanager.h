@@ -31,7 +31,7 @@ class LibraryManager : public QObject
     Q_PROPERTY(QString catalogError READ catalogError NOTIFY catalogChanged)
     Q_PROPERTY(QDateTime catalogFetchedAt READ catalogFetchedAt NOTIFY catalogChanged)
     Q_PROPERTY(bool aria2Available READ aria2Available CONSTANT)
-    Q_PROPERTY(int updateCount READ updateCount NOTIFY updatesChanged)  // installed libraries with a newer version
+    Q_PROPERTY(int updateCount READ updateCount NOTIFY updatesChanged) // installed libraries with a newer version
     Q_PROPERTY(bool checkingUpdates READ checkingUpdates NOTIFY updatesChanged)
     Q_PROPERTY(QDateTime lastUpdateCheck READ lastUpdateCheck NOTIFY updatesChanged)
     Q_PROPERTY(bool autoCheckUpdates READ autoCheckUpdates WRITE setAutoCheckUpdates NOTIFY updatesChanged)
@@ -45,9 +45,18 @@ public:
     // After the database is open: recover interrupted downloads and pick up files already in the folder.
     void initialize();
 
-    InstalledModel *installed() { return &m_installed; }
-    CatalogModel *catalog() { return &m_catalog; }
-    DownloadsModel *downloads() { return &m_downloads; }
+    InstalledModel *installed()
+    {
+        return &m_installed;
+    }
+    CatalogModel *catalog()
+    {
+        return &m_catalog;
+    }
+    DownloadsModel *downloads()
+    {
+        return &m_downloads;
+    }
     QString folder() const;
     double freeSpace() const;
     int activeDownloads() const;
@@ -55,8 +64,14 @@ public:
     QString catalogError() const;
     QDateTime catalogFetchedAt() const;
     bool aria2Available() const;
-    int updateCount() const { return m_updateCount; }
-    bool checkingUpdates() const { return m_checkingUpdates; }
+    int updateCount() const
+    {
+        return m_updateCount;
+    }
+    bool checkingUpdates() const
+    {
+        return m_checkingUpdates;
+    }
     QDateTime lastUpdateCheck() const;
     bool autoCheckUpdates() const;
     void setAutoCheckUpdates(bool on);
@@ -65,8 +80,8 @@ public:
     // nothing when there is no update or the catalog cannot be reached.
     Q_INVOKABLE void checkForUpdates(bool quiet = false);
 
-    Q_INVOKABLE void loadCatalog();     // from the cache if fresh
-    Q_INVOKABLE void refreshCatalog();  // from Kiwix
+    Q_INVOKABLE void loadCatalog(); // from the cache if fresh
+    Q_INVOKABLE void refreshCatalog(); // from Kiwix
     Q_INVOKABLE void download(int catalogRow);
     Q_INVOKABLE void updateLibrary(qint64 libraryId);
     Q_INVOKABLE void cancelDownload(qint64 id);
@@ -77,7 +92,7 @@ public:
     Q_INVOKABLE void removeLibrary(qint64 id, bool deleteFile);
     Q_INVOKABLE bool setFolder(const QUrl &folder);
     Q_INVOKABLE QVariantMap details(qint64 id) const;
-    Q_INVOKABLE QVariantList libraryList() const;  // [{libraryId, title}] of the installed libraries whose file is there
+    Q_INVOKABLE QVariantList libraryList() const; // [{libraryId, title}] of the installed libraries whose file is there
 
 Q_SIGNALS:
     void folderChanged();

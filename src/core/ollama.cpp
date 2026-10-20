@@ -10,10 +10,10 @@
 
 namespace
 {
-constexpr qsizetype MaxLineBytes = 1 << 20;  // a streamed line is one JSON object of a few hundred bytes
+constexpr qsizetype MaxLineBytes = 1 << 20; // a streamed line is one JSON object of a few hundred bytes
 constexpr int ShortTimeout = 10'000;
-constexpr int EmbedTimeout = 120'000;  // a model loads from disk on first use
-constexpr int ChatTimeout = 300'000;   // without a byte: loading the model and reading the prompt come first
+constexpr int EmbedTimeout = 120'000; // a model loads from disk on first use
+constexpr int ChatTimeout = 300'000; // without a byte: loading the model and reading the prompt come first
 
 bool cancelled(QNetworkReply *reply)
 {
@@ -63,8 +63,7 @@ std::optional<QList<Vector>> Ollama::parseEmbeddings(const QByteArray &body, QSt
     return out;
 }
 
-QString Ollama::errorMessage(QNetworkReply::NetworkError error, int httpStatus, const QByteArray &body, const QString &baseUrl,
-                             const QString &model)
+QString Ollama::errorMessage(QNetworkReply::NetworkError error, int httpStatus, const QByteArray &body, const QString &baseUrl, const QString &model)
 {
     const QString said = QJsonDocument::fromJson(body).object().value(QLatin1String("error")).toString();
     if (httpStatus == 404 && !model.isEmpty() && (said.contains(QLatin1String("not found")) || said.isEmpty()))
@@ -125,8 +124,8 @@ QNetworkReply *OllamaClient::owned(QNetworkReply *reply)
 
 QNetworkReply *OllamaClient::embed(const QString &model, const QStringList &input, QObject *context, EmbedDone done)
 {
-    QNetworkReply *reply = post(QStringLiteral("/api/embed"), {{QStringLiteral("model"), model}, {QStringLiteral("input"), QJsonArray::fromStringList(input)}},
-                                EmbedTimeout);
+    QNetworkReply *reply =
+        post(QStringLiteral("/api/embed"), {{QStringLiteral("model"), model}, {QStringLiteral("input"), QJsonArray::fromStringList(input)}}, EmbedTimeout);
     const QString base = m_baseUrl;
     connect(reply, &QNetworkReply::finished, context, [reply, done, base, model, n = input.size()] {
         reply->deleteLater();

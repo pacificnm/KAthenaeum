@@ -26,7 +26,7 @@ void ZimSchemeHandler::registerScheme()
 void ZimSchemeHandler::requestStarted(QWebEngineUrlRequestJob *job)
 {
     auto reply = [job](const QByteArray &mime, const QByteArray &data) {
-        auto *buffer = new QBuffer(job);  // lives as long as the job
+        auto *buffer = new QBuffer(job); // lives as long as the job
         buffer->setData(data);
         job->reply(mime, buffer);
     };
@@ -53,7 +53,7 @@ void ZimSchemeHandler::requestStarted(QWebEngineUrlRequestJob *job)
         reply("text/html;charset=utf-8", ArticleStore::notFoundPage(libraryId, path, palette));
         return;
     }
-    if (content->mimetype.startsWith(QLatin1String("text/html"))) {  // HTML that is not an article (a custom main page)
+    if (content->mimetype.startsWith(QLatin1String("text/html"))) { // HTML that is not an article (a custom main page)
         reply("text/html;charset=utf-8", ArticleStore::notFoundPage(libraryId, path, palette));
         return;
     }
@@ -61,5 +61,5 @@ void ZimSchemeHandler::requestStarted(QWebEngineUrlRequestJob *job)
         reply(content->mimetype.toUtf8(), content->data);
         return;
     }
-    job->fail(QWebEngineUrlRequestJob::RequestDenied);  // the ZIM's scripts, stylesheets, raw HTML
+    job->fail(QWebEngineUrlRequestJob::RequestDenied); // the ZIM's scripts, stylesheets, raw HTML
 }

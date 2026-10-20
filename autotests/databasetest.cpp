@@ -12,7 +12,10 @@ class DatabaseTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void createsSchemaInNewFolder()
     {
@@ -38,7 +41,7 @@ private Q_SLOTS:
         QVERIFY(QSqlQuery().exec(QStringLiteral("INSERT INTO settings (key, value) VALUES ('k', 'v')")));
         Database::close();
 
-        QVERIFY2(Database::open(path, &error), qPrintable(error));  // migrations must not run twice
+        QVERIFY2(Database::open(path, &error), qPrintable(error)); // migrations must not run twice
         QCOMPARE(Database::schemaVersion(), Database::latestVersion());
         QSqlQuery q(QStringLiteral("SELECT value FROM settings WHERE key = 'k'"));
         QVERIFY(q.next());

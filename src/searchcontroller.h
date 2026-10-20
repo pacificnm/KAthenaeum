@@ -24,10 +24,22 @@ class SearchController : public QObject
 public:
     static SearchController *create(QQmlEngine *, QJSEngine *);
 
-    QString query() const { return m_query; }
-    QVariantList results() const { return m_results; }
-    bool running() const { return m_running; }
-    int elapsedMs() const { return m_elapsedMs; }
+    QString query() const
+    {
+        return m_query;
+    }
+    QVariantList results() const
+    {
+        return m_results;
+    }
+    bool running() const
+    {
+        return m_running;
+    }
+    int elapsedMs() const
+    {
+        return m_elapsedMs;
+    }
 
     // libraryId -1 = every installed library. Results: [{libraryId, libraryTitle, path, title, section, snippet, titleMatch}]
     Q_INVOKABLE void search(const QString &query, qint64 libraryId = -1);
@@ -45,5 +57,5 @@ private:
     QVariantList m_results;
     bool m_running = false;
     int m_elapsedMs = 0;
-    quint64 m_generation = 0;  // a newer search makes an older one's results stale
+    quint64 m_generation = 0; // a newer search makes an older one's results stale
 };

@@ -25,16 +25,37 @@ public:
     explicit DocumentModel(QObject *parent = nullptr);
     ~DocumentModel() override;
 
-    qint64 documentId() const { return m_id; }
+    qint64 documentId() const
+    {
+        return m_id;
+    }
     void setDocumentId(qint64 id);
-    qint64 projectId() const { return m_projectId; }
-    bool exists() const { return m_exists; }
-    QString title() const { return m_title; }
+    qint64 projectId() const
+    {
+        return m_projectId;
+    }
+    bool exists() const
+    {
+        return m_exists;
+    }
+    QString title() const
+    {
+        return m_title;
+    }
     void setTitle(const QString &title);
-    QString content() const { return m_content; }
+    QString content() const
+    {
+        return m_content;
+    }
     void setContent(const QString &content);
-    bool saved() const { return !m_dirty; }
-    QString error() const { return m_error; }
+    bool saved() const
+    {
+        return !m_dirty;
+    }
+    QString error() const
+    {
+        return m_error;
+    }
 
     Q_INVOKABLE void save();
     // The document as Markdown for outside the app (links to articles become a References list); an error, or empty
@@ -57,5 +78,5 @@ private:
     QString m_content;
     QString m_error;
     QTimer m_timer;
-    bool m_dirty = false;  // typed and not yet saved successfully (a failed save keeps it set, so leaving tries again)
+    bool m_dirty = false; // typed and not yet saved successfully (a failed save keeps it set, so leaving tries again)
 };

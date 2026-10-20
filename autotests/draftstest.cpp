@@ -45,7 +45,7 @@ private Q_SLOTS:
         const QString overview = QStringLiteral("Water is polar and bends. Ice floats on liquid water. The material does not cover salt at all.");
         // sentence 1 near source 2, sentence 2 near nothing, sentence 3 is a refusal (close to source 1, but not cited)
         Vector half = unit(0);
-        half[3] = 1.2f;  // cosine with unit(0) ~0.64: below the threshold
+        half[3] = 1.2f; // cosine with unit(0) ~0.64: below the threshold
         const QString cited = Drafts::citeOverview(overview, {unit(1), half, unit(0)}, {1, 2}, {unit(0), unit(1)});
         QCOMPARE(cited, QStringLiteral("Water is polar and bends. [2] Ice floats on liquid water. The material does not cover salt at all."));
         // a mismatch in counts is not guessed at
@@ -61,11 +61,12 @@ private Q_SLOTS:
         clip.refs = {{1, QStringLiteral("Water"), QStringLiteral("Water")}};
         clip.note = QStringLiteral("key");
         const QString md = Drafts::summaryMarkdown(QStringLiteral("P"), QStringLiteral("Water is polar. [1]"), {water, ice}, {clip}, 20, QDate(2026, 10, 19));
-        QVERIFY2(md.startsWith(QStringLiteral("*Generated 2026-10-19 from 2 articles and 1 saved excerpt. Written by a small AI: check it against the sources.*\n\n"
-                                              "> Only the first 15 of 20 articles were summarized.\n\n## Overview\n\nWater is polar. [1]\n\n## Sources\n\n"
-                                              "### 1. [Water](zim://lib1/Water)\n\nWater is polar.\n\n> **Your note:** start here\n\n"
-                                              "### 2. [Ice (film)](zim://lib1/Ice_%28film%29)\n\nA film.\n\n## Saved excerpts\n\n> Water bends.\n>\n> — Water\n\n**Note:** key\n\n"
-                                              "## References\n\n1. [Water](zim://lib1/Water)\n2. [Ice (film)](zim://lib1/Ice_%28film%29)\n")),
+        QVERIFY2(md.startsWith(QStringLiteral(
+                     "*Generated 2026-10-19 from 2 articles and 1 saved excerpt. Written by a small AI: check it against the sources.*\n\n"
+                     "> Only the first 15 of 20 articles were summarized.\n\n## Overview\n\nWater is polar. [1]\n\n## Sources\n\n"
+                     "### 1. [Water](zim://lib1/Water)\n\nWater is polar.\n\n> **Your note:** start here\n\n"
+                     "### 2. [Ice (film)](zim://lib1/Ice_%28film%29)\n\nA film.\n\n## Saved excerpts\n\n> Water bends.\n>\n> — Water\n\n**Note:** key\n\n"
+                     "## References\n\n1. [Water](zim://lib1/Water)\n2. [Ice (film)](zim://lib1/Ice_%28film%29)\n")),
                  qPrintable(md));
         // nothing summarized: no empty sections
         const QString bare = Drafts::summaryMarkdown(QStringLiteral("P"), QString(), {}, {clip}, 0, QDate(2026, 10, 19));
@@ -81,8 +82,10 @@ private Q_SLOTS:
 
     void sourcesDiscussedOnceEach()
     {
-        QCOMPARE(Drafts::sourcesDiscussed({{1, QStringLiteral("Water"), QStringLiteral("Water")}, {1, QStringLiteral("Water"), QStringLiteral("Water")},
-                                           {0, QString(), QStringLiteral("Saved answer")}, {2, QStringLiteral("Ice"), QStringLiteral("Ice")}}),
+        QCOMPARE(Drafts::sourcesDiscussed({{1, QStringLiteral("Water"), QStringLiteral("Water")},
+                                           {1, QStringLiteral("Water"), QStringLiteral("Water")},
+                                           {0, QString(), QStringLiteral("Saved answer")},
+                                           {2, QStringLiteral("Ice"), QStringLiteral("Ice")}}),
                  QStringLiteral("## Sources discussed\n\n- [Water](zim://lib1/Water)\n- [Ice](zim://lib2/Ice)\n"));
         QCOMPARE(Drafts::sourcesDiscussed({}), QString());
     }
@@ -91,15 +94,16 @@ private Q_SLOTS:
 
     void outlinesAreReadInTheFormsModelsWriteThem()
     {
-        const QString plan = QStringLiteral("Outline:\n"
-                                            "1. Mount Mazama: the volcano before the eruption\n"
-                                            "2) **The eruption** - what happened 7,700 years ago\n"
-                                            "## The Caldera \u2014 how the lake filled\n"
-                                            "- Water clarity\n"
-                                            "* Section 5: Research: studies since\n"
-                                            "\n"
-                                            "1. Mount Mazama: said twice\n"
-                                            "Conclusion");
+        const QString plan = QStringLiteral(
+            "Outline:\n"
+            "1. Mount Mazama: the volcano before the eruption\n"
+            "2) **The eruption** - what happened 7,700 years ago\n"
+            "## The Caldera \u2014 how the lake filled\n"
+            "- Water clarity\n"
+            "* Section 5: Research: studies since\n"
+            "\n"
+            "1. Mount Mazama: said twice\n"
+            "Conclusion");
         const auto sections = Drafts::parsePlan(plan, 6);
         QCOMPARE(sections.size(), 6);
         QCOMPARE(sections[0].heading, QStringLiteral("Mount Mazama"));
@@ -110,7 +114,7 @@ private Q_SLOTS:
         QCOMPARE(sections[3].heading, QStringLiteral("Water clarity"));
         QCOMPARE(sections[3].brief, QString());
         QCOMPARE(sections[4].heading, QStringLiteral("Research"));
-        QCOMPARE(sections[5].heading, QStringLiteral("Conclusion"));  // the repeated heading was dropped
+        QCOMPARE(sections[5].heading, QStringLiteral("Conclusion")); // the repeated heading was dropped
         QCOMPARE(Drafts::parsePlan(plan, 2).size(), 2);
         QVERIFY(Drafts::parsePlan(QString(), 5).isEmpty());
     }
@@ -121,8 +125,10 @@ private Q_SLOTS:
         r.title = QStringLiteral("Crater Lake");
         r.instructions = QStringLiteral("Formal tone. Explain the geology for a general reader.");
         r.words = 300;
-        const QString p = Drafts::sectionPrompt(r, {QStringLiteral("The eruption"), QStringLiteral("what happened")},
-                                                {QStringLiteral("Mount Mazama"), QStringLiteral("Water clarity")}, QStringLiteral("[1] Crater Lake\n..."));
+        const QString p = Drafts::sectionPrompt(r,
+                                                {QStringLiteral("The eruption"), QStringLiteral("what happened")},
+                                                {QStringLiteral("Mount Mazama"), QStringLiteral("Water clarity")},
+                                                QStringLiteral("[1] Crater Lake\n..."));
         QVERIFY(p.contains(r.instructions));
         QVERIFY(p.contains(QStringLiteral("\"The eruption\" (what happened)")));
         QVERIFY(p.contains(QStringLiteral("Mount Mazama; Water clarity")));
@@ -140,7 +146,7 @@ private Q_SLOTS:
         QList<Rag::Citation> c(3);
         c[0] = {0, 17, {1}, 0.8, {}, {}};
         c[1] = {18, 41, {2, 1}, 0.8, {}, {}};
-        c[2] = {42, 81, {}, 0.5, QStringLiteral("topic"), {}};  // flagged: to check
+        c[2] = {42, 81, {}, 0.5, QStringLiteral("topic"), {}}; // flagged: to check
         // this section's sources 1 and 2 are the report's 4 and 7
         QCOMPARE(Drafts::citeSection(text, c, {4, 7}),
                  QStringLiteral("The lake is deep. [4] It formed in a caldera. [7] [4] Nobody knows exactly why it is so blue. [?]"));
@@ -158,8 +164,7 @@ private Q_SLOTS:
 
     void anUnfinishedLastSentenceIsDropped()
     {
-        QCOMPARE(Drafts::dropUnfinishedSentence(QStringLiteral("It is deep. It was built over 400,000 years of andesite,")),
-                 QStringLiteral("It is deep."));
+        QCOMPARE(Drafts::dropUnfinishedSentence(QStringLiteral("It is deep. It was built over 400,000 years of andesite,")), QStringLiteral("It is deep."));
         QCOMPARE(Drafts::dropUnfinishedSentence(QStringLiteral("**Context**\nMount Mazama was built over")), QStringLiteral("**Context**"));
         QCOMPARE(Drafts::dropUnfinishedSentence(QStringLiteral("All done.")), QStringLiteral("All done."));
         QCOMPARE(Drafts::dropUnfinishedSentence(QStringLiteral("| a | b |")), QStringLiteral("| a | b |"));
@@ -178,10 +183,11 @@ private Q_SLOTS:
         Drafts::ReportRequest r;
         r.title = QStringLiteral("Crater Lake");
         r.instructions = QStringLiteral("Two lines\nof instructions");
-        const QString md = Drafts::reportMarkdown(r, {{QStringLiteral("Origins"), QStringLiteral("Text [1].")}, {QStringLiteral("Today"), QStringLiteral("More [2].")}},
-                                                  {{{1, QStringLiteral("Crater_Lake"), QStringLiteral("Crater Lake")}, {}},
-                                                   {{0, {}, {}}, QStringLiteral("Saved excerpt: “deep blue”")}},
-                                                  QDate(2026, 10, 19));
+        const QString md = Drafts::reportMarkdown(
+            r,
+            {{QStringLiteral("Origins"), QStringLiteral("Text [1].")}, {QStringLiteral("Today"), QStringLiteral("More [2].")}},
+            {{{1, QStringLiteral("Crater_Lake"), QStringLiteral("Crater Lake")}, {}}, {{0, {}, {}}, QStringLiteral("Saved excerpt: “deep blue”")}},
+            QDate(2026, 10, 19));
         QVERIFY(md.contains(QStringLiteral("> **Instructions:**\n>\n> Two lines\n> of instructions")));
         QVERIFY(md.contains(QStringLiteral("## Origins\n\nText [1].\n\n## Today")));
         QVERIFY(md.contains(QStringLiteral("## References\n\n1. [Crater Lake](zim://lib1/Crater_Lake)\n2. Saved excerpt: “deep blue”")));

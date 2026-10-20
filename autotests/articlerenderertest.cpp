@@ -14,29 +14,46 @@ class ArticleRendererTest : public QObject
 {
     Q_OBJECT
 
-    static QString run(const QString &body, const QString &path = QStringLiteral("Water"),
-                       const QSet<QString> &paths = {QStringLiteral("Water"), QStringLiteral("Ice"), QStringLiteral("dir/Sub_page"), QStringLiteral("img/a.png"),
+    static QString run(const QString &body,
+                       const QString &path = QStringLiteral("Water"),
+                       const QSet<QString> &paths = {QStringLiteral("Water"),
+                                                     QStringLiteral("Ice"),
+                                                     QStringLiteral("dir/Sub_page"),
+                                                     QStringLiteral("img/a.png"),
                                                      QStringLiteral("Chemistry:_A_European_Journal")})
     {
-        const QByteArray raw = QStringLiteral("<html><head><title>T</title></head><body><h1>Water</h1><div class='mw-parser-output'>%1</div></body></html>").arg(body).toUtf8();
-        const auto out = ArticleRenderer::render(raw, path, QStringLiteral("zim://lib7/"), [&](const QString &p) { return paths.contains(p); });
+        const QByteArray raw =
+            QStringLiteral("<html><head><title>T</title></head><body><h1>Water</h1><div class='mw-parser-output'>%1</div></body></html>").arg(body).toUtf8();
+        const auto out = ArticleRenderer::render(raw, path, QStringLiteral("zim://lib7/"), [&](const QString &p) {
+            return paths.contains(p);
+        });
         return out ? out->html : QStringLiteral("<<refused>>");
     }
 
     static RenderedArticle marked(const QString &body, const QList<Highlight> &highlights)
     {
-        const QByteArray raw = QStringLiteral("<html><head><title>T</title></head><body><div class='mw-parser-output'>%1</div></body></html>").arg(body).toUtf8();
-        const auto out = ArticleRenderer::render(raw, QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return true; }, nullptr, highlights);
+        const QByteArray raw =
+            QStringLiteral("<html><head><title>T</title></head><body><div class='mw-parser-output'>%1</div></body></html>").arg(body).toUtf8();
+        const auto out = ArticleRenderer::render(
+            raw,
+            QStringLiteral("Water"),
+            QStringLiteral("zim://lib7/"),
+            [](const QString &) {
+                return true;
+            },
+            nullptr,
+            highlights);
         return out ? *out : RenderedArticle{};
     }
 
 private Q_SLOTS:
     void scriptsHandlersAndDangerousUrlsAreStripped()
     {
-        const QString low = run(QStringLiteral("<script>alert(1)</script><p onclick=\"x()\" onmouseover=\"y()\">hi</p><a href=\"javascript:alert(1)\">j</a>"
-                                               "<a href=\"  JaVaScRiPt:alert(2)\">j2</a><a href=\"data:text/html,<script>1</script>\">d</a>"
-                                               "<iframe src=\"//evil\"></iframe><form action=\"/x\"><input name=a></form><object data=\"x\"></object><embed src=\"x\">"))
-                                .toLower();
+        const QString low =
+            run(QStringLiteral("<script>alert(1)</script><p onclick=\"x()\" onmouseover=\"y()\">hi</p><a href=\"javascript:alert(1)\">j</a>"
+                               "<a href=\"  JaVaScRiPt:alert(2)\">j2</a><a href=\"data:text/html,<script>1</script>\">d</a>"
+                               "<iframe src=\"//evil\"></iframe><form action=\"/x\"><input name=a></form><object data=\"x\"></object><embed src=\"x\">"))
+                .toLower();
         for (const char *bad : {"<script", "onclick", "onmouseover", "javascript:", "data:text", "<iframe", "<form", "<input", "<object", "<embed"})
             QVERIFY2(!low.contains(QLatin1String(bad)), bad);
         QVERIFY(low.contains(QLatin1String("hi")));
@@ -44,7 +61,8 @@ private Q_SLOTS:
 
     void styleKeepsHarmlessAndDropsDangerous()
     {
-        const QString html = run(QStringLiteral("<p style=\"background:#ccf\">a</p><p style=\"background:url(http://evil/x.png)\">b</p><p style=\"width:expression(alert(1))\">c</p>"));
+        const QString html = run(QStringLiteral(
+            "<p style=\"background:#ccf\">a</p><p style=\"background:url(http://evil/x.png)\">b</p><p style=\"width:expression(alert(1))\">c</p>"));
         QVERIFY(html.contains(QLatin1String("background:#ccf")));
         QVERIFY(!html.contains(QLatin1String("evil")));
         QVERIFY(!html.contains(QLatin1String("expression")));
@@ -109,41 +127,49 @@ private Q_SLOTS:
 
     void imagesPlaceholdersDroppedRealOnesRewrittenUnknownDropped()
     {
-        const QString html = run(QStringLiteral("<img src=\"data:image/svg+xml;utf8,<svg/>\"><img src=\"../img/a.png\" srcset=\"x 2x\"><img src=\"missing.png\"><img src=\"https://upload.example/x.png\">"),
+        const QString html = run(QStringLiteral("<img src=\"data:image/svg+xml;utf8,<svg/>\"><img src=\"../img/a.png\" srcset=\"x 2x\"><img "
+                                                "src=\"missing.png\"><img src=\"https://upload.example/x.png\">"),
                                  QStringLiteral("dir/Other"));
         QCOMPARE(html.count(QLatin1String("<img")), 1);
         QVERIFY(html.contains(QLatin1String("src=\"zim://lib7/img/a.png\"")));
         QVERIFY(!html.contains(QLatin1String("srcset")));
         QVERIFY(!html.contains(QLatin1String("data:")));
-        QVERIFY(!html.contains(QLatin1String("upload.example")));  // nothing is fetched from the internet
+        QVERIFY(!html.contains(QLatin1String("upload.example"))); // nothing is fetched from the internet
     }
 
     void tocCollectsHeadingsWithIds()
     {
-        const auto out = ArticleRenderer::render("<html><head><title>T</title></head><body><div class='mw-parser-output'><h2 id='A'>Alpha</h2>"
-                                                 "<section id='S'><h3>Beta <span>two</span></h3></section><h2>NoId</h2></div></body></html>",
-                                                 QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return false; });
+        const auto out = ArticleRenderer::render(
+            "<html><head><title>T</title></head><body><div class='mw-parser-output'><h2 id='A'>Alpha</h2>"
+            "<section id='S'><h3>Beta <span>two</span></h3></section><h2>NoId</h2></div></body></html>",
+            QStringLiteral("Water"),
+            QStringLiteral("zim://lib7/"),
+            [](const QString &) {
+                return false;
+            });
         QVERIFY(out);
         QCOMPARE(out->toc.size(), 2);
         QCOMPARE(out->toc[0].id, QStringLiteral("A"));
         QCOMPARE(out->toc[0].level, 2);
-        QCOMPARE(out->toc[1].id, QStringLiteral("S"));  // mwoffliner puts the id on the section around the heading
+        QCOMPARE(out->toc[1].id, QStringLiteral("S")); // mwoffliner puts the id on the section around the heading
         QCOMPARE(out->toc[1].text, QStringLiteral("Beta two"));
         QCOMPARE(out->toc[1].level, 3);
     }
 
     void elementsThatCarryUrlsOrCoverThePageAreRemoved()
     {
-        const QString low = run(QStringLiteral("<area href=\"javascript:alert(1)\"><video src=\"javascript:x\"></video><audio src=\"x\"></audio><base href=\"//evil/\">"
-                                               "<p style=\"position:fixed;top:0;left:0;width:100%;height:100%\">overlay</p><p style=\"z-index:9999\">z</p>"))
-                                .toLower();
+        const QString low =
+            run(QStringLiteral("<area href=\"javascript:alert(1)\"><video src=\"javascript:x\"></video><audio src=\"x\"></audio><base href=\"//evil/\">"
+                               "<p style=\"position:fixed;top:0;left:0;width:100%;height:100%\">overlay</p><p style=\"z-index:9999\">z</p>"))
+                .toLower();
         for (const char *bad : {"<area", "<video", "<audio", "<base", "position", "z-index"})
             QVERIFY2(!low.contains(QLatin1String(bad)), bad);
     }
 
     void hrefAndSrcSurviveOnlyOnAAndImg()
     {
-        const QString html = run(QStringLiteral("<svg><a href=\"javascript:alert(1)\" xlink:href=\"javascript:2\">s</a></svg><div src=\"x\" href=\"y\">d</div><link href=\"//evil\">"));
+        const QString html = run(QStringLiteral(
+            "<svg><a href=\"javascript:alert(1)\" xlink:href=\"javascript:2\">s</a></svg><div src=\"x\" href=\"y\">d</div><link href=\"//evil\">"));
         QVERIFY(!html.contains(QLatin1String("javascript")));
         QVERIFY(!html.contains(QLatin1String("src=\"x\"")));
         QVERIFY(!html.contains(QLatin1String("href=\"y\"")));
@@ -161,7 +187,9 @@ private Q_SLOTS:
     void nonArticleInputIsRefusedNotCrashed()
     {
         for (const QByteArray &raw : {QByteArray(), QByteArray("<p>hi</p>"), QByteArray("just text"), QByteArray("\xff\xfe\x00garbage", 10)})
-            QVERIFY(!ArticleRenderer::render(raw, QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return true; }));
+            QVERIFY(!ArticleRenderer::render(raw, QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) {
+                return true;
+            }));
     }
 
     void rendersRealArticles()
@@ -180,8 +208,9 @@ private Q_SLOTS:
             const auto entry = ZimReader::randomArticle(*id);
             const auto content = ZimReader::content(*id, entry->path);
             QVERIFY(content);
-            const auto out = ArticleRenderer::render(content->data, content->path, QStringLiteral("zim://lib1/"),
-                                                     [&](const QString &p) { return ZimReader::hasEntry(*id, p); });
+            const auto out = ArticleRenderer::render(content->data, content->path, QStringLiteral("zim://lib1/"), [&](const QString &p) {
+                return ZimReader::hasEntry(*id, p);
+            });
             QVERIFY2(out, qPrintable(entry->path));
             QVERIFY(!out->title.isEmpty());
             QVERIFY(!out->html.isEmpty());
@@ -204,7 +233,8 @@ private Q_SLOTS:
         const auto out = marked(QStringLiteral("<p>Water is a polar molecule. It bends light.</p>"),
                                 {{QStringLiteral("Water is a polar molecule."), QStringLiteral("Saved in “Water”: key point")}});
         QCOMPARE(out.highlighted, 1);
-        QCOMPARE(out.html, QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"Saved in “Water”: key point\">Water is a polar molecule.</mark> It bends light.</p>"));
+        QCOMPARE(out.html,
+                 QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"Saved in “Water”: key point\">Water is a polar molecule.</mark> It bends light.</p>"));
     }
 
     void aPassageAcrossALinkAndParagraphsIsMarkedPieceByPiece()
@@ -213,10 +243,11 @@ private Q_SLOTS:
                                 {{QStringLiteral("frozen water that floats. It is less dense."), QStringLiteral("n")}});
         QCOMPARE(out.highlighted, 1);
         QCOMPARE(out.html.count(QLatin1String("<mark class=\"excerpt-hl\"")), 3);
-        QVERIFY2(out.html.contains(QLatin1String("<a href=\"zim://lib7/Water\"><mark class=\"excerpt-hl\" title=\"n\">frozen water</mark></a>")), qPrintable(out.html));
+        QVERIFY2(out.html.contains(QLatin1String("<a href=\"zim://lib7/Water\"><mark class=\"excerpt-hl\" title=\"n\">frozen water</mark></a>")),
+                 qPrintable(out.html));
         QVERIFY(out.html.contains(QLatin1String("<mark class=\"excerpt-hl\" title=\"n\"> that floats.</mark></p>")));
         QVERIFY(out.html.contains(QLatin1String("<p><mark class=\"excerpt-hl\" title=\"n\">It is less dense.</mark> More text.</p>")));
-        QVERIFY(out.html.startsWith(QLatin1String("<p>Ice is <a")));  // the text before it is untouched
+        QVERIFY(out.html.startsWith(QLatin1String("<p>Ice is <a"))); // the text before it is untouched
     }
 
     void spacingAndCaseDoNotMatter()
@@ -235,9 +266,9 @@ private Q_SLOTS:
         const auto out = marked(QStringLiteral("<p>Ice is <a href=\"Water\">frozen water</a> that floats.</p><p>It is less dense.</p>"), {h});
         QCOMPARE(out.highlighted, 1);
         QCOMPARE(out.html.count(QLatin1String("<mark class=\"hl hl-green\"")), 3);
-        QCOMPARE(out.html.count(QLatin1String("id=\"hl-12\"")), 1);  // the first piece only: where "Show in Article" jumps
+        QCOMPARE(out.html.count(QLatin1String("id=\"hl-12\"")), 1); // the first piece only: where "Show in Article" jumps
         QVERIFY2(out.html.contains(QLatin1String("<mark class=\"hl hl-green\" id=\"hl-12\">frozen water</mark>")), qPrintable(out.html));
-        QVERIFY(!out.html.contains(QLatin1String("title=")));  // no note, no tooltip
+        QVERIFY(!out.html.contains(QLatin1String("title="))); // no note, no tooltip
     }
 
     void theArticlesCoordinatesAreRead()
@@ -261,14 +292,16 @@ private Q_SLOTS:
     void aDropListedWrapperDoesNotShieldItsContent()
     {
         // the content root, or something above it, matching the drop list made everything inside count as "nested", and
-        // nothing was dropped (the review, found with these pages)
+        // nothing was dropped
         for (const QString &page : {QStringLiteral("<html><head><title>T</title></head><body><div class='mw-parser-output navbox'>"
                                                    "<p>Text.</p><style>body{background:red}</style><script>alert(1)</script>"
                                                    "<iframe src='x'></iframe><form><input name='a'></form></div></body></html>"),
                                     QStringLiteral("<html><head><title>T</title></head><body><div class='noprint'><div class='mw-parser-output'>"
                                                    "<p>Text.</p><style>p{color:red}</style><script>alert(1)</script><form><input></form>"
                                                    "</div></div></body></html>")}) {
-            const auto out = ArticleRenderer::render(page.toUtf8(), QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return true; });
+            const auto out = ArticleRenderer::render(page.toUtf8(), QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) {
+                return true;
+            });
             QVERIFY(out);
             QVERIFY2(out->html.contains(QLatin1String("Text.")), qPrintable(out->html));
             for (const char *tag : {"<style", "<script", "<iframe", "<form", "<input"})
@@ -278,8 +311,8 @@ private Q_SLOTS:
 
     void aPassageNoLongerInTheTextIsNotShown()
     {
-        const auto out = marked(QStringLiteral("<p>Water is wet.</p>"), {{QStringLiteral("Something the article never said."), QString()},
-                                                                       {QStringLiteral("wet"), QString()}});  // too short to place
+        const auto out = marked(QStringLiteral("<p>Water is wet.</p>"),
+                                {{QStringLiteral("Something the article never said."), QString()}, {QStringLiteral("wet"), QString()}}); // too short to place
         QCOMPARE(out.highlighted, 0);
         QCOMPARE(out.html, QStringLiteral("<p>Water is wet.</p>"));
     }
@@ -289,7 +322,7 @@ private Q_SLOTS:
         const auto out = marked(QStringLiteral("<p>Water is a polar molecule.</p>"),
                                 {{QStringLiteral("Water is a polar molecule."), QStringLiteral("\"><script>alert(1)</script>")}});
         QVERIFY(!out.html.contains(QLatin1String("<script")));
-        QVERIFY(out.html.contains(QLatin1String("&lt;script&gt;alert(1)&lt;/script&gt;")));  // shown as text in the tooltip
+        QVERIFY(out.html.contains(QLatin1String("&lt;script&gt;alert(1)&lt;/script&gt;"))); // shown as text in the tooltip
         // both kinds of quote: the attribute still cannot be closed early
         const auto both = marked(QStringLiteral("<p>Water is a polar molecule.</p>"),
                                  {{QStringLiteral("Water is a polar molecule."), QStringLiteral("it's \"x\"><b onmouseover=y>")}});
@@ -299,11 +332,13 @@ private Q_SLOTS:
 
     void twoPassagesInTheSameTextNode()
     {
-        const auto out = marked(QStringLiteral("<p>Water is a polar molecule. Ice floats on top of water.</p>"),
-                                {{QStringLiteral("Water is a polar molecule."), QStringLiteral("a")}, {QStringLiteral("Ice floats on top of water."), QStringLiteral("b")}});
+        const auto out =
+            marked(QStringLiteral("<p>Water is a polar molecule. Ice floats on top of water.</p>"),
+                   {{QStringLiteral("Water is a polar molecule."), QStringLiteral("a")}, {QStringLiteral("Ice floats on top of water."), QStringLiteral("b")}});
         QCOMPARE(out.highlighted, 2);
-        QCOMPARE(out.html, QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"a\">Water is a polar molecule.</mark> "
-                                          "<mark class=\"excerpt-hl\" title=\"b\">Ice floats on top of water.</mark></p>"));
+        QCOMPARE(out.html,
+                 QStringLiteral("<p><mark class=\"excerpt-hl\" title=\"a\">Water is a polar molecule.</mark> "
+                                "<mark class=\"excerpt-hl\" title=\"b\">Ice floats on top of water.</mark></p>"));
     }
 
     void cssEscapesAndImageFunctionsAreDropped()

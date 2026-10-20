@@ -7,8 +7,8 @@
 #include "zimarchives_p.h"
 
 #include <QCoreApplication>
-#include <QHash>
 #include <QGlobalStatic>
+#include <QHash>
 #include <QMutex>
 #include <QRegularExpression>
 #include <QThread>
@@ -38,7 +38,7 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
     if (auto a = opened(libraryId))
         return a;
     // Opening reads the libraries table, and the database connection belongs to the main thread: a worker gets only
-    // what the main thread opened (ZimSearch::prepare). Workers reached the database this way (the review, 2026-10-19).
+    // what the main thread opened (ZimSearch::prepare). Otherwise workers would reach the database this way.
     if (QCoreApplication::instance() && QThread::currentThread() != QCoreApplication::instance()->thread())
         return nullptr;
     const auto lib = Library::byId(libraryId);
@@ -57,7 +57,7 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
 void ZimArchives::close(qint64 libraryId)
 {
     QMutexLocker lock(archivesLock());
-    archives->remove(libraryId);  // a search takes its own references when it starts (ZimSearch candidates) and keeps them
+    archives->remove(libraryId); // a search takes its own references when it starts (ZimSearch candidates) and keeps them
 }
 
 namespace
@@ -130,10 +130,11 @@ QList<std::pair<quint32, quint32>> letterRanges(const zim::Archive &z, const QSt
 
 QString ZimReader::htmlRedirectTarget(const QByteArray &html, const QString &path)
 {
-    if (html.size() > 4096)  // these pages are a few hundred bytes; a real article is never one
+    if (html.size() > 4096) // these pages are a few hundred bytes; a real article is never one
         return {};
-    static const QRegularExpression refresh(QStringLiteral("http-equiv\\s*=\\s*[\"']refresh[\"'][^>]*content\\s*=\\s*\"\\s*\\d+\\s*;\\s*url\\s*=\\s*'?([^'\"]+)"),
-                                            QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression refresh(
+        QStringLiteral("http-equiv\\s*=\\s*[\"']refresh[\"'][^>]*content\\s*=\\s*\"\\s*\\d+\\s*;\\s*url\\s*=\\s*'?([^'\"]+)"),
+        QRegularExpression::CaseInsensitiveOption);
     const auto m = refresh.match(QString::fromUtf8(html));
     if (!m.hasMatch())
         return {};
@@ -153,7 +154,7 @@ std::optional<ZimContent> ZimReader::content(qint64 libraryId, const QString &pa
     try {
         QString current = path, fragment;
         for (int hop = 0; hop < 4; ++hop) {
-            const zim::Item item = z->getEntryByPath(current.toStdString()).getItem(true);  // follows the ZIM's redirects
+            const zim::Item item = z->getEntryByPath(current.toStdString()).getItem(true); // follows the ZIM's redirects
             if (tooLarge(qint64(item.getSize()), str(item.getMimetype()).startsWith(QLatin1String("text/html")))) {
                 qWarning("Not reading %s: %lld bytes", qUtf8Printable(current), qint64(item.getSize()));
                 return std::nullopt;
@@ -169,7 +170,7 @@ std::optional<ZimContent> ZimReader::content(qint64 libraryId, const QString &pa
         }
     } catch (const std::exception &) {
     }
-    return std::nullopt;  // missing, or redirects going round in circles
+    return std::nullopt; // missing, or redirects going round in circles
 }
 
 bool ZimReader::hasEntry(qint64 libraryId, const QString &path)

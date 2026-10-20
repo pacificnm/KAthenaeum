@@ -9,8 +9,8 @@
 #include <QSqlQuery>
 #include <QVariant>
 #include <QtEndian>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -23,8 +23,25 @@ namespace MapPlaces
 namespace
 {
 // The keys that say what a feature is, the most telling first
-const char *const KindKeys[] = {"place", "tourism", "historic", "amenity", "leisure", "natural", "aeroway", "railway", "man_made",
-                                "building", "shop", "office", "craft", "military", "boundary", "landuse", "waterway", "highway", "route"};
+const char *const KindKeys[] = {"place",
+                                "tourism",
+                                "historic",
+                                "amenity",
+                                "leisure",
+                                "natural",
+                                "aeroway",
+                                "railway",
+                                "man_made",
+                                "building",
+                                "shop",
+                                "office",
+                                "craft",
+                                "military",
+                                "boundary",
+                                "landuse",
+                                "waterway",
+                                "highway",
+                                "route"};
 
 template<typename T>
 QString tag(const T &object, const char *key)
@@ -93,7 +110,7 @@ void place(MapPlace &p, const Box &b)
     p.east = b.east;
     p.south = b.south;
     p.north = b.north;
-    p.lat = b.sumLat / b.n;  // the average of its points: inside a compact shape, near a long one
+    p.lat = b.sumLat / b.n; // the average of its points: inside a compact shape, near a long one
     p.lon = b.sumLon / b.n;
 }
 
@@ -195,7 +212,7 @@ bool outlineContains(const QByteArray &outline, double lat, double lon)
         const quint32 n = qFromLittleEndian<quint32>(d + at);
         at += 4;
         if (n > quint32((outline.size() - at) / 8))
-            return false;  // damaged
+            return false; // damaged
         float px = 0, py = 0;
         for (quint32 i = 0; i < n; ++i, at += 8) {
             const float x = qFromLittleEndian<float>(d + at), y = qFromLittleEndian<float>(d + at + 4);
@@ -251,8 +268,8 @@ std::optional<std::vector<MapPlace>> read(const QString &pbfPath, const std::ato
         // 1. relations: the interesting ones, and the ways and label nodes they are made of
         struct Rel {
             MapPlace place;
-            std::vector<osmium::object_id_type> ways;  // outer: its extent
-            std::vector<osmium::object_id_type> inner;  // holes: only its outline
+            std::vector<osmium::object_id_type> ways; // outer: its extent
+            std::vector<osmium::object_id_type> inner; // holes: only its outline
             osmium::object_id_type label = 0;
         };
         std::vector<Rel> relations;
@@ -414,7 +431,7 @@ std::optional<std::vector<MapPlace>> read(const QString &pbfPath, const std::ato
                 r.place.outline = outline(all);
             }
             if (const auto *l = r.label ? position(r.label) : nullptr) {
-                r.place.lat = l->first;  // a town's centre, not the middle of its boundary
+                r.place.lat = l->first; // a town's centre, not the middle of its boundary
                 r.place.lon = l->second;
             }
             out.push_back(std::move(r.place));
@@ -451,8 +468,9 @@ bool store(qint64 regionId, const std::vector<MapPlace> &places, QString *error)
     if (!q.exec())
         return failed(q);
     QSqlQuery insert(d), box(d);
-    insert.prepare(QStringLiteral("INSERT INTO map_places (region_id, osm, name, name_en, kind, lat, lon, west, south, east, north, area, "
-                                  "wikipedia, wikipedia_en, wikidata, population, outline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+    insert.prepare(
+        QStringLiteral("INSERT INTO map_places (region_id, osm, name, name_en, kind, lat, lon, west, south, east, north, area, "
+                       "wikipedia, wikipedia_en, wikidata, population, outline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
     box.prepare(QStringLiteral("INSERT INTO map_places_box (id, west, east, south, north) VALUES (?, ?, ?, ?, ?)"));
     for (const MapPlace &p : places) {
         insert.addBindValue(regionId);
@@ -485,7 +503,7 @@ bool store(qint64 regionId, const std::vector<MapPlace> &places, QString *error)
     if (!d.commit()) {
         if (error)
             *error = d.lastError().text();
-        d.rollback();  // left open, the transaction would take in every later write
+        d.rollback(); // left open, the transaction would take in every later write
         return false;
     }
     return true;
@@ -535,7 +553,7 @@ QList<MapPlace> around(double lat, double lon, int limit)
     q.addBindValue(lat);
     q.addBindValue(limit * 8);
     QList<MapPlace> out;
-    QSet<QString> seen;  // the same article twice (a park's two outlines)
+    QSet<QString> seen; // the same article twice (a park's two outlines)
     if (q.exec())
         while (q.next() && out.size() < limit) {
             MapPlace p = fromRow(q);

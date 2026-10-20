@@ -22,8 +22,14 @@ public:
     static AppState *instance();
     static AppState *create(QQmlEngine *, QJSEngine *);
 
-    QString databasePath() const { return m_databasePath; }
-    QString databaseError() const { return m_databaseError; }
+    QString databasePath() const
+    {
+        return m_databasePath;
+    }
+    QString databaseError() const
+    {
+        return m_databaseError;
+    }
 
     // Called once from main() before QML loads.
     void setDatabase(const QString &path, const QString &error);

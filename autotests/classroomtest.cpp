@@ -12,7 +12,7 @@
 #include "core/teacher.h"
 
 // The classroom (schema v10): reading the teacher's syllabus, levels, which libraries a subject reads, storing courses,
-// and choosing a lesson's readings. The cases are what qwen3.5:2b actually wrote (2026-10-20).
+// and choosing a lesson's readings. The cases are what qwen3.5:2b actually writes.
 class ClassroomTest : public QObject
 {
     Q_OBJECT
@@ -25,7 +25,7 @@ class ClassroomTest : public QObject
         r.id = id;
         r.name = name;
         r.title = name;
-        r.path = path.isEmpty() ? QStringLiteral("/proc/self/exe") : path;  // a file that exists
+        r.path = path.isEmpty() ? QStringLiteral("/proc/self/exe") : path; // a file that exists
         return r;
     }
 
@@ -43,20 +43,25 @@ private Q_SLOTS:
     void init()
     {
         QString error;
-        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error),
-                 qPrintable(error));
+        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error), qPrintable(error));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void theSyllabusAsTheModelWritesIt()
     {
         // the form asked for, with the article named
-        const auto units = Classroom::parseSyllabus(QStringLiteral(
-            "Unit 1: Introduction to Plate Tectonics and Earthquakes\n"
-            "- The movement of tectonic plates | The plate tectonics model | You will learn how the crust moves.\n"
-            "- How earthquakes happen | Seismic waves and earthquake magnitude | You will learn about waves.\n\n"
-            "Unit 2: Volcanoes, Eruptions, and Famous Events\n"
-            "- The formation of volcanoes | Volcano | You will learn how magma rises.\n"), QStringLiteral("Volcanoes"), 6, 5);
+        const auto units =
+            Classroom::parseSyllabus(QStringLiteral("Unit 1: Introduction to Plate Tectonics and Earthquakes\n"
+                                                    "- The movement of tectonic plates | The plate tectonics model | You will learn how the crust moves.\n"
+                                                    "- How earthquakes happen | Seismic waves and earthquake magnitude | You will learn about waves.\n\n"
+                                                    "Unit 2: Volcanoes, Eruptions, and Famous Events\n"
+                                                    "- The formation of volcanoes | Volcano | You will learn how magma rises.\n"),
+                                     QStringLiteral("Volcanoes"),
+                                     6,
+                                     5);
         QCOMPARE(units.size(), 2);
         QCOMPARE(units[0].title, QStringLiteral("Introduction to Plate Tectonics and Earthquakes"));
         QCOMPARE(units[0].lessons.size(), 2);
@@ -70,45 +75,49 @@ private Q_SLOTS:
     void theTemplatesOwnWordsAreDropped()
     {
         // the first run: every lesson began "Lesson title:", and all but one were dropped as repeats
-        const auto copied = Classroom::parseSyllabus(QStringLiteral(
-            "Unit 1: Plates\n"
-            "- Lesson title: The Three Types of Plates | what moves\n"
-            "- Lesson title: Faults | how they slip\n"
-            "- <the lesson's title> | <the Wikipedia article's title> | <one sentence>\n"
-            "- **Subduction** | \"Subduction\" | Article: plates sinking\n"), QStringLiteral("Earth"), 6, 5);
+        const auto copied = Classroom::parseSyllabus(QStringLiteral("Unit 1: Plates\n"
+                                                                    "- Lesson title: The Three Types of Plates | what moves\n"
+                                                                    "- Lesson title: Faults | how they slip\n"
+                                                                    "- <the lesson's title> | <the Wikipedia article's title> | <one sentence>\n"
+                                                                    "- **Subduction** | \"Subduction\" | Article: plates sinking\n"),
+                                                     QStringLiteral("Earth"),
+                                                     6,
+                                                     5);
         QCOMPARE(copied.size(), 1);
-        QCOMPARE(copied[0].lessons.size(), 3);  // the placeholder line is not a lesson
+        QCOMPARE(copied[0].lessons.size(), 3); // the placeholder line is not a lesson
         QCOMPARE(copied[0].lessons[0].title, QStringLiteral("The Three Types of Plates"));
         QCOMPARE(copied[0].lessons[1].title, QStringLiteral("Faults"));
         QCOMPARE(copied[0].lessons[2].title, QStringLiteral("Subduction"));
-        QCOMPARE(copied[0].lessons[2].article, QStringLiteral("Subduction"));  // quotes round it dropped
+        QCOMPARE(copied[0].lessons[2].article, QStringLiteral("Subduction")); // quotes round it dropped
         QCOMPARE(copied[0].lessons[2].objective, QStringLiteral("plates sinking"));
     }
 
     void otherFormsAndLimits()
     {
         // headings, numbering and bold; lessons before any unit; a unit with no lessons; repeats; too many
-        const auto units = Classroom::parseSyllabus(QStringLiteral(
-            "Here is the syllabus:\n"
-            "1. Counting: numbers to 100\n"
-            "## Fractions\n"
-            "1. **What a fraction is** - parts of a whole\n"
-            "2. Comparing fractions — which is bigger\n"
-            "3. What a fraction is - again\n"
-            "**Unit 3: Empty**\n"
-            "Module 4. Measurement\n"
-            "- Units of measurement: metres and inches\n"
-            "- Part of speech: not a unit either\n"
-            "- Lesson 3: Rulers\n"), QStringLiteral("Mathematics"), 6, 2);
+        const auto units = Classroom::parseSyllabus(QStringLiteral("Here is the syllabus:\n"
+                                                                   "1. Counting: numbers to 100\n"
+                                                                   "## Fractions\n"
+                                                                   "1. **What a fraction is** - parts of a whole\n"
+                                                                   "2. Comparing fractions — which is bigger\n"
+                                                                   "3. What a fraction is - again\n"
+                                                                   "**Unit 3: Empty**\n"
+                                                                   "Module 4. Measurement\n"
+                                                                   "- Units of measurement: metres and inches\n"
+                                                                   "- Part of speech: not a unit either\n"
+                                                                   "- Lesson 3: Rulers\n"),
+                                                    QStringLiteral("Mathematics"),
+                                                    6,
+                                                    2);
         QCOMPARE(units.size(), 3);
-        QCOMPARE(units[0].title, QStringLiteral("Mathematics"));  // the lessons before any unit
+        QCOMPARE(units[0].title, QStringLiteral("Mathematics")); // the lessons before any unit
         QCOMPARE(units[0].lessons[0].title, QStringLiteral("Counting"));
         QCOMPARE(units[1].title, QStringLiteral("Fractions"));
-        QCOMPARE(units[1].lessons.size(), 2);  // the repeat is dropped
+        QCOMPARE(units[1].lessons.size(), 2); // the repeat is dropped
         QCOMPARE(units[1].lessons[1].objective, QStringLiteral("which is bigger"));
-        QCOMPARE(units[2].title, QStringLiteral("Measurement"));  // "Empty" had no lessons
-        QCOMPARE(units[2].lessons.size(), 2);  // at most two each
-        QCOMPARE(units[2].lessons[0].title, QStringLiteral("Units of measurement"));  // a lesson, not a unit
+        QCOMPARE(units[2].title, QStringLiteral("Measurement")); // "Empty" had no lessons
+        QCOMPARE(units[2].lessons.size(), 2); // at most two each
+        QCOMPARE(units[2].lessons[0].title, QStringLiteral("Units of measurement")); // a lesson, not a unit
         QCOMPARE(units[2].lessons[1].title, QStringLiteral("Part of speech"));
         QCOMPARE(units[2].position, 2);
         QVERIFY(Classroom::parseSyllabus(QStringLiteral("I cannot help with that."), QStringLiteral("X"), 6, 5).size() <= 1);
@@ -136,7 +145,8 @@ private Q_SLOTS:
 
     void whichLibrariesACourseReads()
     {
-        const QList<LibraryRecord> installed = {library(1, QStringLiteral("wikipedia_en_ray-charles")), library(2, QStringLiteral("wikipedia_en_all")),
+        const QList<LibraryRecord> installed = {library(1, QStringLiteral("wikipedia_en_ray-charles")),
+                                                library(2, QStringLiteral("wikipedia_en_all")),
                                                 library(3, QStringLiteral("wikipedia_en_mathematics")),
                                                 library(4, QStringLiteral("wikipedia_en_history"), QStringLiteral("/no/such/file.zim"))};
         // the subject's own first, then the general ones; never an unrelated topic library; never a missing file
@@ -160,10 +170,13 @@ private Q_SLOTS:
         QVERIFY(Classroom::saveProfile({QStringLiteral("  Ada  Lovelace "), QStringLiteral("8"), QStringLiteral("engines"), QString()}));
         QCOMPARE(Classroom::profile().name, QStringLiteral("Ada Lovelace"));
         QVERIFY(Classroom::saveProfile({QStringLiteral("Ada"), QStringLiteral("not a grade"), {}, {}}));
-        QCOMPARE(Classroom::profile().grade, QStringLiteral("none"));  // one row, and only known grades
+        QCOMPARE(Classroom::profile().grade, QStringLiteral("none")); // one row, and only known grades
 
         QCOMPARE(Classroom::createCourse(QStringLiteral("math"), QStringLiteral("  "), QStringLiteral("5"), {}, {}), 0);
-        const qint64 id = Classroom::createCourse(QStringLiteral("math"), QStringLiteral("Fractions"), QStringLiteral("5"), QStringLiteral("halves"),
+        const qint64 id = Classroom::createCourse(QStringLiteral("math"),
+                                                  QStringLiteral("Fractions"),
+                                                  QStringLiteral("5"),
+                                                  QStringLiteral("halves"),
                                                   QStringLiteral("short"));
         QVERIFY(id > 0);
         QCOMPARE(Classroom::course(id)->status, QStringLiteral("new"));
@@ -216,12 +229,12 @@ private Q_SLOTS:
         Classroom::Lesson b;
         b.title = QStringLiteral("Seismic Waves");
         b.readings = {{{2, QStringLiteral("Seismic_wave"), QStringLiteral("Seismic wave")}, 0.8},
-                      {{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")}, 0.75}};  // shared with lesson 1
+                      {{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")}, 0.75}}; // shared with lesson 1
         QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Plates"), {a, b}}}));
         const auto lessons = Classroom::syllabus(course).constFirst().lessons;
         QCOMPARE(Classroom::lessonLabel(lessons[1].id), QStringLiteral("Lesson 2: Seismic Waves"));
 
-        QVERIFY(!Classroom::syncLesson(lessons[0].id));  // no project yet
+        QVERIFY(!Classroom::syncLesson(lessons[0].id)); // no project yet
         const qint64 project = Projects::create(QStringLiteral("Volcanoes"));
         QVERIFY(Classroom::setProject(course, project));
         QCOMPARE(Classroom::courseForProject(project)->id, course);
@@ -232,8 +245,8 @@ private Q_SLOTS:
         const auto articles = Projects::items(project, QStringLiteral("article"));
         QCOMPARE(articles.size(), 2);
         for (const ProjectItem &i : articles)
-            QCOMPARE(i.lesson, i.article.path == QLatin1String("Lithosphere") ? QStringLiteral("Lesson 1: The Lithosphere")
-                                                                               : QStringLiteral("Lesson 2: Seismic Waves"));
+            QCOMPARE(i.lesson,
+                     i.article.path == QLatin1String("Lithosphere") ? QStringLiteral("Lesson 1: The Lithosphere") : QStringLiteral("Lesson 2: Seismic Waves"));
         // the introduction as a document, once; lesson 2 has none yet
         auto docs = Projects::documents(project);
         QCOMPARE(docs.size(), 1);
@@ -256,7 +269,7 @@ private Q_SLOTS:
         QCOMPARE(Classroom::keepHighlight(lessons[0].id, QStringLiteral("the lithosphere is  the rigid outer shell."), lith, QStringLiteral("key")), clip);
         const auto clips = Projects::items(project, QStringLiteral("clip"));
         QCOMPARE(clips.size(), 1);
-        QCOMPARE(clips[0].note, QStringLiteral("key"));  // a note given later is kept
+        QCOMPARE(clips[0].note, QStringLiteral("key")); // a note given later is kept
         QCOMPARE(clips[0].lesson, QStringLiteral("Lesson 1: The Lithosphere"));
 
         // untied: nothing more goes in; deleting the project unties it
@@ -269,9 +282,10 @@ private Q_SLOTS:
 
     void questionsAsTheModelWritesThem()
     {
-        const auto q = Classroom::parseQuestion(QStringLiteral(
-            "**Question:** Which dynasty did Vespasian found?\nA) The Nerva–Antonine dynasty\nB) The Julio-Claudian dynasty\n"
-            "(C) The Five Good Emperors\nD. The Flavian dynasty\n**Answer:** D) The Flavian dynasty\nWhy: \"Vespasian became the founder of the brief Flavian dynasty\""));
+        const auto q = Classroom::parseQuestion(
+            QStringLiteral("**Question:** Which dynasty did Vespasian found?\nA) The Nerva–Antonine dynasty\nB) The Julio-Claudian dynasty\n"
+                           "(C) The Five Good Emperors\nD. The Flavian dynasty\n**Answer:** D) The Flavian dynasty\nWhy: \"Vespasian became the founder of the "
+                           "brief Flavian dynasty\""));
         QVERIFY(q);
         QCOMPARE(q->text, QStringLiteral("Which dynasty did Vespasian found?"));
         QCOMPARE(q->options.size(), 4);
@@ -288,15 +302,18 @@ private Q_SLOTS:
 
     void anAnswerMustBeInItsPassage()
     {
-        const QString passage = QStringLiteral("Vespasian became the founder of the brief Flavian dynasty, followed by the Nerva–Antonine dynasty. "
-                                               "The eruption of Krakatoa in 1883 was heard 4,800 km away.");
+        const QString passage = QStringLiteral(
+            "Vespasian became the founder of the brief Flavian dynasty, followed by the Nerva–Antonine dynasty. "
+            "The eruption of Krakatoa in 1883 was heard 4,800 km away.");
         Classroom::Question q;
         q.text = QStringLiteral("Which dynasty did Vespasian found?");
-        q.options = {QStringLiteral("The Julio-Claudian dynasty"), QStringLiteral("The Flavian dynasty"), QStringLiteral("The Severan dynasty"),
+        q.options = {QStringLiteral("The Julio-Claudian dynasty"),
+                     QStringLiteral("The Flavian dynasty"),
+                     QStringLiteral("The Severan dynasty"),
                      QStringLiteral("The Five Good Emperors")};
         q.answer = 1;
         QVERIFY(Classroom::answerInPassage(q, passage));
-        q.answer = 2;  // the key on an option the passage does not have
+        q.answer = 2; // the key on an option the passage does not have
         QVERIFY(!Classroom::answerInPassage(q, passage));
         q.answer = 0;
         q.options[0] = QStringLiteral("The Julio-Claudian dynasty");
@@ -329,7 +346,7 @@ private Q_SLOTS:
             QCOMPARE(QSet<QString>(s.options.cbegin(), s.options.cend()).size(), 4);
             positions.insert(s.answer);
         }
-        QCOMPARE(positions.size(), 4);  // the answer lands on every letter
+        QCOMPARE(positions.size(), 4); // the answer lands on every letter
     }
 
     void quizzesAreGradedAndMissesReviewed()
@@ -342,7 +359,7 @@ private Q_SLOTS:
         const auto unit = Classroom::syllabus(course).constFirst();
         const qint64 lesson = unit.lessons.first().id;
         QVERIFY(!Classroom::latestQuiz(QStringLiteral("lesson"), lesson));
-        QCOMPARE(Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"), {}}), 0);  // no questions, no quiz
+        QCOMPARE(Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"), {}}), 0); // no questions, no quiz
 
         auto question = [&](const QString &text, int answer) {
             Classroom::Question q;
@@ -354,8 +371,13 @@ private Q_SLOTS:
             q.lessonId = lesson;
             return q;
         };
-        const qint64 quiz = Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"),
-                                                 {question(QStringLiteral("One?"), 0), question(QStringLiteral("Two?"), 1), question(QStringLiteral("Three?"), 2)}});
+        const qint64 quiz =
+            Classroom::saveQuiz({0,
+                                 course,
+                                 lesson,
+                                 0,
+                                 QStringLiteral("lesson"),
+                                 {question(QStringLiteral("One?"), 0), question(QStringLiteral("Two?"), 1), question(QStringLiteral("Three?"), 2)}});
         QVERIFY(quiz > 0);
         QCOMPARE(Classroom::latestQuiz(QStringLiteral("lesson"), lesson)->questions.size(), 3);
         QCOMPARE(Classroom::quiz(quiz)->questions[1].source.title, QStringLiteral("Roman Republic"));
@@ -367,7 +389,7 @@ private Q_SLOTS:
         QCOMPARE(missed.size(), 2);
         QCOMPARE(missed[0].question.text, QStringLiteral("Two?"));
         QCOMPARE(missed[0].chosen, 3);
-        QCOMPARE(missed[1].chosen, -1);  // not answered counts as missed
+        QCOMPARE(missed[1].chosen, -1); // not answered counts as missed
         QCOMPARE(missed[0].lessonTitle, QStringLiteral("The Republic"));
 
         // a better try: the latest attempt is what is reviewed, the best what is scored
@@ -421,7 +443,8 @@ private Q_SLOTS:
             return out;
         };
         QCOMPARE(titles(Teaching::chooseReadings({choice(QStringLiteral("Geodynamics of terrestrial exoplanets"), 0.773),
-                                                  choice(QStringLiteral("Plate tectonics"), 0.870), choice(QStringLiteral("Animal locomotion"), 0.659)},
+                                                  choice(QStringLiteral("Plate tectonics"), 0.870),
+                                                  choice(QStringLiteral("Animal locomotion"), 0.659)},
                                                  {})),
                  QStringList{QStringLiteral("Plate tectonics")});
         QCOMPARE(titles(Teaching::chooseReadings({choice(QStringLiteral("Stratovolcano"), 0.811), choice(QStringLiteral("Caldera"), 0.803)}, {})),
@@ -448,12 +471,13 @@ private Q_SLOTS:
         const QString plan = Classroom::syllabusPrompt(c, {QStringLiteral("Jaimie"), QStringLiteral("4"), QStringLiteral("volcanoes, hiking"), {}}, 3, 3);
         QVERIFY(plan.contains(QLatin1String("exactly 3 units")));
         QVERIFY(plan.contains(QLatin1String("Every lesson must be a mathematics topic")));
-        QVERIFY(!plan.contains(QLatin1String("volcanoes")));  // interests drew a maths course off its subject
+        QVERIFY(!plan.contains(QLatin1String("volcanoes"))); // interests drew a maths course off its subject
         Classroom::Lesson l;
         l.title = QStringLiteral("Fractions");
-        const QString intro = Classroom::introPrompt(c, {QStringLiteral("Jaimie Garner"), {}, QStringLiteral("volcanoes"), {}}, l, QStringLiteral("[1] Fraction"));
+        const QString intro =
+            Classroom::introPrompt(c, {QStringLiteral("Jaimie Garner"), {}, QStringLiteral("volcanoes"), {}}, l, QStringLiteral("[1] Fraction"));
         QVERIFY(intro.contains(QLatin1String("speaking to Jaimie directly")));
-        QVERIFY(intro.contains(QLatin1String("volcanoes")));  // examples may come from them
+        QVERIFY(intro.contains(QLatin1String("volcanoes"))); // examples may come from them
         QVERIFY(intro.contains(QLatin1String("Do not greet")));
     }
 };

@@ -19,10 +19,14 @@ namespace
 const QHash<QString, QString> &wikimediaProjects()
 {
     static const QHash<QString, QString> value = {
-        {QStringLiteral("wikipedia"), QStringLiteral("Wikipedia")},   {QStringLiteral("wiktionary"), QStringLiteral("Wiktionary")},
-        {QStringLiteral("wikiversity"), QStringLiteral("Wikiversity")}, {QStringLiteral("wikibooks"), QStringLiteral("Wikibooks")},
-        {QStringLiteral("wikivoyage"), QStringLiteral("Wikivoyage")}, {QStringLiteral("wikinews"), QStringLiteral("Wikinews")},
-        {QStringLiteral("wikiquote"), QStringLiteral("Wikiquote")},   {QStringLiteral("wikisource"), QStringLiteral("Wikisource")},
+        {QStringLiteral("wikipedia"), QStringLiteral("Wikipedia")},
+        {QStringLiteral("wiktionary"), QStringLiteral("Wiktionary")},
+        {QStringLiteral("wikiversity"), QStringLiteral("Wikiversity")},
+        {QStringLiteral("wikibooks"), QStringLiteral("Wikibooks")},
+        {QStringLiteral("wikivoyage"), QStringLiteral("Wikivoyage")},
+        {QStringLiteral("wikinews"), QStringLiteral("Wikinews")},
+        {QStringLiteral("wikiquote"), QStringLiteral("Wikiquote")},
+        {QStringLiteral("wikisource"), QStringLiteral("Wikisource")},
     };
     return value;
 }
@@ -37,7 +41,7 @@ QString mlaDate(const QDate &d)
     return QStringLiteral("%1 %2 %3").arg(d.day()).arg(QLatin1String(MlaMonths[d.month() - 1])).arg(d.year());
 }
 
-QString longDate(const QDate &d)  // October 20, 2026
+QString longDate(const QDate &d) // October 20, 2026
 {
     return QStringLiteral("%1 %2, %3").arg(QLatin1String(Months[d.month() - 1])).arg(d.day()).arg(d.year());
 }
@@ -209,7 +213,7 @@ Citations::Source Citations::source(const LibraryRecord &library, const QString 
         s.publisher = QStringLiteral("Wikimedia Foundation");
         QString language = name.at(1).toLower();
         if (language.endsWith(QLatin1String("-simple")) || language == QLatin1String("simple"))
-            language = QStringLiteral("simple");  // Simple English Wikipedia lives at simple.wikipedia.org
+            language = QStringLiteral("simple"); // Simple English Wikipedia lives at simple.wikipedia.org
         // the characters Wikipedia's own addresses keep as they are: "Portland,_Oregon", "Ray_(film)"
         const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(path, "/_-.,:()!~*'$&;=+@"));
         if (!language.isEmpty() && !path.isEmpty())
@@ -224,7 +228,7 @@ Citations::Source Citations::source(const LibraryRecord &library, const QString 
 QString Citations::format(Style style, const Source &source, const QDate &accessed, bool markdown)
 {
     return build(style, source, accessed, [markdown, style](const QString &s) {
-        return style == Style::Chicago ? s : italic(s, markdown);  // Chicago sets website names in roman
+        return style == Style::Chicago ? s : italic(s, markdown); // Chicago sets website names in roman
     });
 }
 

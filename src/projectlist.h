@@ -17,7 +17,16 @@ class ProjectList : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
 public:
-    enum Role { ProjectIdRole = Qt::UserRole + 1, TitleRole, DescriptionRole, UpdatedRole, ArticlesRole, ClipsRole, ChatsRole, DocumentsRole };
+    enum Role {
+        ProjectIdRole = Qt::UserRole + 1,
+        TitleRole,
+        DescriptionRole,
+        UpdatedRole,
+        ArticlesRole,
+        ClipsRole,
+        ChatsRole,
+        DocumentsRole
+    };
     Q_ENUM(Role)
 
     explicit ProjectList(QObject *parent = nullptr);
@@ -34,8 +43,13 @@ public:
     Q_INVOKABLE QVariantList containing(qint64 libraryId, const QString &path) const;
 
     Q_INVOKABLE bool addArticle(qint64 projectId, qint64 libraryId, const QString &path, const QString &title, const QString &note = {});
-    Q_INVOKABLE bool addExcerpt(qint64 projectId, const QString &text, qint64 libraryId, const QString &path, const QString &title,
-                                const QString &section = {}, const QString &note = {});
+    Q_INVOKABLE bool addExcerpt(qint64 projectId,
+                                const QString &text,
+                                qint64 libraryId,
+                                const QString &path,
+                                const QString &title,
+                                const QString &section = {},
+                                const QString &note = {});
     // An answer, kept as an excerpt that names the articles it was drawn from (sources: the chat's [{libraryId, path, title}])
     Q_INVOKABLE bool addAnswer(qint64 projectId, const QString &text, const QVariantList &sources, const QString &note = {});
     Q_INVOKABLE bool attachChat(qint64 projectId, qint64 chatId);

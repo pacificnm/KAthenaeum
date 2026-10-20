@@ -10,11 +10,11 @@
 
 #include "core/answerer.h"
 #include "core/chats.h"
-#include "core/drafts.h"
-#include "core/projects.h"
 #include "core/database.h"
+#include "core/drafts.h"
 #include "core/library.h"
 #include "core/ollama.h"
+#include "core/projects.h"
 #include "core/zimreader.h"
 
 #include <zim/writer/creator.h>
@@ -26,10 +26,10 @@ class Fake : public QObject
 {
 public:
     QTcpServer server;
-    QHash<QString, std::pair<int, QByteArray>> failures;  // path -> (status, body)
+    QHash<QString, std::pair<int, QByteArray>> failures; // path -> (status, body)
     QString hangOn;
     QStringList answer{QStringLiteral("Photosynthesis turns sunlight "), QStringLiteral("into sugar in green plants.")};
-    QList<QJsonObject> requests;  // bodies, in order, with "path" added
+    QList<QJsonObject> requests; // bodies, in order, with "path" added
     QStringList paths;
 
     Fake()
@@ -58,7 +58,10 @@ public:
         });
     }
 
-    QString url() const { return QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort()); }
+    QString url() const
+    {
+        return QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort());
+    }
 
     QJsonObject last(const QString &path) const
     {
@@ -84,21 +87,25 @@ private:
         if (path == QLatin1String("/api/embed")) {
             QJsonArray vectors;
             for (int i = 0; i < body.value(QLatin1String("input")).toArray().size(); ++i)
-                vectors.append(QJsonArray{1.0, 0.0, 0.0});  // everything alike: every sentence is backed
+                vectors.append(QJsonArray{1.0, 0.0, 0.0}); // everything alike: every sentence is backed
             send(s, 200, QJsonDocument(QJsonObject{{QStringLiteral("embeddings"), vectors}}).toJson(QJsonDocument::Compact));
         } else if (path == QLatin1String("/api/show")) {
             send(s, 200, "{\"capabilities\":[\"completion\",\"thinking\"]}");
         } else if (path == QLatin1String("/api/chat")) {
             s->write("HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nConnection: close\r\n\r\n");
             if (hangOn == path) {
-                s->write("{\"message\":{\"content\":\"Partial \"},\"done\":false}" "\n");
-                return;  // and nothing more
+                s->write(
+                    "{\"message\":{\"content\":\"Partial \"},\"done\":false}"
+                    "\n");
+                return; // and nothing more
             }
             for (const QString &t : std::as_const(answer))
                 s->write(QJsonDocument(QJsonObject{{QStringLiteral("message"), QJsonObject{{QStringLiteral("content"), t}}}, {QStringLiteral("done"), false}})
                              .toJson(QJsonDocument::Compact)
                          + "\n");
-            s->write("{\"message\":{\"content\":\"\"},\"done\":true,\"eval_count\":9,\"eval_duration\":1000000000,\"done_reason\":\"stop\"}" "\n");
+            s->write(
+                "{\"message\":{\"content\":\"\"},\"done\":true,\"eval_count\":9,\"eval_duration\":1000000000,\"done_reason\":\"stop\"}"
+                "\n");
             s->disconnectFromHost();
         } else {
             send(s, 404, "{\"error\":\"unknown\"}");
@@ -115,8 +122,8 @@ class AnswererTest : public QObject
 
     static std::string page(const std::string &title, const std::string &intro, const std::string &section, const std::string &text)
     {
-        return "<html><head><title>" + title + "</title></head><body><div class='mw-parser-output'><p>" + intro + "</p><h2>" + section
-            + "</h2><p>" + text + "</p></div></body></html>";
+        return "<html><head><title>" + title + "</title></head><body><div class='mw-parser-output'><p>" + intro + "</p><h2>" + section + "</h2><p>" + text
+            + "</p></div></body></html>";
     }
 
     struct Run {
@@ -132,14 +139,20 @@ class AnswererTest : public QObject
     };
 
     // Asks and waits for finished(); `whileRunning` is called once the answer has started streaming
-    Run ask(Fake &fake, const QString &question, const QStringList &earlier = {}, const std::function<void(Answerer &)> &whileRunning = {},
-            const ArticleScope &article = {}, const ProjectScope &project = {})
+    Run ask(Fake &fake,
+            const QString &question,
+            const QStringList &earlier = {},
+            const std::function<void(Answerer &)> &whileRunning = {},
+            const ArticleScope &article = {},
+            const ProjectScope &project = {})
     {
         OllamaClient client;
         client.setBaseUrl(fake.url());
         Answerer answerer(&client);
         Run run;
-        connect(&answerer, &Answerer::phaseChanged, this, [&](Answerer::Phase p, int) { run.phases << p; });
+        connect(&answerer, &Answerer::phaseChanged, this, [&](Answerer::Phase p, int) {
+            run.phases << p;
+        });
         connect(&answerer, &Answerer::sourcesReady, this, [&](const QList<Rag::Source> &s, bool d, const QString &n) {
             run.sources = s;
             run.degraded = d;
@@ -148,7 +161,9 @@ class AnswererTest : public QObject
         connect(&answerer, &Answerer::textAdded, this, [&](const QString &t) {
             run.text += t;
             if (whileRunning)
-                QTimer::singleShot(0, &answerer, [&] { whileRunning(answerer); });
+                QTimer::singleShot(0, &answerer, [&] {
+                    whileRunning(answerer);
+                });
         });
         connect(&answerer, &Answerer::clipsEmbedded, this, [&](const QList<std::pair<qint64, Vector>> &v, const QString &model) {
             run.embeddedClips = v;
@@ -159,7 +174,9 @@ class AnswererTest : public QObject
             run.done = true;
         });
         answerer.start({question, earlier, {m_id}, QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text"), article, project});
-        [&] { QTRY_VERIFY_WITH_TIMEOUT(run.done, 20000); }();
+        [&] {
+            QTRY_VERIFY_WITH_TIMEOUT(run.done, 20000);
+        }();
         return run;
     }
 
@@ -177,8 +194,12 @@ public:
         client.setBaseUrl(fake.url());
         Drafter drafter(&client);
         Draft d;
-        connect(&drafter, &Drafter::progress, this, [&](int, int, const QString &label) { d.labels << label; });
-        connect(&drafter, &Drafter::textAdded, this, [&](const QString &t) { d.streamed += t; });
+        connect(&drafter, &Drafter::progress, this, [&](int, int, const QString &label) {
+            d.labels << label;
+        });
+        connect(&drafter, &Drafter::textAdded, this, [&](const QString &t) {
+            d.streamed += t;
+        });
         connect(&drafter, &Drafter::finished, this, [&](const QString &status, const QString &title, const QString &md, const QString &error) {
             d.status = status;
             d.title = title;
@@ -188,13 +209,16 @@ public:
         });
         start(drafter);
         if (stopWhenStreaming)
-            [&] { QTRY_VERIFY_WITH_TIMEOUT(fake.paths.contains(QStringLiteral("/api/chat")), 20000); }();
+            [&] {
+                QTRY_VERIFY_WITH_TIMEOUT(fake.paths.contains(QStringLiteral("/api/chat")), 20000);
+            }();
         if (stopWhenStreaming)
             drafter.stop();
-        [&] { QTRY_VERIFY_WITH_TIMEOUT(d.done, 20000); }();
+        [&] {
+            QTRY_VERIFY_WITH_TIMEOUT(d.done, 20000);
+        }();
         return d;
     }
-
 
 private Q_SLOTS:
     void initTestCase()
@@ -205,18 +229,29 @@ private Q_SLOTS:
         c.configIndexing(true, "eng");
         c.startZimCreation(file.toStdString());
         c.setMainPath("Photosynthesis");
-        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{
-                 {"Name", "t"}, {"Title", "Plants"}, {"Creator", "x"}, {"Publisher", "x"}, {"Date", "2026-01-01"}, {"Description", "d"}, {"Language", "eng"}})
+        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{{"Name", "t"},
+                                                                                   {"Title", "Plants"},
+                                                                                   {"Creator", "x"},
+                                                                                   {"Publisher", "x"},
+                                                                                   {"Date", "2026-01-01"},
+                                                                                   {"Description", "d"},
+                                                                                   {"Language", "eng"}})
             c.addMetadata(k, v);
         const std::vector<std::tuple<std::string, std::string, std::string>> pages = {
-            {"Photosynthesis", "Photosynthesis",
-             page("Photosynthesis", "Photosynthesis is the process by which green plants turn sunlight, water and carbon dioxide into sugar.",
-                  "Chlorophyll", "Chlorophyll is the green pigment in leaves that absorbs sunlight.")},
-            {"Leaf", "Leaf", page("Leaf", "A leaf is the main organ of photosynthesis in green plants, flat and thin to catch sunlight.", "Shape", "Leaves vary in shape.")},
+            {"Photosynthesis",
+             "Photosynthesis",
+             page("Photosynthesis",
+                  "Photosynthesis is the process by which green plants turn sunlight, water and carbon dioxide into sugar.",
+                  "Chlorophyll",
+                  "Chlorophyll is the green pigment in leaves that absorbs sunlight.")},
+            {"Leaf",
+             "Leaf",
+             page("Leaf", "A leaf is the main organ of photosynthesis in green plants, flat and thin to catch sunlight.", "Shape", "Leaves vary in shape.")},
             {"Index", "Index", "<html><body>front page</body></html>"},
         };
         for (const auto &[path, title, html] : pages)
-            c.addItem(zim::writer::StringItem::create(path, std::string("text/html"), title, zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, html));
+            c.addItem(
+                zim::writer::StringItem::create(path, std::string("text/html"), title, zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}}, html));
         c.finishZimCreation();
 
         QVERIFY(Database::open(m_dir.filePath(QStringLiteral("t.sqlite")), nullptr));
@@ -241,7 +276,8 @@ private Q_SLOTS:
         QCOMPARE(run.result.stats.tokensPerSecond, 9.0);
 
         // what went to Ollama: the question and passages with nomic's prefixes, thinking off, the measured options
-        QCOMPARE(fake.paths, (QStringList{QStringLiteral("/api/embed"), QStringLiteral("/api/show"), QStringLiteral("/api/chat"), QStringLiteral("/api/embed")}));
+        QCOMPARE(fake.paths,
+                 (QStringList{QStringLiteral("/api/embed"), QStringLiteral("/api/show"), QStringLiteral("/api/chat"), QStringLiteral("/api/embed")}));
         const QJsonArray input = fake.requests.first().value(QLatin1String("input")).toArray();
         QVERIFY(input.first().toString().startsWith(QLatin1String("search_query: how do plants use sunlight")));
         QVERIFY(input.last().toString().startsWith(QLatin1String("search_document: ")));
@@ -249,7 +285,7 @@ private Q_SLOTS:
         QCOMPARE(chat.value(QLatin1String("think")).toBool(true), false);
         QCOMPARE(chat.value(QLatin1String("options")).toObject().value(QLatin1String("num_ctx")).toInt(), Rag::NumCtx);
         const QJsonArray messages = chat.value(QLatin1String("messages")).toArray();
-        QCOMPARE(messages.size(), 2);  // system, and the sources with the question
+        QCOMPARE(messages.size(), 2); // system, and the sources with the question
         QVERIFY(messages.last().toObject().value(QLatin1String("content")).toString().contains(QLatin1String("[1] Photosynthesis")));
     }
 
@@ -259,7 +295,8 @@ private Q_SLOTS:
         const Run run = ask(fake, QStringLiteral("and its pigment?"), {QStringLiteral("What is photosynthesis?")});
         QCOMPARE(run.result.status, QStringLiteral("done"));
         QVERIFY(fake.requests.first().value(QLatin1String("input")).toArray().first().toString().contains(QLatin1String("photosynthesis? and its pigment?")));
-        const QString prompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().last().toObject().value(QLatin1String("content")).toString();
+        const QString prompt =
+            fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().last().toObject().value(QLatin1String("content")).toString();
         QVERIFY(prompt.contains(QLatin1String("Earlier in this conversation the user asked: \"What is photosynthesis?\"\nQuestion: and its pigment?")));
     }
 
@@ -274,7 +311,7 @@ private Q_SLOTS:
         QVERIFY(!run.sources.isEmpty());
         QVERIFY(!run.result.answer.isEmpty());
         QVERIFY(run.result.citations.isEmpty());
-        QCOMPARE(fake.paths.count(QStringLiteral("/api/embed")), 1);  // no second try for the citations
+        QCOMPARE(fake.paths.count(QStringLiteral("/api/embed")), 1); // no second try for the citations
     }
 
     void withoutTheAnswerModelTheSourcesAreStillShown()
@@ -292,7 +329,9 @@ private Q_SLOTS:
     {
         Fake fake;
         fake.hangOn = QStringLiteral("/api/chat");
-        const Run run = ask(fake, QStringLiteral("how do plants use sunlight"), {}, [](Answerer &a) { a.stop(); });
+        const Run run = ask(fake, QStringLiteral("how do plants use sunlight"), {}, [](Answerer &a) {
+            a.stop();
+        });
         QCOMPARE(run.result.status, QStringLiteral("stopped"));
         QCOMPARE(run.result.answer, QStringLiteral("Partial "));
         QVERIFY(run.result.citations.isEmpty());
@@ -316,7 +355,7 @@ private Q_SLOTS:
         // "sunlight" is in both articles; only Photosynthesis may be used
         const Run run = ask(fake, QStringLiteral("what absorbs sunlight"), {}, {}, {m_id, QStringLiteral("Photosynthesis"), QStringLiteral("Photosynthesis")});
         QCOMPARE(run.result.status, QStringLiteral("done"));
-        QVERIFY(run.sources.size() >= 2);  // its introduction and its Chlorophyll section, each a source of its own
+        QVERIFY(run.sources.size() >= 2); // its introduction and its Chlorophyll section, each a source of its own
         QStringList sections;
         for (const Rag::Source &s : run.sources) {
             QCOMPARE(s.path, QStringLiteral("Photosynthesis"));
@@ -366,7 +405,7 @@ private Q_SLOTS:
         saved.text = QStringLiteral("Chlorophyll absorbs mostly red and blue light.");
         saved.libraryId = m_id;
         saved.path = QStringLiteral("Photosynthesis");
-        p.clips = {saved};  // no vector yet
+        p.clips = {saved}; // no vector yet
         p.alsoLibrary = alsoLibrary;
         return p;
     }
@@ -382,7 +421,7 @@ private Q_SLOTS:
             titles << s.title;
         }
         QCOMPARE(kinds, (QStringList{QStringLiteral("clip"), QString()}));
-        QCOMPARE(titles, (QStringList{QStringLiteral("Saved excerpt: Photosynthesis"), QStringLiteral("Leaf")}));  // not the Photosynthesis article
+        QCOMPARE(titles, (QStringList{QStringLiteral("Saved excerpt: Photosynthesis"), QStringLiteral("Leaf")})); // not the Photosynthesis article
         // the excerpt was embedded with the question, and handed back to be saved
         QCOMPARE(run.embeddedClips.size(), 1);
         QCOMPARE(run.embeddedClips.first().first, 42);
@@ -404,9 +443,9 @@ private Q_SLOTS:
         for (const Rag::Source &s : run.sources)
             if (s.kind == QLatin1String("library"))
                 outside << s.path;
-        QCOMPARE(outside, QStringList{QStringLiteral("Photosynthesis")});  // Leaf is the project's own, never "outside"
-        const QString prompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().last().toObject()
-                                   .value(QLatin1String("content")).toString();
+        QCOMPARE(outside, QStringList{QStringLiteral("Photosynthesis")}); // Leaf is the project's own, never "outside"
+        const QString prompt =
+            fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().last().toObject().value(QLatin1String("content")).toString();
         QVERIFY(prompt.contains(QLatin1String("Other library articles (NOT part of the research project):")));
     }
 
@@ -430,17 +469,26 @@ private Q_SLOTS:
         Projects::addArticle(p, {m_id, QStringLiteral("Leaf"), QStringLiteral("Leaf")});
         Projects::addClip(p, QStringLiteral("Chlorophyll absorbs sunlight."), {{m_id, QStringLiteral("Photosynthesis"), QStringLiteral("Photosynthesis")}});
         Fake fake;
-        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        const Draft d = draft(fake, [&](Drafter &dr) {
+            dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")});
+        });
         QCOMPARE(d.status, QStringLiteral("done"));
         QCOMPARE(d.title, QStringLiteral("Summary: Plants"));
-        QCOMPARE(d.labels, (QStringList{QStringLiteral("Reading the articles"), QStringLiteral("Summarizing “Photosynthesis”"),
-                                        QStringLiteral("Summarizing “Leaf”"), QStringLiteral("Writing the overview")}));
+        QCOMPARE(d.labels,
+                 (QStringList{QStringLiteral("Reading the articles"),
+                              QStringLiteral("Summarizing “Photosynthesis”"),
+                              QStringLiteral("Summarizing “Leaf”"),
+                              QStringLiteral("Writing the overview")}));
         // one model call per article, one for the overview, then one embedding call for the overview's numbers
-        QCOMPARE(fake.paths, (QStringList{QStringLiteral("/api/show"), QStringLiteral("/api/chat"), QStringLiteral("/api/chat"), QStringLiteral("/api/chat"),
-                                          QStringLiteral("/api/embed")}));
+        QCOMPARE(fake.paths,
+                 (QStringList{QStringLiteral("/api/show"),
+                              QStringLiteral("/api/chat"),
+                              QStringLiteral("/api/chat"),
+                              QStringLiteral("/api/chat"),
+                              QStringLiteral("/api/embed")}));
         QCOMPARE(fake.last(QStringLiteral("/api/chat")).value(QLatin1String("think")).toBool(true), false);
-        const QString overviewPrompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject()
-                                           .value(QLatin1String("content")).toString();
+        const QString overviewPrompt =
+            fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject().value(QLatin1String("content")).toString();
         QVERIFY(overviewPrompt.contains(QLatin1String("The research question is: How do plants use light?")));
         QVERIFY(overviewPrompt.contains(QLatin1String("Saved excerpt (Photosynthesis): Chlorophyll absorbs sunlight.")));
         QVERIFY2(d.markdown.contains(QLatin1String("## Overview\n\nPhotosynthesis turns sunlight into sugar in green plants. [1]")), qPrintable(d.markdown));
@@ -461,18 +509,25 @@ private Q_SLOTS:
         a.chatId = chat;
         a.role = QStringLiteral("assistant");
         a.content = QStringLiteral("Chlorophyll [1].");
-        a.sources = QStringLiteral("[{\"n\":1,\"libraryId\":%1,\"path\":\"Photosynthesis\",\"title\":\"Photosynthesis\"},"
-                                   "{\"n\":2,\"kind\":\"clip\",\"libraryId\":%1,\"path\":\"Leaf\",\"title\":\"Saved excerpt\"}]").arg(m_id).toUtf8();
+        a.sources = QStringLiteral(
+                        "[{\"n\":1,\"libraryId\":%1,\"path\":\"Photosynthesis\",\"title\":\"Photosynthesis\"},"
+                        "{\"n\":2,\"kind\":\"clip\",\"libraryId\":%1,\"path\":\"Leaf\",\"title\":\"Saved excerpt\"}]")
+                        .arg(m_id)
+                        .toUtf8();
         Chats::addMessage(a);
         Fake fake;
-        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeChat(chat, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        const Draft d = draft(fake, [&](Drafter &dr) {
+            dr.summarizeChat(chat, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")});
+        });
         QCOMPARE(d.status, QStringLiteral("done"));
         QCOMPARE(d.title, QStringLiteral("Chat summary: Light"));
         QCOMPARE(d.streamed, QStringLiteral("Photosynthesis turns sunlight into sugar in green plants."));
-        QCOMPARE(d.markdown, QStringLiteral("Photosynthesis turns sunlight into sugar in green plants.\n\n## Sources discussed\n\n"
-                                            "- [Photosynthesis](zim://lib%1/Photosynthesis)\n").arg(m_id));  // the excerpt is not listed
-        const QString prompt = fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject()
-                                   .value(QLatin1String("content")).toString();
+        QCOMPARE(d.markdown,
+                 QStringLiteral("Photosynthesis turns sunlight into sugar in green plants.\n\n## Sources discussed\n\n"
+                                "- [Photosynthesis](zim://lib%1/Photosynthesis)\n")
+                     .arg(m_id)); // the excerpt is not listed
+        const QString prompt =
+            fake.last(QStringLiteral("/api/chat")).value(QLatin1String("messages")).toArray().first().toObject().value(QLatin1String("content")).toString();
         QVERIFY(prompt.contains(QLatin1String("Q: What absorbs light?\nA: Chlorophyll.")));
     }
 
@@ -482,7 +537,12 @@ private Q_SLOTS:
         Projects::addArticle(p, {m_id, QStringLiteral("Leaf"), QStringLiteral("Leaf")});
         Fake fake;
         fake.hangOn = QStringLiteral("/api/chat");
-        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); }, true);
+        const Draft d = draft(
+            fake,
+            [&](Drafter &dr) {
+                dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")});
+            },
+            true);
         QCOMPARE(d.status, QStringLiteral("stopped"));
         QVERIFY(d.markdown.isEmpty());
     }
@@ -491,7 +551,9 @@ private Q_SLOTS:
     {
         const qint64 p = Projects::create(QStringLiteral("Empty"));
         Fake fake;
-        const Draft d = draft(fake, [&](Drafter &dr) { dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")}); });
+        const Draft d = draft(fake, [&](Drafter &dr) {
+            dr.summarizeProject(p, {QStringLiteral("qwen3.5:2b"), QStringLiteral("nomic-embed-text")});
+        });
         QCOMPARE(d.status, QStringLiteral("error"));
         QVERIFY(d.error.contains(QLatin1String("Add some articles")));
         QVERIFY(fake.paths.isEmpty());

@@ -16,9 +16,9 @@ struct HighlightRecord {
     qint64 id = 0;
     qint64 libraryId = 0;
     QString path;
-    QString title;  // the article's
+    QString title; // the article's
     QString text;
-    QString color;  // one of Highlights::colors()
+    QString color; // one of Highlights::colors()
     QString note;
     QDateTime createdAt;
     QDateTime updatedAt;
@@ -26,7 +26,7 @@ struct HighlightRecord {
 
 namespace Highlights
 {
-QStringList colors();  // yellow, green, blue, pink: the first is the default
+QStringList colors(); // yellow, green, blue, pink: the first is the default
 // The same passage highlighted again in the same article keeps one highlight: its colour changes, and a note given
 // replaces the old one (an empty one does not). Returns its id, or 0 (empty or too short to find again in the page).
 qint64 add(qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &color = {}, const QString &note = {});
@@ -34,7 +34,7 @@ bool setNote(qint64 id, const QString &note);
 bool setColor(qint64 id, const QString &color);
 bool remove(qint64 id);
 std::optional<HighlightRecord> byId(qint64 id);
-QList<HighlightRecord> forArticle(qint64 libraryId, const QString &path);  // in the order they were made
+QList<HighlightRecord> forArticle(qint64 libraryId, const QString &path); // in the order they were made
 // Every highlight, grouped by article (the article changed most recently first), each article's in the order they were
 // made. `color` empty for all; `text` matches the passage, the note or the article's title.
 QList<HighlightRecord> all(const QString &color = {}, const QString &text = {});

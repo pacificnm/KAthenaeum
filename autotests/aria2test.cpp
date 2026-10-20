@@ -20,13 +20,13 @@ private Q_SLOTS:
         QCOMPARE(p->speed, qint64(592) * 1024);
         QCOMPARE(p->etaSeconds, 36);
 
-        p = Aria2::parseLine(u"[#85a9a7 0B/22MiB(0%) CN:1 DL:0B]");  // the first line has no ETA
+        p = Aria2::parseLine(u"[#85a9a7 0B/22MiB(0%) CN:1 DL:0B]"); // the first line has no ETA
         QVERIFY(p);
         QCOMPARE(p->done, qint64(0));
         QCOMPARE(p->speed, qint64(0));
         QCOMPARE(p->etaSeconds, -1);
 
-        p = Aria2::parseLine(u"[#7d9ec2 7.2MiB/22MiB(32%) CN:1 DL:15KiB ETA:16m22s]");  // a resumed download
+        p = Aria2::parseLine(u"[#7d9ec2 7.2MiB/22MiB(32%) CN:1 DL:15KiB ETA:16m22s]"); // a resumed download
         QVERIFY(p);
         QCOMPARE(p->percent, 32);
         QCOMPARE(p->etaSeconds, 16 * 60 + 22);

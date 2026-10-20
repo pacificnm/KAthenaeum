@@ -14,8 +14,8 @@ Kirigami.Page {
     id: page
 
     required property url url
-    // A section to show once the article has loaded and is in place. Loading "page#section" directly did not always
-    // scroll there (a citation opened Ray (film) at the top instead of at Plot, seen 2026-10-19).
+    // A section to show once the article has loaded and is in place. Loading "page#section" directly does not always
+    // scroll there (a citation can open Ray (film) at the top instead of at Plot).
     property string fragment
     property var info: ({})
     property bool asking: false   // the chat panel is open
@@ -119,7 +119,7 @@ Kirigami.Page {
         if (libraryId !== info.libraryId || path !== info.path) {
             page.openArticle(libraryId, path, fragment);
         } else if (page.panelOpen && page.narrow) {
-            // the article is hidden under the panel: a jump made now lands anywhere (it scrolled to the end), so show the
+            // the article is hidden under the panel: a jump made now lands anywhere (even the end), so show the
             // article first and jump once it is laid out
             page.asking = false;
             page.notesOpen = false;
@@ -312,7 +312,7 @@ Kirigami.Page {
 
         // Selected text: Copy, or ask about it
         // Always the app's own menu: Chromium's (Back and Forward that never worked here, Save Page, View Page Source)
-        // came up wherever nothing was selected (the user, 2026-10-20)
+        // would come up wherever nothing is selected
         onContextMenuRequested: function(request) {
             request.accepted = true;
             if (request.selectedText.trim() !== "") {

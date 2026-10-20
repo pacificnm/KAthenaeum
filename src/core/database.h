@@ -4,7 +4,7 @@
 
 #include <QString>
 
-// The app's SQLite database: chats, projects, excerpts, settings, installed libraries (see CLAUDE.md).
+// The app's SQLite database: chats, projects, excerpts, settings, installed libraries.
 // One file in the user's data directory, opened once at startup as Qt's default connection.
 namespace Database
 {

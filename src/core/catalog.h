@@ -16,28 +16,31 @@ class QNetworkReply;
 
 // One downloadable library in the Kiwix OPDS v2 catalog.
 struct CatalogEntry {
-    QString id;          // urn:uuid:...
-    QString name;        // "wikipedia_en_chemistry" (repeats across flavours)
+    QString id; // urn:uuid:...
+    QString name; // "wikipedia_en_chemistry" (repeats across flavours)
     QString title;
     QString summary;
-    QString language;    // "eng", sometimes a list: "eng,jpn"
-    QString category;    // "wikipedia", "ted", ... often empty
-    QString flavour;     // "mini", "nopic", "maxi", often empty
+    QString language; // "eng", sometimes a list: "eng,jpn"
+    QString category; // "wikipedia", "ted", ... often empty
+    QString flavour; // "mini", "nopic", "maxi", often empty
     QString author;
     QString publisher;
-    QStringList tags;    // "_ftindex:yes", "_pictures:no", ...
+    QStringList tags; // "_ftindex:yes", "_pictures:no", ...
     QDate date;
     qint64 articleCount = 0;
     qint64 mediaCount = 0;
-    qint64 size = 0;     // bytes, rounded UP to the next KiB by the catalog
-    QUrl url;            // the .meta4 metalink aria2c downloads
-    QUrl illustration;   // 48x48 PNG on the catalog server
-    QString filename;    // "wikipedia_en_chemistry_mini_2026-10.zim"
-    QString base;        // "wikipedia_en_chemistry_mini"
-    QString version;     // "2026-10"
+    qint64 size = 0; // bytes, rounded UP to the next KiB by the catalog
+    QUrl url; // the .meta4 metalink aria2c downloads
+    QUrl illustration; // 48x48 PNG on the catalog server
+    QString filename; // "wikipedia_en_chemistry_mini_2026-10.zim"
+    QString base; // "wikipedia_en_chemistry_mini"
+    QString version; // "2026-10"
 
     // Without the ZIM's own full-text index KAthenaeum can only find articles by title
-    bool hasFulltextIndex() const { return !tags.contains(QLatin1String("_ftindex:no")); }
+    bool hasFulltextIndex() const
+    {
+        return !tags.contains(QLatin1String("_ftindex:no"));
+    }
 };
 
 namespace Catalog
@@ -71,10 +74,22 @@ class CatalogFeed : public QObject
 public:
     CatalogFeed(const QString &cacheFile, const QUrl &feedUrl, QObject *parent = nullptr);
 
-    const QList<CatalogEntry> &entries() const { return m_entries; }
-    QDateTime fetchedAt() const { return m_fetchedAt; }
-    bool isLoading() const { return m_reply != nullptr; }
-    QString error() const { return m_error; }  // last fetch problem; entries may still come from the cache
+    const QList<CatalogEntry> &entries() const
+    {
+        return m_entries;
+    }
+    QDateTime fetchedAt() const
+    {
+        return m_fetchedAt;
+    }
+    bool isLoading() const
+    {
+        return m_reply != nullptr;
+    }
+    QString error() const
+    {
+        return m_error;
+    } // last fetch problem; entries may still come from the cache
 
     // Uses the cache when it is younger than an hour, otherwise fetches. A failed fetch keeps the cached copy.
     void load();

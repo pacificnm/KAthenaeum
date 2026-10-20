@@ -29,14 +29,14 @@
 
 QVariant DocumentPreview::loadResource(int, const QUrl &)
 {
-    return {};  // a document may quote anything: its preview loads no images, from the web or from disk
+    return {}; // a document may quote anything: its preview loads no images, from the web or from disk
 }
 
 DocumentWindow::DocumentWindow(qint64 documentId)
     : m_model(new DocumentModel(this))
 {
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_QuitOnClose, false);  // closing the main window quits, whatever documents are open
+    setAttribute(Qt::WA_QuitOnClose, false); // closing the main window quits, whatever documents are open
     m_model->setDocumentId(documentId);
 
     // Kate's editor, Markdown highlighted
@@ -90,7 +90,7 @@ DocumentWindow::DocumentWindow(qint64 documentId)
 
     QAction *configure = bar->addAction(QIcon::fromTheme(QStringLiteral("configure")), i18n("Configure Editor…"));
     connect(configure, &QAction::triggered, this, [this] {
-        KTextEditor::Editor::instance()->configDialog(this);  // Kate's own settings: fonts, colours, spell check, vi mode
+        KTextEditor::Editor::instance()->configDialog(this); // Kate's own settings: fonts, colours, spell check, vi mode
     });
 
     auto *spacer = new QWidget(bar);
@@ -113,7 +113,7 @@ DocumentWindow::DocumentWindow(qint64 documentId)
     connect(m_model, &DocumentModel::savedChanged, this, [this] {
         if (!m_model->error().isEmpty()) {
             m_status->setText(m_model->error());
-            m_status->setStyleSheet(QStringLiteral("color: #da4453"));  // Breeze's negative text
+            m_status->setStyleSheet(QStringLiteral("color: #da4453")); // Breeze's negative text
         } else {
             m_status->setText(m_model->saved() ? i18n("Saved") : i18n("Saving…"));
             m_status->setStyleSheet(QString());
@@ -155,7 +155,8 @@ void DocumentWindow::refreshPreview()
 {
     const int scroll = m_preview->verticalScrollBar()->value();
     // the project's sources' notes shown beside where they are cited (the stored text is not changed)
-    m_preview->setMarkdown(QStringLiteral("# %1\n\n%2").arg(m_model->title(), Projects::previewMarkdown(m_model->content(), Projects::items(m_model->projectId()))));
+    m_preview->setMarkdown(
+        QStringLiteral("# %1\n\n%2").arg(m_model->title(), Projects::previewMarkdown(m_model->content(), Projects::items(m_model->projectId()))));
     m_preview->verticalScrollBar()->setValue(scroll);
 }
 
@@ -181,8 +182,8 @@ void DocumentWindow::fillCiteMenu()
     for (const ProjectItem &i : items) {
         if (i.kind != QLatin1String("article"))
             continue;
-        QAction *a = m_cite->addAction(QIcon::fromTheme(QStringLiteral("text-html")),
-                                       i.note.isEmpty() ? i.article.title : i18n("%1 (has a note)", i.article.title));
+        QAction *a =
+            m_cite->addAction(QIcon::fromTheme(QStringLiteral("text-html")), i.note.isEmpty() ? i.article.title : i18n("%1 (has a note)", i.article.title));
         a->setToolTip(i.note);
         connect(a, &QAction::triggered, this, [this, i] {
             insert(Projects::articleLink(i.article));
@@ -210,7 +211,7 @@ void DocumentWindow::fillCiteMenu()
 void DocumentWindow::insert(const QString &markdown)
 {
     QString text = markdown;
-    if (text.startsWith(QLatin1Char('>'))) {  // a quotation is a block of its own
+    if (text.startsWith(QLatin1Char('>'))) { // a quotation is a block of its own
         const KTextEditor::Cursor at = m_view->cursorPosition();
         const bool lineHasText = !m_document->line(at.line()).trimmed().isEmpty();
         text = (lineHasText ? QStringLiteral("\n\n") : QString()) + text + QStringLiteral("\n\n");
@@ -222,8 +223,8 @@ void DocumentWindow::insert(const QString &markdown)
 void DocumentWindow::exportDocument()
 {
     const QString folder = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    const QString path = QFileDialog::getSaveFileName(this, i18n("Export Document"), folder + QLatin1Char('/') + m_model->exportName(),
-                                                      i18n("Markdown (*.md)"));
+    const QString path =
+        QFileDialog::getSaveFileName(this, i18n("Export Document"), folder + QLatin1Char('/') + m_model->exportName(), i18n("Markdown (*.md)"));
     if (path.isEmpty())
         return;
     m_model->save();
@@ -233,18 +234,18 @@ void DocumentWindow::exportDocument()
 
 void DocumentWindow::projectChanged()
 {
-    if (!Projects::document(m_model->documentId())) {  // deleted, or its project was
+    if (!Projects::document(m_model->documentId())) { // deleted, or its project was
         m_document->setReadWrite(false);
         close();
         return;
     }
     refreshTitle();
-    m_previewTimer.start();  // a note may have changed
+    m_previewTimer.start(); // a note may have changed
 }
 
 void DocumentWindow::closeEvent(QCloseEvent *event)
 {
-    m_model->save();  // what was typed is kept (it says so if it could not be)
+    m_model->save(); // what was typed is kept (it says so if it could not be)
     event->accept();
 }
 

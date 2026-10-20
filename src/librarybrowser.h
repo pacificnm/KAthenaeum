@@ -54,7 +54,7 @@ public:
 
     QString citationStyle() const;
     void setCitationStyle(const QString &style);
-    QVariantList citationStyles() const;  // [{style, label}]
+    QVariantList citationStyles() const; // [{style, label}]
 
 Q_SIGNALS:
     void fullWidthChanged();

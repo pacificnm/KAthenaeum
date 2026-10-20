@@ -20,13 +20,36 @@ namespace
 const QSet<QString> &partsOfSpeech()
 {
     static const QSet<QString> value = {
-        QStringLiteral("noun"), QStringLiteral("proper noun"), QStringLiteral("verb"), QStringLiteral("adjective"), QStringLiteral("adverb"),
-        QStringLiteral("pronoun"), QStringLiteral("preposition"), QStringLiteral("conjunction"), QStringLiteral("interjection"),
-        QStringLiteral("determiner"), QStringLiteral("article"), QStringLiteral("numeral"), QStringLiteral("number"),
-        QStringLiteral("cardinal number"), QStringLiteral("ordinal number"), QStringLiteral("phrase"), QStringLiteral("prepositional phrase"),
-        QStringLiteral("prefix"), QStringLiteral("suffix"), QStringLiteral("affix"), QStringLiteral("abbreviation"), QStringLiteral("contraction"),
-        QStringLiteral("particle"), QStringLiteral("idiom"), QStringLiteral("proverb"), QStringLiteral("symbol"), QStringLiteral("letter"),
-        QStringLiteral("initialism"), QStringLiteral("acronym"), QStringLiteral("participle"),
+        QStringLiteral("noun"),
+        QStringLiteral("proper noun"),
+        QStringLiteral("verb"),
+        QStringLiteral("adjective"),
+        QStringLiteral("adverb"),
+        QStringLiteral("pronoun"),
+        QStringLiteral("preposition"),
+        QStringLiteral("conjunction"),
+        QStringLiteral("interjection"),
+        QStringLiteral("determiner"),
+        QStringLiteral("article"),
+        QStringLiteral("numeral"),
+        QStringLiteral("number"),
+        QStringLiteral("cardinal number"),
+        QStringLiteral("ordinal number"),
+        QStringLiteral("phrase"),
+        QStringLiteral("prepositional phrase"),
+        QStringLiteral("prefix"),
+        QStringLiteral("suffix"),
+        QStringLiteral("affix"),
+        QStringLiteral("abbreviation"),
+        QStringLiteral("contraction"),
+        QStringLiteral("particle"),
+        QStringLiteral("idiom"),
+        QStringLiteral("proverb"),
+        QStringLiteral("symbol"),
+        QStringLiteral("letter"),
+        QStringLiteral("initialism"),
+        QStringLiteral("acronym"),
+        QStringLiteral("participle"),
     };
     return value;
 }
@@ -60,10 +83,16 @@ QString ownText(xmlNodePtr n)
             if (c->type == XML_TEXT_NODE && c->content) {
                 out += QString::fromUtf8(reinterpret_cast<const char *>(c->content));
             } else if (c->type == XML_ELEMENT_NODE) {
-                static const QSet<QString> skip = {QStringLiteral("ol"), QStringLiteral("ul"), QStringLiteral("dl"), QStringLiteral("style"),
-                                                   QStringLiteral("script"), QStringLiteral("link"), QStringLiteral("table"), QStringLiteral("figure")};
-                if (skip.contains(nameOf(c)) || hasClass(c, "nyms") || hasClass(c, "citation") || hasClass(c, "quotation")
-                    || hasClass(c, "reference") || hasClass(c, "mw-ref"))
+                static const QSet<QString> skip = {QStringLiteral("ol"),
+                                                   QStringLiteral("ul"),
+                                                   QStringLiteral("dl"),
+                                                   QStringLiteral("style"),
+                                                   QStringLiteral("script"),
+                                                   QStringLiteral("link"),
+                                                   QStringLiteral("table"),
+                                                   QStringLiteral("figure")};
+                if (skip.contains(nameOf(c)) || hasClass(c, "nyms") || hasClass(c, "citation") || hasClass(c, "quotation") || hasClass(c, "reference")
+                    || hasClass(c, "mw-ref"))
                     continue;
                 walk(c);
             }
@@ -107,10 +136,14 @@ QString headingText(xmlNodePtr h)
 
 // What matters on the page, in document order
 struct Event {
-    enum Kind { Heading, List, Ipa } kind;
+    enum Kind {
+        Heading,
+        List,
+        Ipa
+    } kind;
     xmlNodePtr node;
-    int level = 0;  // a heading's
-    QString text;   // a heading's, or an IPA's
+    int level = 0; // a heading's
+    QString text; // a heading's, or an IPA's
 };
 
 void collect(xmlNodePtr node, QList<Event> &out)
@@ -122,7 +155,7 @@ void collect(xmlNodePtr node, QList<Event> &out)
         if (n.size() == 2 && n.at(0) == QLatin1Char('h') && n.at(1) >= QLatin1Char('2') && n.at(1) <= QLatin1Char('6')) {
             out.append({Event::Heading, c, n.at(1).digitValue(), headingText(c)});
         } else if (n == QLatin1String("ol")) {
-            out.append({Event::List, c, 0, {}});  // its own items are the senses; nested lists are sub-senses
+            out.append({Event::List, c, 0, {}}); // its own items are the senses; nested lists are sub-senses
         } else if (n == QLatin1String("span") && attr(c, "class").split(QLatin1Char(' ')).contains(QLatin1String("IPA"))) {
             out.append({Event::Ipa, c, 0, headingText(c)});
         } else if (n != QLatin1String("table") && n != QLatin1String("style") && n != QLatin1String("script")) {
@@ -133,7 +166,11 @@ void collect(xmlNodePtr node, QList<Event> &out)
 
 struct Doc {
     htmlDocPtr doc = nullptr;
-    ~Doc() { if (doc) xmlFreeDoc(doc); }
+    ~Doc()
+    {
+        if (doc)
+            xmlFreeDoc(doc);
+    }
 };
 }
 
@@ -143,18 +180,19 @@ std::optional<Dictionary::Entry> Dictionary::parse(const QByteArray &html, const
     if (html.trimmed().isEmpty())
         return std::nullopt;
     Doc d;
-    d.doc = htmlReadMemory(html.constData(), int(html.size()), nullptr, "UTF-8",
-                           HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_NONET);
+    d.doc =
+        htmlReadMemory(html.constData(), int(html.size()), nullptr, "UTF-8", HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_NONET);
     if (!d.doc)
         return std::nullopt;
 
     xmlNodePtr root = nullptr;
     {
         xmlXPathContextPtr ctx = xmlXPathNewContext(d.doc);
-        xmlXPathObjectPtr r = xmlXPathEvalExpression(
-            reinterpret_cast<const xmlChar *>("//div[contains(concat(' ', normalize-space(@class), ' '), ' mw-parser-output ')]|//body"), ctx);
+        xmlXPathObjectPtr r =
+            xmlXPathEvalExpression(reinterpret_cast<const xmlChar *>("//div[contains(concat(' ', normalize-space(@class), ' '), ' mw-parser-output ')]|//body"),
+                                   ctx);
         if (r && r->nodesetval && r->nodesetval->nodeNr > 0)
-            root = r->nodesetval->nodeTab[0];  // document order: the wrapper is inside <body>, so <body> comes first
+            root = r->nodesetval->nodeTab[0]; // document order: the wrapper is inside <body>, so <body> comes first
         if (r && r->nodesetval)
             for (int i = 0; i < r->nodesetval->nodeNr; ++i)
                 if (nameOf(r->nodesetval->nodeTab[i]) == QLatin1String("div"))
@@ -236,11 +274,11 @@ QString Dictionary::baseForm(const Entry &entry)
         for (const Sense &s : p.senses) {
             const auto m = formOf.match(s.definition);
             if (!m.hasMatch())
-                return {};  // a sense of its own
+                return {}; // a sense of its own
             if (base.isEmpty())
                 base = m.captured(1);
             else if (base.compare(m.captured(1), Qt::CaseInsensitive) != 0)
-                return {};  // forms of different words
+                return {}; // forms of different words
         }
     return base;
 }
@@ -282,7 +320,7 @@ QStringList Dictionary::candidates(const QString &selected)
         add(base);
         add(base + QLatin1Char('e'));
         if (base.size() >= 3 && base.back() == base.at(base.size() - 2))
-            add(base.chopped(1));  // a doubled consonant: "running" -> runn -> run
+            add(base.chopped(1)); // a doubled consonant: "running" -> runn -> run
     };
     if (!lower.contains(QLatin1Char(' '))) {
         if (lower.endsWith(QLatin1String("ies")) || lower.endsWith(QLatin1String("ied")))

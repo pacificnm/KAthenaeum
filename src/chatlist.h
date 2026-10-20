@@ -18,8 +18,17 @@ class ChatList : public QAbstractListModel
     Q_PROPERTY(QString articlePath MEMBER m_path NOTIFY filterChanged)
 
 public:
-    enum Role { ChatIdRole = Qt::UserRole + 1, TitleRole, UpdatedRole, QuestionsRole, ArticleLibraryIdRole, ArticlePathRole, ArticleTitleRole,
-                ProjectIdRole, ProjectTitleRole };
+    enum Role {
+        ChatIdRole = Qt::UserRole + 1,
+        TitleRole,
+        UpdatedRole,
+        QuestionsRole,
+        ArticleLibraryIdRole,
+        ArticlePathRole,
+        ArticleTitleRole,
+        ProjectIdRole,
+        ProjectTitleRole
+    };
     Q_ENUM(Role)
 
     explicit ChatList(QObject *parent = nullptr);

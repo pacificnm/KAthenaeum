@@ -21,9 +21,18 @@ constexpr QLatin1StringView Era("(BC|BCE|AD|CE|B\\.C\\.|A\\.D\\.)");
 
 int monthNumber(const QString &name)
 {
-    static const QStringList names = {QStringLiteral("january"), QStringLiteral("february"), QStringLiteral("march"), QStringLiteral("april"),
-                                      QStringLiteral("may"),     QStringLiteral("june"),     QStringLiteral("july"),  QStringLiteral("august"),
-                                      QStringLiteral("september"), QStringLiteral("october"), QStringLiteral("november"), QStringLiteral("december")};
+    static const QStringList names = {QStringLiteral("january"),
+                                      QStringLiteral("february"),
+                                      QStringLiteral("march"),
+                                      QStringLiteral("april"),
+                                      QStringLiteral("may"),
+                                      QStringLiteral("june"),
+                                      QStringLiteral("july"),
+                                      QStringLiteral("august"),
+                                      QStringLiteral("september"),
+                                      QStringLiteral("october"),
+                                      QStringLiteral("november"),
+                                      QStringLiteral("december")};
     return int(names.indexOf(name.toLower())) + 1;
 }
 
@@ -47,7 +56,12 @@ QRegularExpression re(const QString &pattern)
 
 // English ordinals differ by the number's last digits ("1st", "2nd", "3rd", "11th"), so each kind of period has one whole
 // string per English suffix: translators get complete phrases and may translate all four alike
-enum class Ordinal { St, Nd, Rd, Th };
+enum class Ordinal {
+    St,
+    Nd,
+    Rd,
+    Th
+};
 
 Ordinal ordinal(int n)
 {
@@ -115,8 +129,10 @@ std::optional<Timeline::Date> Timeline::findDate(const QString &sentence, int no
     };
 
     // 14 October 1066 (AD), October 14, 1066
-    static const QRegularExpression dayMonthYear = re(QStringLiteral("\\b(\\d{1,2})\\s+") + Months + QStringLiteral("\\s+(\\d{1,4})\\b(?:\\s*") + Era + QStringLiteral(")?"));
-    static const QRegularExpression monthDayYear = re(QStringLiteral("\\b") + Months + QStringLiteral("\\s+(\\d{1,2}),\\s*(\\d{1,4})\\b(?:\\s*") + Era + QStringLiteral(")?"));
+    static const QRegularExpression dayMonthYear =
+        re(QStringLiteral("\\b(\\d{1,2})\\s+") + Months + QStringLiteral("\\s+(\\d{1,4})\\b(?:\\s*") + Era + QStringLiteral(")?"));
+    static const QRegularExpression monthDayYear =
+        re(QStringLiteral("\\b") + Months + QStringLiteral("\\s+(\\d{1,2}),\\s*(\\d{1,4})\\b(?:\\s*") + Era + QStringLiteral(")?"));
     // October 1066 (not "May 5": three or four digits)
     static const QRegularExpression monthYear = re(QStringLiteral("\\b") + Months + QStringLiteral("\\s+(\\d{3,4})\\b(?:\\s*") + Era + QStringLiteral(")?"));
     // 31 BC, 10,000 BCE, AD 476, 476 AD
@@ -161,7 +177,7 @@ std::optional<Timeline::Date> Timeline::findDate(const QString &sentence, int no
     }
     for (auto it = decade.globalMatch(sentence); it.hasNext();) {
         const auto m = it.next();
-        add(m.capturedStart(), m.captured(1).toDouble() + 5, m.captured(0), 0);  // the middle of the decade
+        add(m.capturedStart(), m.captured(1).toDouble() + 5, m.captured(0), 0); // the middle of the decade
     }
     for (auto it = century.globalMatch(sentence); it.hasNext();) {
         const auto m = it.next();
@@ -175,7 +191,10 @@ std::optional<Timeline::Date> Timeline::findDate(const QString &sentence, int no
         QString digits = m.captured(1);
         digits.remove(QLatin1Char(','));
         const QString scale = m.captured(2).toLower();
-        const double multiplier = scale == QLatin1String("billion") ? 1e9 : scale == QLatin1String("million") ? 1e6 : scale == QLatin1String("thousand") ? 1e3 : 1;
+        const double multiplier = scale == QLatin1String("billion") ? 1e9
+            : scale == QLatin1String("million")                     ? 1e6
+            : scale == QLatin1String("thousand")                    ? 1e3
+                                                                    : 1;
         const double years = digits.toDouble() * multiplier;
         if (years < 1)
             continue;
@@ -209,7 +228,7 @@ QList<Timeline::Event> Timeline::fromPassages(const QList<Passage> &passages, co
 {
     QList<Event> out;
     for (const Passage &p : passages) {
-        if (p.section == Extract::keyFactsSection())  // the infobox: labels and values, not sentences
+        if (p.section == Extract::keyFactsSection()) // the infobox: labels and values, not sentences
             continue;
         for (const auto splitSentences = Rag::splitSentences(p.text); const auto &[a, b] : splitSentences) {
             QString sentence = p.text.mid(a, b - a).simplified();

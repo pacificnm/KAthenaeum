@@ -12,8 +12,8 @@
 #include <zim/writer/creator.h>
 #include <zim/writer/item.h>
 
-// Found by the review (2026-10-19): a removed library's id was handed to the next library added, so its chats and
-// excerpts pointed at another ZIM; and the same ZIM added again got a new id, so they were lost.
+// A removed library's id must not be handed to the next library added (its chats and excerpts would point at another
+// ZIM), and the same ZIM added again must get its old id back (or they are lost).
 class LibraryIdsTest : public QObject
 {
     Q_OBJECT
@@ -23,13 +23,18 @@ class LibraryIdsTest : public QObject
     QString makeZim(const QString &name)
     {
         const QString file = m_dir.filePath(name);
-        zim::writer::Creator c;  // every ZIM gets its own uuid
+        zim::writer::Creator c; // every ZIM gets its own uuid
         c.startZimCreation(file.toStdString());
         c.setMainPath("A");
-        for (const auto &[k, v] : std::vector<std::pair<std::string, std::string>>{{"Name", name.toStdString()}, {"Title", name.toStdString()}, {"Language", "eng"}})
+        for (const auto &[k, v] :
+             std::vector<std::pair<std::string, std::string>>{{"Name", name.toStdString()}, {"Title", name.toStdString()}, {"Language", "eng"}})
             c.addMetadata(k, v);
-        c.addItem(zim::writer::StringItem::create(std::string("A"), std::string("text/html"), std::string("A"), zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
-                                                  std::string("<html><head><title>A</title></head><body><div class='mw-parser-output'><p>Text.</p></div></body></html>")));
+        c.addItem(zim::writer::StringItem::create(
+            std::string("A"),
+            std::string("text/html"),
+            std::string("A"),
+            zim::writer::Hints{{zim::writer::HintKeys::FRONT_ARTICLE, 1}},
+            std::string("<html><head><title>A</title></head><body><div class='mw-parser-output'><p>Text.</p></div></body></html>")));
         c.finishZimCreation();
         return file;
     }
@@ -74,7 +79,10 @@ private Q_SLOTS:
         QCOMPARE(*Library::add(music), h + 1);
     }
 
-    void cleanupTestCase() { Database::close(); }
+    void cleanupTestCase()
+    {
+        Database::close();
+    }
 };
 
 QTEST_GUILESS_MAIN(LibraryIdsTest)

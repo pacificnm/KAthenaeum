@@ -14,17 +14,17 @@
 // A place on the map that Wikipedia may have an article about: from OpenStreetMap, which tags many features with the
 // article that describes them ("wikipedia=en:Portland, Oregon").
 struct MapPlace {
-    QString osm;  // "n123", "w123" or "r123": what the map tiles' feature ids say
+    QString osm; // "n123", "w123" or "r123": what the map tiles' feature ids say
     QString name;
     QString nameEn;
-    QString kind;  // the tag that says what it is: "place=city", "tourism=museum"
-    double lat = 0, lon = 0;  // a point on it, to show it
-    double west = 0, south = 0, east = 0, north = 0;  // its extent
-    bool area = false;  // a closed shape (a park, a lake, a town's boundary), not a point or a line
-    QByteArray outline;  // an area's edges, simplified (see encodeOutline): what "is the point in it" is tested against
-    QString wikipedia;  // "en:Portland, Oregon" (sometimes just the title)
-    QString wikipediaEn;  // wikipedia:en, when the main tag names another language's article
-    QString wikidata;  // "Q6106"
+    QString kind; // the tag that says what it is: "place=city", "tourism=museum"
+    double lat = 0, lon = 0; // a point on it, to show it
+    double west = 0, south = 0, east = 0, north = 0; // its extent
+    bool area = false; // a closed shape (a park, a lake, a town's boundary), not a point or a line
+    QByteArray outline; // an area's edges, simplified (see encodeOutline): what "is the point in it" is tested against
+    QString wikipedia; // "en:Portland, Oregon" (sometimes just the title)
+    QString wikipediaEn; // wikipedia:en, when the main tag names another language's article
+    QString wikidata; // "Q6106"
     qint64 population = 0;
 };
 
@@ -44,9 +44,9 @@ QString articleTitle(const MapPlace &place, const QString &language);
 
 // An area's outline: its ways as polylines, simplified (about 30 m), in any order and direction, outer and inner alike.
 // Whether a point is inside needs only the edges (an even number of crossings to the east is outside), not whole rings.
-QByteArray encodeOutline(const QList<QList<QPointF>> &lines);  // points are (lon, lat)
+QByteArray encodeOutline(const QList<QList<QPointF>> &lines); // points are (lon, lat)
 bool outlineContains(const QByteArray &outline, double lat, double lon);
-QList<QPointF> simplify(const QList<QPointF> &line, double tolerance);  // Douglas-Peucker; keeps both ends
+QList<QPointF> simplify(const QList<QPointF> &line, double tolerance); // Douglas-Peucker; keeps both ends
 
 // ---- stored with their region (main thread only) ----
 bool store(qint64 regionId, const std::vector<MapPlace> &places, QString *error = nullptr);

@@ -16,7 +16,10 @@ struct ArticleScope {
     qint64 libraryId = 0;
     QString path;
     QString title;
-    bool isSet() const { return libraryId > 0 && !path.isEmpty(); }
+    bool isSet() const
+    {
+        return libraryId > 0 && !path.isEmpty();
+    }
 };
 
 // The project a chat belongs to: it answers from the project's articles and saved excerpts
@@ -24,11 +27,14 @@ struct ProjectScope {
     qint64 id = 0;
     QString title;
     QString goal;
-    QList<ArticleScope> articles;  // in installed libraries only
-    QList<Rag::Clip> clips;        // newest first; an empty vector = to be embedded with this question
-    bool alsoLibrary = false;      // also search the libraries (libraryIds), as a separate group
-    QString system;                // instead of the project chat's system prompt (the classroom's teacher)
-    bool isSet() const { return id > 0; }
+    QList<ArticleScope> articles; // in installed libraries only
+    QList<Rag::Clip> clips; // newest first; an empty vector = to be embedded with this question
+    bool alsoLibrary = false; // also search the libraries (libraryIds), as a separate group
+    QString system; // instead of the project chat's system prompt (the classroom's teacher)
+    bool isSet() const
+    {
+        return id > 0;
+    }
 };
 
 // Passages to rank: the scope's own, and (a project chat that also searches the library) the library's
@@ -39,28 +45,28 @@ struct Pools {
 
 struct AnswerRequest {
     QString question;
-    QStringList earlierQuestions;  // earlier questions of the chat, oldest first (for follow-ups)
+    QStringList earlierQuestions; // earlier questions of the chat, oldest first (for follow-ups)
     QList<qint64> libraryIds;
     QString answerModel;
     QString embeddingModel;
-    ArticleScope article;  // when set, answer from this article alone (libraryIds is then ignored)
-    ProjectScope project;  // when set, answer from the project (libraryIds only for alsoLibrary)
+    ArticleScope article; // when set, answer from this article alone (libraryIds is then ignored)
+    ProjectScope project; // when set, answer from the project (libraryIds only for alsoLibrary)
 };
 
 struct AnswerStats {
-    int findMs = 0;        // finding and reading articles, picking passages
-    int embedMs = 0;       // embedding the question and the passages
-    int firstTokenMs = 0;  // from the start until the first word (what the user waits for)
+    int findMs = 0; // finding and reading articles, picking passages
+    int embedMs = 0; // embedding the question and the passages
+    int firstTokenMs = 0; // from the start until the first word (what the user waits for)
     int citeMs = 0;
     int totalMs = 0;
     int tokens = 0;
     double tokensPerSecond = 0;
-    bool truncated = false;  // the model hit NumPredict
-    int passages = 0;        // passages ranked
+    bool truncated = false; // the model hit NumPredict
+    int passages = 0; // passages ranked
 };
 
 struct AnswerResult {
-    QString status;  // done | stopped | error
+    QString status; // done | stopped | error
     QString answer;
     QList<Rag::Citation> citations;
     QString error;
@@ -76,7 +82,13 @@ class Answerer : public QObject
     Q_OBJECT
 
 public:
-    enum Phase { Finding, Ranking, Reading, Writing, Checking };
+    enum Phase {
+        Finding,
+        Ranking,
+        Reading,
+        Writing,
+        Checking
+    };
     Q_ENUM(Phase)
 
     Answerer(OllamaClient *client, QObject *parent = nullptr);
@@ -86,10 +98,13 @@ public:
     void start(const AnswerRequest &request);
     // Ends the answer now: finished() follows with status "stopped" and what was written so far
     void stop();
-    bool running() const { return m_running; }
+    bool running() const
+    {
+        return m_running;
+    }
 
     static QString noSourcesAnswer();
-    static QString noTextAnswer();  // an article with no prose to answer from
+    static QString noTextAnswer(); // an article with no prose to answer from
     static QString noProjectSourcesAnswer();
 
 Q_SIGNALS:
@@ -109,7 +124,7 @@ private:
     QPointer<OllamaClient> m_client;
     QPointer<QNetworkReply> m_reply;
     AnswerRequest m_request;
-    QString m_query;  // what is searched: the question, or a short follow-up with the question before it
+    QString m_query; // what is searched: the question, or a short follow-up with the question before it
     quint64 m_generation = 0;
     bool m_running = false;
     bool m_degraded = false;

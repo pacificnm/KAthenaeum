@@ -158,7 +158,9 @@ can be used the moment it is downloaded.
 
 ### Style
 
-- C++20, Qt 6 and KDE Frameworks conventions; `clang-format` with KDE's settings (`.clang-format`).
+- C++20, Qt 6 and KDE Frameworks conventions, formatted with KDE's clang-format settings: `cmake --build build
+  --target clang-format` (with clang-format installed, configuring writes `.clang-format` and installs a pre-commit hook that checks
+  formatting).
 - The build must stay free of warnings with GCC and Clang, and of clazy findings at levels 0 and 1.
 - Comments say why, not what. Match the comment density of the surrounding code.
 - Every file carries `SPDX-FileCopyrightText` and `SPDX-License-Identifier` tags, or an entry in `REUSE.toml`; check

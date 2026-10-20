@@ -22,8 +22,15 @@ QDateTime timestamp(const QVariant &v)
 
 HighlightRecord fromRow(const QSqlQuery &q)
 {
-    return {q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), q.value(4).toString(),
-            q.value(5).toString(), q.value(6).toString(), timestamp(q.value(7)), timestamp(q.value(8))};
+    return {q.value(0).toLongLong(),
+            q.value(1).toLongLong(),
+            q.value(2).toString(),
+            q.value(3).toString(),
+            q.value(4).toString(),
+            q.value(5).toString(),
+            q.value(6).toString(),
+            timestamp(q.value(7)),
+            timestamp(q.value(8))};
 }
 
 QString validColor(const QString &color)
@@ -58,7 +65,7 @@ QStringList Highlights::colors()
 
 bool Highlights::tooShort(const QString &text)
 {
-    return squeezed(text).size() < 8;  // ArticleRenderer will not place a shorter one
+    return squeezed(text).size() < 8; // ArticleRenderer will not place a shorter one
 }
 
 qint64 Highlights::add(qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &color, const QString &note)

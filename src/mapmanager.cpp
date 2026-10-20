@@ -6,8 +6,8 @@
 #include "core/mapextract.h"
 #include "core/maplookup.h"
 #include "core/mapplaces.h"
-#include "core/network.h"
 #include "core/maptiling.h"
+#include "core/network.h"
 #include "core/pmtiles.h"
 #include "core/settings.h"
 #include "core/zimreader.h"
@@ -237,7 +237,7 @@ bool MapManager::hasWorld() const
 void MapManager::regionsUpdated(bool styleToo)
 {
     if (styleToo) {
-        m_archives.clear();  // a region's file may have been replaced or removed
+        m_archives.clear(); // a region's file may have been replaced or removed
         ++m_revision;
         Q_EMIT styleChanged();
     }
@@ -261,11 +261,12 @@ QString MapManager::styleUrl(bool dark)
     // coarse ones (MapLibre draws layers in order, and places the labels of later layers first)
     for (const auto regions = MapRegions::ready(); const MapRegionRecord &r : regions) {
         const QString source = QStringLiteral("r%1").arg(r.id);
-        sources.insert(source, QJsonObject{
-                                   {QStringLiteral("type"), QStringLiteral("vector")},
-                                   {QStringLiteral("url"), QString(QStringLiteral("pmtiles://") + QUrl::fromLocalFile(r.file).toString())},
-                                   {QStringLiteral("attribution"), QStringLiteral("© OpenStreetMap contributors")},
-                               });
+        sources.insert(source,
+                       QJsonObject{
+                           {QStringLiteral("type"), QStringLiteral("vector")},
+                           {QStringLiteral("url"), QString(QStringLiteral("pmtiles://") + QUrl::fromLocalFile(r.file).toString())},
+                           {QStringLiteral("attribution"), QStringLiteral("© OpenStreetMap contributors")},
+                       });
         for (const QJsonValue &v : base) {
             QJsonObject l = v.toObject();
             if (l.value(QStringLiteral("type")).toString() == QLatin1String("background"))
@@ -440,11 +441,11 @@ QVariantMap MapManager::regionShape(const QString &id) const
             for (const QPointF &p : ring)
                 lons.push_back(p.x());
     std::sort(lons.begin(), lons.end());
-    double cut = -INFINITY;  // points at or west of it move east
+    double cut = -INFINITY; // points at or west of it move east
     if (!lons.empty()) {
-        double widest = lons.front() + 360 - lons.back();  // the gap across 180°
+        double widest = lons.front() + 360 - lons.back(); // the gap across 180°
         for (size_t i = 0; i + 1 < lons.size(); ++i)
-            if (lons[i + 1] - lons[i] > widest && lons[i + 1] - lons[i] < 350) {  // 350+: a band round the globe (Antarctica)
+            if (lons[i + 1] - lons[i] > widest && lons[i + 1] - lons[i] < 350) { // 350+: a band round the globe (Antarctica)
                 widest = lons[i + 1] - lons[i];
                 cut = lons[i];
             }
@@ -472,7 +473,7 @@ QVariantMap MapManager::regionShape(const QString &id) const
     QVariantList paths;
     for (const QList<QPointF> &ring : std::as_const(rings)) {
         QVariantList points;
-        for (const auto simplified = MapPlaces::simplify(ring, size / 300); const QPointF &p : simplified)  // a silhouette: a few hundred points at most
+        for (const auto simplified = MapPlaces::simplify(ring, size / 300); const QPointF &p : simplified) // a silhouette: a few hundred points at most
             points.append(QPointF((p.x() - minX) / w, (p.y() - minY) / h));
         if (points.size() >= 3)
             paths.append(QVariant(points));
@@ -493,7 +494,11 @@ void MapManager::estimate(const QString &id, int maxZoom)
         return;
     const quint64 tiles = MapTiling::tileCount(r->shape, 0, maxZoom);
     if (tiles > MapCatalog::MaxTiles) {
-        Q_EMIT estimated(id, maxZoom, 0, int(std::min<quint64>(tiles, INT_MAX)), 0,
+        Q_EMIT estimated(id,
+                         maxZoom,
+                         0,
+                         int(std::min<quint64>(tiles, INT_MAX)),
+                         0,
                          i18n("This region is too large to download at this detail. Choose less detail, or one of its parts."));
         return;
     }
@@ -520,7 +525,7 @@ void MapManager::estimate(const QString &id, int maxZoom)
             return;
         }
         auto *extract = new MapExtract(nullptr, shape, maxZoom, QString(), this);
-        extract->setSource(new HttpRangeReader(MapCatalog::buildUrl(build), m_network, extract));  // goes with it
+        extract->setSource(new HttpRangeReader(MapCatalog::buildUrl(build), m_network, extract)); // goes with it
         extract->setEstimateOnly(true);
         const QString key = id + QLatin1Char('@') + QString::number(maxZoom);
         m_estimates.insert(key, extract);
@@ -657,7 +662,7 @@ QVariantMap MapManager::placeAt(double lat, double lon, double zoom, double radi
         if (const auto f = MapLookup::nearest(*archive(r.file), lat, lon, zoom, radiusPx); f && (!feature || f->distancePx < feature->distancePx))
             feature = f;
         if (feature && r.region != QLatin1String("world"))
-            break;  // a region's own tiles know better than the world's
+            break; // a region's own tiles know better than the world's
     }
 
     QVariantMap out;
@@ -731,16 +736,22 @@ QVariantMap MapManager::locate(qint64 libraryId, const QString &title, bool hasC
         // the place OpenStreetMap links to this article: zoomed to fit it
         const double span = std::max(place->east - place->west, place->north - place->south);
         const double zoom = span > 0 ? std::clamp(std::log2(360.0 / span) - 0.5, 4.0, 16.0) : 15.0;
-        out = {{QStringLiteral("lat"), place->lat}, {QStringLiteral("lon"), place->lon}, {QStringLiteral("zoom"), std::min(zoom, double(region->maxZoom) + 1)},
-               {QStringLiteral("name"), place->name}, {QStringLiteral("kindLabel"), kindLabel(place->kind)}};
+        out = {{QStringLiteral("lat"), place->lat},
+               {QStringLiteral("lon"), place->lon},
+               {QStringLiteral("zoom"), std::min(zoom, double(region->maxZoom) + 1)},
+               {QStringLiteral("name"), place->name},
+               {QStringLiteral("kindLabel"), kindLabel(place->kind)}};
         lat = place->lat;
         lon = place->lon;
     } else if (hasCoordinates && (region = regionAt(lat, lon))) {
         // the article's own coordinates: close in on a detailed region, the whole country on the world overview
         place.reset();
         const bool world = region->region == QLatin1String("world");
-        out = {{QStringLiteral("lat"), lat}, {QStringLiteral("lon"), lon}, {QStringLiteral("zoom"), world ? 5.0 : 12.0},
-               {QStringLiteral("name"), title}, {QStringLiteral("kindLabel"), QString()}};
+        out = {{QStringLiteral("lat"), lat},
+               {QStringLiteral("lon"), lon},
+               {QStringLiteral("zoom"), world ? 5.0 : 12.0},
+               {QStringLiteral("name"), title},
+               {QStringLiteral("kindLabel"), QString()}};
     } else {
         return {};
     }

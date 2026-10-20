@@ -13,8 +13,8 @@ struct ZimEntry {
 };
 
 struct ZimContent {
-    QString path;      // after following redirects
-    QString fragment;  // the section an HTML redirect page pointed at, if any
+    QString path; // after following redirects
+    QString fragment; // the section an HTML redirect page pointed at, if any
     QString title;
     QString mimetype;
     QByteArray data;
@@ -28,7 +28,7 @@ namespace ZimReader
 // article with <meta http-equiv="refresh" content="0;URL='./Cry_(song)#Version'">
 std::optional<ZimContent> content(qint64 libraryId, const QString &path);
 // Entries larger than this are not read: a 29 KB ZIM held a 300 MB article (it compresses to nothing) that took 3 GB to
-// render and pushed libxml2 past its limits (the review, 2026-10-19). Real Wikipedia pages are a few MB at most.
+// render and pushed libxml2 past its limits. Real Wikipedia pages are a few MB at most.
 constexpr qint64 MaxHtmlBytes = 16 << 20;
 constexpr qint64 MaxOtherBytes = 32 << 20;
 // Too large to read safely?
@@ -40,7 +40,7 @@ inline bool tooLarge(qint64 size, bool html)
 // The target of an HTML redirect page ("Cry_(song)#Version"), or empty. `path` is the page's own path.
 QString htmlRedirectTarget(const QByteArray &html, const QString &path);
 bool hasEntry(qint64 libraryId, const QString &path);
-void close(qint64 libraryId);  // before a library's file is deleted
+void close(qint64 libraryId); // before a library's file is deleted
 
 // A to Z, straight from the ZIM's title order (case-sensitive bytes). `letter` is "A".."Z" (upper- and lowercase
 // titles, uppercase first) or "#" (everything else: digits, punctuation, accented letters). Redirects and

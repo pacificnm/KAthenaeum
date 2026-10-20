@@ -4,8 +4,8 @@
 
 #include <QByteArray>
 #include <QHash>
-#include <QString>
 #include <QList>
+#include <QString>
 #include <cstdint>
 #include <optional>
 
@@ -13,10 +13,16 @@
 // pyramid, read by ranges. A region's map is cut out of Protomaps' planet build by fetching only its tiles' ranges.
 namespace PMTiles
 {
-enum Compression : quint8 { UnknownCompression = 0, NoCompression = 1, Gzip = 2, Brotli = 3, Zstd = 4 };
+enum Compression : quint8 {
+    UnknownCompression = 0,
+    NoCompression = 1,
+    Gzip = 2,
+    Brotli = 3,
+    Zstd = 4
+};
 
 constexpr int HeaderSize = 127;
-constexpr int RootSpace = 16384;  // the header and the root directory are always within the first 16 KiB
+constexpr int RootSpace = 16384; // the header and the root directory are always within the first 16 KiB
 
 struct Header {
     quint64 rootOffset = 0, rootLength = 0;
@@ -27,14 +33,14 @@ struct Header {
     bool clustered = false;
     quint8 internalCompression = Gzip;
     quint8 tileCompression = Gzip;
-    quint8 tileType = 1;  // 1 = Mapbox vector tiles
+    quint8 tileType = 1; // 1 = Mapbox vector tiles
     quint8 minZoom = 0, maxZoom = 0;
     qint32 minLonE7 = 0, minLatE7 = 0, maxLonE7 = 0, maxLatE7 = 0;
     quint8 centerZoom = 0;
     qint32 centerLonE7 = 0, centerLatE7 = 0;
 };
 
-std::optional<Header> parseHeader(const QByteArray &bytes);  // the first 127 bytes or more; nothing if not PMTiles v3
+std::optional<Header> parseHeader(const QByteArray &bytes); // the first 127 bytes or more; nothing if not PMTiles v3
 QByteArray serializeHeader(const Header &h);
 
 // A directory entry: a run of tiles (runLength >= 1) sharing one content, or a leaf directory (runLength == 0)
@@ -68,8 +74,14 @@ class Archive
 {
 public:
     explicit Archive(const QString &path);
-    bool isValid() const { return m_valid; }
-    const Header &header() const { return m_header; }
+    bool isValid() const
+    {
+        return m_valid;
+    }
+    const Header &header() const
+    {
+        return m_header;
+    }
     // the tile's bytes, decompressed; empty if the archive has no such tile
     QByteArray tile(int z, quint32 x, quint32 y);
 
@@ -80,7 +92,7 @@ private:
     QString m_path;
     Header m_header;
     QList<Entry> m_root;
-    QHash<quint64, QList<Entry>> m_leaves;  // by offset
+    QHash<quint64, QList<Entry>> m_leaves; // by offset
     bool m_valid = false;
 };
 

@@ -31,15 +31,39 @@ class ProjectModel : public QObject
 public:
     explicit ProjectModel(QObject *parent = nullptr);
 
-    qint64 projectId() const { return m_id; }
+    qint64 projectId() const
+    {
+        return m_id;
+    }
     void setProjectId(qint64 id);
-    bool exists() const { return m_exists; }
-    QString title() const { return m_title; }
-    QString description() const { return m_description; }
-    QVariantList articles() const { return m_articles; }
-    QVariantList excerpts() const { return m_excerpts; }
-    QVariantList chats() const { return m_chats; }
-    QVariantList documents() const { return m_documents; }
+    bool exists() const
+    {
+        return m_exists;
+    }
+    QString title() const
+    {
+        return m_title;
+    }
+    QString description() const
+    {
+        return m_description;
+    }
+    QVariantList articles() const
+    {
+        return m_articles;
+    }
+    QVariantList excerpts() const
+    {
+        return m_excerpts;
+    }
+    QVariantList chats() const
+    {
+        return m_chats;
+    }
+    QVariantList documents() const
+    {
+        return m_documents;
+    }
 
     Q_INVOKABLE bool update(const QString &title, const QString &description);
     Q_INVOKABLE bool setNote(qint64 itemId, const QString &note);
@@ -51,7 +75,7 @@ public:
     Q_INVOKABLE QString quote(qint64 itemId) const;
     // The whole project as one Markdown file; an error message, or empty on success
     Q_INVOKABLE QString exportTo(const QUrl &file) const;
-    Q_INVOKABLE QString exportName() const;  // "water.md"
+    Q_INVOKABLE QString exportName() const; // "water.md"
     // The project's articles cited in each style, sorted: [{style, label, text, html}], one entry per paragraph
     Q_INVOKABLE QVariantList bibliography() const;
     // A document's Markdown for its preview, with the notes of the sources it cites

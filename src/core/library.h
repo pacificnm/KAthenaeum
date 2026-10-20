@@ -36,15 +36,15 @@ namespace Library
 {
 QList<LibraryRecord> all();
 std::optional<LibraryRecord> byId(qint64 id);
-QByteArray illustration(qint64 id);  // 48x48 PNG, empty if none
+QByteArray illustration(qint64 id); // 48x48 PNG, empty if none
 
 // Registers the ZIM at `path` (or refreshes its row if it is already known). Returns its id, or nothing with `error` set.
 std::optional<qint64> add(const QString &path, QString *error = nullptr);
 
 struct ScanResult {
-    QStringList added;    // file names newly registered
-    QStringList missing;  // registered files that are gone (rows are kept: projects may refer to them)
-    QStringList errors;   // "name: problem" for files that could not be read
+    QStringList added; // file names newly registered
+    QStringList missing; // registered files that are gone (rows are kept: projects may refer to them)
+    QStringList errors; // "name: problem" for files that could not be read
 };
 // Registers every complete .zim in `folder` (a file with a .aria2 sidecar is still downloading) and reports registered
 // files from anywhere that no longer exist.

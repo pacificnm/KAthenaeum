@@ -38,7 +38,7 @@ private Q_SLOTS:
         QCOMPARE(Citations::format(Citations::Style::Apa, s, today),
                  QStringLiteral("Portland, Oregon. (2026, August 25). In Wikipedia. Offline copy via Kiwix. "
                                 "Retrieved October 20, 2026, from https://en.wikipedia.org/wiki/Portland,_Oregon"));
-        QCOMPARE(Citations::format(Citations::Style::Chicago, s, today, true),  // Chicago sets a website's name in roman
+        QCOMPARE(Citations::format(Citations::Style::Chicago, s, today, true), // Chicago sets a website's name in roman
                  QStringLiteral("Wikipedia. “Portland, Oregon.” Wikimedia Foundation. Offline copy of August 25, 2026, via Kiwix. "
                                 "Accessed October 20, 2026. https://en.wikipedia.org/wiki/Portland,_Oregon."));
         QVERIFY(Citations::html(Citations::Style::Apa, s, today).startsWith(QLatin1String("Portland, Oregon. (2026, August 25). In <i>Wikipedia</i>.")));
@@ -67,7 +67,7 @@ private Q_SLOTS:
         QVERIFY(s.url.isEmpty());
         QCOMPARE(Citations::format(Citations::Style::Mla, s, QDate(2026, 10, 20)),
                  QStringLiteral("“Hamlet.” Project Gutenberg Library, gutenberg.org. Offline copy via Kiwix. Accessed 20 Oct. 2026."));
-        QCOMPARE(Citations::format(Citations::Style::Apa, s, QDate(2026, 10, 20)),  // no date: n.d.
+        QCOMPARE(Citations::format(Citations::Style::Apa, s, QDate(2026, 10, 20)), // no date: n.d.
                  QStringLiteral("Hamlet. (n.d.). In Project Gutenberg Library. gutenberg.org. Offline copy via Kiwix. Retrieved October 20, 2026."));
     }
 
@@ -94,10 +94,10 @@ private Q_SLOTS:
                                                   Citations::source(wikipedia(), QStringLiteral("Water"), QStringLiteral("Water"))};
         const QStringList mla = Citations::sorted(Citations::Style::Mla, sources, today);
         QCOMPARE(mla.size(), 2);
-        QVERIFY(mla[0].startsWith(QStringLiteral("“acid.”")));  // the opening quotation mark does not count, nor case
+        QVERIFY(mla[0].startsWith(QStringLiteral("“acid.”"))); // the opening quotation mark does not count, nor case
         QVERIFY(mla[1].startsWith(QStringLiteral("“Water.”")));
         const QStringList chicago = Citations::sorted(Citations::Style::Chicago, sources, today);
-        QVERIFY(chicago[0].contains(QStringLiteral("“acid.”")));  // all start "Wikipedia.": then by title
+        QVERIFY(chicago[0].contains(QStringLiteral("“acid.”"))); // all start "Wikipedia.": then by title
     }
 
     void styleNames()

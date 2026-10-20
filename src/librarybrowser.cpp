@@ -77,10 +77,12 @@ QVariantMap LibraryBrowser::randomArticle(qint64 libraryId) const
 
 QVariantList LibraryBrowser::overviews(qint64 libraryId) const
 {
-    // Wikipedia's own curated overview pages, already in the ZIM as ordinary articles (see CLAUDE.md, hub articles)
+    // Wikipedia's own curated overview pages, already in the ZIM as ordinary articles
     const QList<std::pair<QString, QString>> kinds = {
-        {i18n("Outlines"), QStringLiteral("Outline of ")},   {i18n("Indexes"), QStringLiteral("Index of ")},
-        {i18n("Glossaries"), QStringLiteral("Glossary of ")}, {i18n("Timelines"), QStringLiteral("Timeline of ")},
+        {i18n("Outlines"), QStringLiteral("Outline of ")},
+        {i18n("Indexes"), QStringLiteral("Index of ")},
+        {i18n("Glossaries"), QStringLiteral("Glossary of ")},
+        {i18n("Timelines"), QStringLiteral("Timeline of ")},
         {i18n("Lists"), QStringLiteral("List of ")},
     };
     constexpr int shown = 12;
@@ -178,7 +180,8 @@ QVariantList LibraryBrowser::citationStyles() const
 {
     QVariantList out;
     for (const auto styles = Citations::styleNames(); const QString &name : styles)
-        out.append(QVariantMap{{QStringLiteral("style"), name}, {QStringLiteral("label"), Citations::label(Citations::style(name))},
+        out.append(QVariantMap{{QStringLiteral("style"), name},
+                               {QStringLiteral("label"), Citations::label(Citations::style(name))},
                                {QStringLiteral("shortLabel"), Citations::shortLabel(Citations::style(name))}});
     return out;
 }

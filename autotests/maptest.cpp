@@ -33,7 +33,10 @@ struct Pb {
         }
         b.append(char(v));
     }
-    void key(int field, int wire) { varint(quint64(field) << 3 | quint64(wire)); }
+    void key(int field, int wire)
+    {
+        varint(quint64(field) << 3 | quint64(wire));
+    }
     void bytes(int field, const QByteArray &v)
     {
         key(field, 2);
@@ -78,9 +81,9 @@ QByteArray tileWith(const QString &layer, const QList<PointFeature> &features)
             tags.varint(quint64(values.indexOf(v)));
         }
         feat.bytes(2, tags.b);
-        feat.uint(3, 1);  // point
+        feat.uint(3, 1); // point
         Pb geom;
-        geom.varint(1 | (1 << 3));  // MoveTo, 1 point
+        geom.varint(1 | (1 << 3)); // MoveTo, 1 point
         geom.varint(zz(f.x));
         geom.varint(zz(f.y));
         feat.bytes(4, geom.b);
@@ -198,7 +201,7 @@ private Q_SLOTS:
             QCOMPARE((*back)[i].length, entries[i].length);
             QCOMPARE((*back)[i].runLength, entries[i].runLength);
         }
-        QVERIFY(!PMTiles::parseDirectory(QByteArray("\xff\xff\xff", 3)));  // truncated
+        QVERIFY(!PMTiles::parseDirectory(QByteArray("\xff\xff\xff", 3))); // truncated
 
         // too many entries for the root: leaves, and the root fits in the first 16 KiB
         QList<PMTiles::Entry> many;
@@ -228,7 +231,7 @@ private Q_SLOTS:
         const QByteArray text = QByteArray("Portland, Oregon ").repeated(500);
         QCOMPARE(PMTiles::gunzip(PMTiles::gzip(text)).value_or(QByteArray()), text);
         QVERIFY(!PMTiles::gunzip(QByteArray("not gzip at all")));
-        QVERIFY(!PMTiles::gunzip(PMTiles::gzip(text).left(20)));  // cut short
+        QVERIFY(!PMTiles::gunzip(PMTiles::gzip(text).left(20))); // cut short
     }
 
     void aPointInAShape()
@@ -239,12 +242,12 @@ private Q_SLOTS:
                                                {{{179, -1}, {180, -1}, {180, 1}, {179, 1}, {179, -1}}},
                                                {{{-180, -1}, {-179, -1}, {-179, 1}, {-180, 1}, {-180, -1}}}};
         QVERIFY(MapTiling::contains(shape, 2, 2));
-        QVERIFY(!MapTiling::contains(shape, 5, 5));  // the hole
+        QVERIFY(!MapTiling::contains(shape, 5, 5)); // the hole
         QVERIFY(!MapTiling::contains(shape, 20, 2));
         QVERIFY(MapTiling::contains(shape, 179.5, 0));
         QVERIFY(MapTiling::contains(shape, -179.5, 0));
-        QVERIFY(!MapTiling::contains(shape, 86.9, 27.9));  // Mount Everest is not in the Pacific
-        QVERIFY(MapTiling::bounds(shape).contains(QPointF(86.9, 0)));  // though the box says so
+        QVERIFY(!MapTiling::contains(shape, 86.9, 27.9)); // Mount Everest is not in the Pacific
+        QVERIFY(MapTiling::bounds(shape).contains(QPointF(86.9, 0))); // though the box says so
         QVERIFY(!MapTiling::contains({}, 0, 0));
     }
 
@@ -279,7 +282,7 @@ private Q_SLOTS:
         // itself. Followed without a limit, it was fetched for ever.
         QByteArray leaf;
         quint32 length = 8;
-        for (int i = 0; i < 4; ++i) {  // the leaf holds its own length: settle on a size that does not change
+        for (int i = 0; i < 4; ++i) { // the leaf holds its own length: settle on a size that does not change
             leaf = PMTiles::serializeDirectory({{0, 0, length, 0}});
             length = quint32(leaf.size());
         }
@@ -306,7 +309,7 @@ private Q_SLOTS:
         QSignalSpy finished(&extract, &MapExtract::finished);
         extract.start();
         QVERIFY(finished.wait(5000));
-        QVERIFY(!finished.first().first().toString().isEmpty());  // an error, not an endless fetch
+        QVERIFY(!finished.first().first().toString().isEmpty()); // an error, not an endless fetch
         QVERIFY2(reader.reads() <= 6, qPrintable(QString::number(reader.reads())));
     }
 
@@ -336,7 +339,7 @@ private Q_SLOTS:
 
         PMTiles::Archive region(out);
         QVERIFY(region.isValid());
-        QCOMPARE(int(region.header().maxZoom), 6);  // less detail than the source, as asked
+        QCOMPARE(int(region.header().maxZoom), 6); // less detail than the source, as asked
         const auto wanted = MapTiling::tileIds(shape, 0, 6);
         QCOMPARE(qint64(wanted.size()), extract.tileCount());
         for (quint64 id : wanted) {
@@ -344,7 +347,7 @@ private Q_SLOTS:
             QCOMPARE(region.tile(t.z, t.x, t.y), contentFor(t.z, t.x, t.y));
         }
         // outside the region, and deeper than asked: nothing
-        QVERIFY(region.tile(6, 10, 10).isEmpty());  // the Pacific
+        QVERIFY(region.tile(6, 10, 10).isEmpty()); // the Pacific
         QVERIFY(region.tile(7, 63, 42).isEmpty());
         // the reads were merged: far fewer than one per tile
         QVERIFY2(reader.reads() < int(wanted.size()) / 4, qPrintable(QString::number(reader.reads())));
@@ -387,8 +390,12 @@ private Q_SLOTS:
 
     void vectorTilesDecode()
     {
-        const QByteArray tile = tileWith(QStringLiteral("pois"),
-                                         {{(quint64(2) << 44) | 31732583, 1000, 2000, {{QStringLiteral("name"), QStringLiteral("Pioneer Courthouse")}, {QStringLiteral("kind"), QStringLiteral("courthouse")}}}});
+        const QByteArray tile =
+            tileWith(QStringLiteral("pois"),
+                     {{(quint64(2) << 44) | 31732583,
+                       1000,
+                       2000,
+                       {{QStringLiteral("name"), QStringLiteral("Pioneer Courthouse")}, {QStringLiteral("kind"), QStringLiteral("courthouse")}}}});
         const auto features = Mvt::decode(tile);
         QVERIFY(features);
         QCOMPARE(features->size(), 1);
@@ -399,8 +406,8 @@ private Q_SLOTS:
         QCOMPARE(f.parts.first().first(), QPointF(1000, 2000));
         QCOMPARE(Mvt::distance(f, QPointF(1003, 2004)), 5.0);
         QCOMPARE(MapLookup::osmKey(f.id), QStringLiteral("w31732583"));
-        QVERIFY(Mvt::decode(tile, {QStringLiteral("places")})->isEmpty());  // other layers only
-        QVERIFY(!Mvt::decode(QByteArray("\x1a\xff\xff\xff\xff\x0f", 6)));  // a length past the end
+        QVERIFY(Mvt::decode(tile, {QStringLiteral("places")})->isEmpty()); // other layers only
+        QVERIFY(!Mvt::decode(QByteArray("\x1a\xff\xff\xff\xff\x0f", 6))); // a length past the end
 
         Mvt::Feature square;
         square.type = Mvt::Polygon;
@@ -414,7 +421,7 @@ private Q_SLOTS:
     {
         const QByteArray tile = tileWith(QStringLiteral("places"), {{1, 5, 5, {{QStringLiteral("name"), QStringLiteral("X")}}}});
         for (qsizetype n = 0; n < tile.size(); ++n)
-            Mvt::decode(tile.left(n));  // every truncation
+            Mvt::decode(tile.left(n)); // every truncation
         const QByteArray dir = PMTiles::serializeDirectory({{0, 0, 100, 1}, {5, 100, 20, 0}});
         for (qsizetype n = 0; n < dir.size(); ++n)
             PMTiles::parseDirectory(dir.left(n));
@@ -440,7 +447,7 @@ private Q_SLOTS:
     {
         QCOMPARE(MapLookup::osmKey((quint64(1) << 44) | 1666626393), QStringLiteral("n1666626393"));
         QCOMPARE(MapLookup::osmKey((quint64(3) << 44) | 147401), QStringLiteral("r147401"));
-        QCOMPARE(MapLookup::osmKey(12345), QString());  // no type: not an OpenStreetMap id
+        QCOMPARE(MapLookup::osmKey(12345), QString()); // no type: not an OpenStreetMap id
         const QPointF centre = MapLookup::coordinateAt(45.52, -122.67, 13, 0, 0);
         QVERIFY(qAbs(centre.x() - 45.52) < 1e-9 && qAbs(centre.y() + 122.67) < 1e-9);
         // 512 pixels at zoom 0 are the whole world
@@ -462,9 +469,17 @@ private Q_SLOTS:
         };
         const auto [cx, cy] = at(x, y);
         const QByteArray pois = tileWith(QStringLiteral("pois"),
-                                         {{(quint64(2) << 44) | 31732583, cx + 40, cy, {{QStringLiteral("name"), QStringLiteral("Pioneer Courthouse")}, {QStringLiteral("kind"), QStringLiteral("courthouse")}, {QStringLiteral("min_zoom"), QStringLiteral("14")}}},
+                                         {{(quint64(2) << 44) | 31732583,
+                                           cx + 40,
+                                           cy,
+                                           {{QStringLiteral("name"), QStringLiteral("Pioneer Courthouse")},
+                                            {QStringLiteral("kind"), QStringLiteral("courthouse")},
+                                            {QStringLiteral("min_zoom"), QStringLiteral("14")}}},
                                           {(quint64(1) << 44) | 99, cx + 400, cy, {{QStringLiteral("name"), QStringLiteral("Far Away Cafe")}}},
-                                          {(quint64(1) << 44) | 98, cx, cy + 10, {{QStringLiteral("name"), QStringLiteral("Hidden Until 17")}, {QStringLiteral("min_zoom"), QStringLiteral("17")}}}});
+                                          {(quint64(1) << 44) | 98,
+                                           cx,
+                                           cy + 10,
+                                           {{QStringLiteral("name"), QStringLiteral("Hidden Until 17")}, {QStringLiteral("min_zoom"), QStringLiteral("17")}}}});
         QMap<quint64, QByteArray> tiles{{PMTiles::tileId(z, tx, ty), pois}};
         const QString path = dir.filePath(QStringLiteral("t.pmtiles"));
         writeArchive(path, tiles, z, z);
@@ -473,11 +488,11 @@ private Q_SLOTS:
         // at zoom 15 a tile is 512 pixels: 40 units of 4096 are 5 pixels
         const auto f = MapLookup::nearest(archive, lat, lon, 15, 20);
         QVERIFY(f);
-        QCOMPARE(f->name, QStringLiteral("Pioneer Courthouse"));  // the one hidden at this zoom is skipped
+        QCOMPARE(f->name, QStringLiteral("Pioneer Courthouse")); // the one hidden at this zoom is skipped
         QCOMPARE(f->osm, QStringLiteral("w31732583"));
         QCOMPARE(f->kind, QStringLiteral("courthouse"));
         QVERIFY(qAbs(f->distancePx - 5) < 0.5);
-        QVERIFY(!MapLookup::nearest(archive, lat, lon - 0.01, 15, 20));  // nothing within 20 pixels
+        QVERIFY(!MapLookup::nearest(archive, lat, lon - 0.01, 15, 20)); // nothing within 20 pixels
     }
 
     void placeTitles()
@@ -501,7 +516,8 @@ private Q_SLOTS:
         };
         QCOMPARE(kind({{QStringLiteral("place"), QStringLiteral("city")}, {QStringLiteral("boundary"), QStringLiteral("administrative")}}),
                  QStringLiteral("place=city"));
-        QCOMPARE(kind({{QStringLiteral("boundary"), QStringLiteral("administrative")}, {QStringLiteral("admin_level"), QStringLiteral("6")},
+        QCOMPARE(kind({{QStringLiteral("boundary"), QStringLiteral("administrative")},
+                       {QStringLiteral("admin_level"), QStringLiteral("6")},
                        {QStringLiteral("border_type"), QStringLiteral("county")}}),
                  QStringLiteral("boundary=county"));
         QCOMPARE(kind({{QStringLiteral("boundary"), QStringLiteral("administrative")}, {QStringLiteral("admin_level"), QStringLiteral("4")}}),
@@ -518,8 +534,13 @@ private Q_SLOTS:
         {
             osmium::memory::Buffer buffer{4096, osmium::memory::Buffer::auto_grow::yes};
             // a city node, an untagged node, a park's corners
-            osmium::builder::add_node(buffer, _id(1), _location(-122.6742, 45.5202),
-                                      _tag("name", "Portland"), _tag("place", "city"), _tag("wikipedia", "en:Portland, Oregon"), _tag("population", "652,503"));
+            osmium::builder::add_node(buffer,
+                                      _id(1),
+                                      _location(-122.6742, 45.5202),
+                                      _tag("name", "Portland"),
+                                      _tag("place", "city"),
+                                      _tag("wikipedia", "en:Portland, Oregon"),
+                                      _tag("population", "652,503"));
             osmium::builder::add_node(buffer, _id(2), _location(-122.0, 45.0));
             osmium::builder::add_node(buffer, _id(10), _location(-122.70, 45.50));
             osmium::builder::add_node(buffer, _id(11), _location(-122.60, 45.50));
@@ -529,17 +550,25 @@ private Q_SLOTS:
             osmium::builder::add_node(buffer, _id(30), _location(-123.0, 46.0));
             osmium::builder::add_node(buffer, _id(31), _location(-122.9, 46.0));
             // a park drawn as a closed way, with an article
-            osmium::builder::add_way(buffer, _id(100), _nodes({10, 11, 12, 13, 10}), _tag("name", "Forest Park"), _tag("leisure", "park"),
+            osmium::builder::add_way(buffer,
+                                     _id(100),
+                                     _nodes({10, 11, 12, 13, 10}),
+                                     _tag("name", "Forest Park"),
+                                     _tag("leisure", "park"),
                                      _tag("wikipedia", "en:Forest Park (Portland, Oregon)"));
             // a road with an article: a line, not an area
-            osmium::builder::add_way(buffer, _id(101), _nodes({30, 31}), _tag("name", "Interstate 5"), _tag("highway", "motorway"),
-                                     _tag("wikidata", "Q94"));
+            osmium::builder::add_way(buffer, _id(101), _nodes({30, 31}), _tag("name", "Interstate 5"), _tag("highway", "motorway"), _tag("wikidata", "Q94"));
             // a way without tags, used by the lake relation
             osmium::builder::add_way(buffer, _id(102), _nodes({10, 11, 12, 13, 10}));
             // a lake as a multipolygon, with its label node
-            osmium::builder::add_relation(buffer, _id(500), _member(osmium::item_type::way, 102, "outer"),
-                                          _member(osmium::item_type::node, 20, "label"), _tag("type", "multipolygon"),
-                                          _tag("name", "Test Lake"), _tag("natural", "water"), _tag("wikidata", "Q1"));
+            osmium::builder::add_relation(buffer,
+                                          _id(500),
+                                          _member(osmium::item_type::way, 102, "outer"),
+                                          _member(osmium::item_type::node, 20, "label"),
+                                          _tag("type", "multipolygon"),
+                                          _tag("name", "Test Lake"),
+                                          _tag("natural", "water"),
+                                          _tag("wikidata", "Q1"));
             osmium::io::Header header;
             osmium::io::Writer writer{path, header, osmium::io::overwrite::allow};
             writer(std::move(buffer));
@@ -552,22 +581,22 @@ private Q_SLOTS:
         QHash<QString, MapPlace> byOsm;
         for (const MapPlace &p : *places)
             byOsm.insert(p.osm, p);
-        QCOMPARE(byOsm.size(), 4);  // Portland, Forest Park, Interstate 5, Test Lake (not the untagged node or way)
+        QCOMPARE(byOsm.size(), 4); // Portland, Forest Park, Interstate 5, Test Lake (not the untagged node or way)
         QCOMPARE(byOsm.value(QStringLiteral("n1")).kind, QStringLiteral("place=city"));
         QCOMPARE(byOsm.value(QStringLiteral("n1")).population, 652503);
         const MapPlace park = byOsm.value(QStringLiteral("w100"));
         QVERIFY(park.area);
         QCOMPARE(park.west, -122.70);
         QCOMPARE(park.north, 45.60);
-        QVERIFY(!byOsm.value(QStringLiteral("w101")).area);  // a road is a line
+        QVERIFY(!byOsm.value(QStringLiteral("w101")).area); // a road is a line
         const MapPlace lake = byOsm.value(QStringLiteral("r500"));
         QVERIFY(lake.area);
-        QCOMPARE(lake.lat, 45.55);  // at its label, not the middle of its outline
+        QCOMPARE(lake.lat, 45.55); // at its label, not the middle of its outline
         QCOMPARE(lake.east, -122.60);
         QVERIFY(MapPlaces::outlineContains(lake.outline, 45.55, -122.65));
         QVERIFY(!MapPlaces::outlineContains(lake.outline, 45.55, -122.55));
         QVERIFY(MapPlaces::outlineContains(park.outline, 45.52, -122.62));
-        QVERIFY(byOsm.value(QStringLiteral("n1")).outline.isEmpty());  // a point has none
+        QVERIFY(byOsm.value(QStringLiteral("n1")).outline.isEmpty()); // a point has none
 
         // stopped: nothing
         std::atomic<bool> stopped{true};
@@ -591,14 +620,14 @@ private Q_SLOTS:
         // a lake with an island, drawn as separate ways in any order and direction
         const QByteArray lake = MapPlaces::encodeOutline({
             {{0, 0}, {10, 0}, {10, 5}},
-            {{2, 2}, {2, 4}, {4, 4}, {4, 2}, {2, 2}},  // the island (a hole)
-            {{0, 0}, {0, 10}, {10, 10}},  // reversed
+            {{2, 2}, {2, 4}, {4, 4}, {4, 2}, {2, 2}}, // the island (a hole)
+            {{0, 0}, {0, 10}, {10, 10}}, // reversed
             {{10, 10}, {10, 5}},
         });
-        QVERIFY(MapPlaces::outlineContains(lake, 7, 7));  // (lat 7, lon 7): water
-        QVERIFY(!MapPlaces::outlineContains(lake, 3, 3));  // the island
-        QVERIFY(!MapPlaces::outlineContains(lake, 7, 12));  // east of it
-        QVERIFY(!MapPlaces::outlineContains(QByteArray("\xff\xff\xff\x7f", 4), 1, 1));  // damaged: not inside
+        QVERIFY(MapPlaces::outlineContains(lake, 7, 7)); // (lat 7, lon 7): water
+        QVERIFY(!MapPlaces::outlineContains(lake, 3, 3)); // the island
+        QVERIFY(!MapPlaces::outlineContains(lake, 7, 12)); // east of it
+        QVERIFY(!MapPlaces::outlineContains(QByteArray("\xff\xff\xff\x7f", 4), 1, 1)); // damaged: not inside
 
         // an L-shaped county: its box holds the corner it does not cover
         const QByteArray county = MapPlaces::encodeOutline({{{0, 0}, {10, 0}, {10, 3}, {3, 3}, {3, 10}, {0, 10}, {0, 0}}});
@@ -623,15 +652,57 @@ private Q_SLOTS:
         QCOMPARE(MapRegions::byId(id)->pbf, oregon.pbf);
 
         std::vector<MapPlace> places(3);
-        places[0] = {QStringLiteral("n1"), QStringLiteral("Portland"), {}, QStringLiteral("place=city"), 45.52, -122.67, -122.67, 45.52, -122.67, 45.52,
-                     false, {}, QStringLiteral("en:Portland, Oregon"), {}, QStringLiteral("Q6106"), 652503};
-        places[1] = {QStringLiteral("r2"), QStringLiteral("Multnomah County"), {}, QStringLiteral("boundary=county"), 45.5, -122.4, -122.93, 45.43, -121.82, 45.73,
-                     true, {}, QStringLiteral("en:Multnomah County, Oregon"), {}, {}, 0};
-        places[2] = {QStringLiteral("w3"), QStringLiteral("Forest Park"), {}, QStringLiteral("leisure=park"), 45.57, -122.75, -122.8, 45.53, -122.7, 45.6,
-                     true, {}, QStringLiteral("en:Forest Park (Portland, Oregon)"), {}, {}, 0};
+        places[0] = {QStringLiteral("n1"),
+                     QStringLiteral("Portland"),
+                     {},
+                     QStringLiteral("place=city"),
+                     45.52,
+                     -122.67,
+                     -122.67,
+                     45.52,
+                     -122.67,
+                     45.52,
+                     false,
+                     {},
+                     QStringLiteral("en:Portland, Oregon"),
+                     {},
+                     QStringLiteral("Q6106"),
+                     652503};
+        places[1] = {QStringLiteral("r2"),
+                     QStringLiteral("Multnomah County"),
+                     {},
+                     QStringLiteral("boundary=county"),
+                     45.5,
+                     -122.4,
+                     -122.93,
+                     45.43,
+                     -121.82,
+                     45.73,
+                     true,
+                     {},
+                     QStringLiteral("en:Multnomah County, Oregon"),
+                     {},
+                     {},
+                     0};
+        places[2] = {QStringLiteral("w3"),
+                     QStringLiteral("Forest Park"),
+                     {},
+                     QStringLiteral("leisure=park"),
+                     45.57,
+                     -122.75,
+                     -122.8,
+                     45.53,
+                     -122.7,
+                     45.6,
+                     true,
+                     {},
+                     QStringLiteral("en:Forest Park (Portland, Oregon)"),
+                     {},
+                     {},
+                     0};
         // the county's outline leaves out the park's corner of its box: there, only the park
-        places[1].outline = MapPlaces::encodeOutline({{{-122.93, 45.43}, {-121.82, 45.43}, {-121.82, 45.73}, {-122.72, 45.73}, {-122.72, 45.58},
-                                                      {-122.93, 45.58}, {-122.93, 45.43}}});
+        places[1].outline = MapPlaces::encodeOutline(
+            {{{-122.93, 45.43}, {-121.82, 45.43}, {-121.82, 45.73}, {-122.72, 45.73}, {-122.72, 45.58}, {-122.93, 45.58}, {-122.93, 45.43}}});
         QVERIFY2(MapPlaces::store(id, places, &error), qPrintable(error));
         QCOMPARE(MapPlaces::around(45.59, -122.78).size(), 1);
         QCOMPARE(MapPlaces::count(id), 3);
@@ -643,11 +714,11 @@ private Q_SLOTS:
         QCOMPARE(around[1].name, QStringLiteral("Multnomah County"));
         QCOMPARE(MapPlaces::search(QStringLiteral("port")).constFirst().name, QStringLiteral("Portland"));
         QCOMPARE(MapPlaces::search(QStringLiteral("park")).constFirst().name, QStringLiteral("Forest Park"));
-        QVERIFY(MapPlaces::search(QStringLiteral("100%_")).isEmpty());  // LIKE's wildcards are only letters
+        QVERIFY(MapPlaces::search(QStringLiteral("100%_")).isEmpty()); // LIKE's wildcards are only letters
         // "Show on Map": the place an article is about, from the tag OpenStreetMap gives it
         QCOMPARE(MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Forest Park (Portland, Oregon)"))->osm, QStringLiteral("w3"));
         QCOMPARE(MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Portland, Oregon"))->name, QStringLiteral("Portland"));
-        QVERIFY(!MapPlaces::byArticle(QStringLiteral("de"), QStringLiteral("Portland, Oregon")));  // another language's article
+        QVERIFY(!MapPlaces::byArticle(QStringLiteral("de"), QStringLiteral("Portland, Oregon"))); // another language's article
         QVERIFY(!MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Portland")));
         QVERIFY(!MapPlaces::byArticle(QString(), QStringLiteral("Portland, Oregon")));
 
@@ -673,15 +744,16 @@ private Q_SLOTS:
         QHash<QString, MapRegionInfo> byId;
         for (const MapRegionInfo &r : *list)
             byId.insert(r.id, r);
-        QVERIFY(!byId.contains(QStringLiteral("evil")));  // its data is not on Geofabrik
+        QVERIFY(!byId.contains(QStringLiteral("evil"))); // its data is not on Geofabrik
         QCOMPARE(byId.value(QStringLiteral("us/new-hampshire")).name, QStringLiteral("New Hampshire"));
         QCOMPARE(byId.value(QStringLiteral("us/new-hampshire")).parent, QStringLiteral("us"));
         QCOMPARE(byId.value(QStringLiteral("us/district-of-columbia")).name, QStringLiteral("District of Columbia"));
         QCOMPARE(byId.value(QStringLiteral("nord-norge")).name, QStringLiteral("Nord-Norge (Northern Norway)"));
-        QCOMPARE(byId.value(QStringLiteral("nord-norge")).parent, QString());  // Norway is not in this list
+        QCOMPARE(byId.value(QStringLiteral("nord-norge")).parent, QString()); // Norway is not in this list
         QCOMPARE(byId.value(QStringLiteral("us/new-hampshire")).shape.size(), 1);
 
-        QCOMPARE(MapCatalog::latestBuild(QByteArrayLiteral("[{\"key\":\"20261017.pmtiles\"},{\"key\":\"20261019.pmtiles\"},{\"key\":\"20261018.pmtiles\"},{\"key\":\"../evil.pmtiles\"}]")),
+        QCOMPARE(MapCatalog::latestBuild(QByteArrayLiteral(
+                     "[{\"key\":\"20261017.pmtiles\"},{\"key\":\"20261019.pmtiles\"},{\"key\":\"20261018.pmtiles\"},{\"key\":\"../evil.pmtiles\"}]")),
                  QStringLiteral("20261019.pmtiles"));
         QVERIFY(MapCatalog::isAllowedUrl(QUrl(QStringLiteral("https://build.protomaps.com/20261019.pmtiles"))));
         QVERIFY(!MapCatalog::isAllowedUrl(QUrl(QStringLiteral("http://build.protomaps.com/20261019.pmtiles"))));

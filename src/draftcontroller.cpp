@@ -3,8 +3,8 @@
 #include "draftcontroller.h"
 
 #include "core/drafts.h"
-#include "modelsettings.h"
 #include "core/library.h"
+#include "modelsettings.h"
 #include "projectlist.h"
 
 #include <KLocalizedString>

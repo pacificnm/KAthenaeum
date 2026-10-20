@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "librarymanager.h"
 
+#include "articlestore.h"
 #include "core/catalog.h"
 #include "core/downloads.h"
 #include "core/library.h"
 #include "core/settings.h"
 #include "core/zimarchive.h"
 #include "core/zimreader.h"
-#include "articlestore.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -22,16 +22,16 @@
 LibraryManager::LibraryManager(QObject *parent)
     : QObject(parent)
     , m_feed(new CatalogFeed(QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).filePath(QStringLiteral("catalog-eng.xml")),
-                             Catalog::defaultFeedUrl(), this))
+                             Catalog::defaultFeedUrl(),
+                             this))
     , m_downloader(new DownloadManager(this))
 {
     connect(m_feed, &CatalogFeed::changed, this, [this] {
-        if (m_catalog.allEntries().size() != m_feed->entries().size() || m_catalog.allEntries().isEmpty()
-            || m_feed->fetchedAt() != m_lastFetch) {
+        if (m_catalog.allEntries().size() != m_feed->entries().size() || m_catalog.allEntries().isEmpty() || m_feed->fetchedAt() != m_lastFetch) {
             m_lastFetch = m_feed->fetchedAt();
             m_catalog.setEntries(m_feed->entries());
             syncCatalogState();
-            reloadInstalled();  // update badges depend on the catalog
+            reloadInstalled(); // update badges depend on the catalog
         }
         if (m_checkingUpdates && !m_feed->isLoading())
             finishUpdateCheck();
@@ -47,7 +47,7 @@ LibraryManager::LibraryManager(QObject *parent)
     connect(m_downloader, &DownloadManager::completed, this, [this](qint64, qint64 libraryId) {
         reloadInstalled();
         syncCatalogState();
-        Q_EMIT folderChanged();  // free space moved
+        Q_EMIT folderChanged(); // free space moved
         if (const auto lib = Library::byId(libraryId))
             Q_EMIT message(i18n("%1 is ready", lib->title), false);
     });
@@ -138,8 +138,10 @@ void LibraryManager::finishUpdateCheck()
     }
     AppSettings::setLastLibraryUpdateCheck(QDateTime::currentDateTime());
     if (m_updateCount > 0)
-        Q_EMIT message(i18np("An update is available: %2. The Library Manager has it.", "%1 updates are available: %2. The Library Manager has them.",
-                             m_updateCount, m_updateNames.join(QStringLiteral(", "))),
+        Q_EMIT message(i18np("An update is available: %2. The Library Manager has it.",
+                             "%1 updates are available: %2. The Library Manager has them.",
+                             m_updateCount,
+                             m_updateNames.join(QStringLiteral(", "))),
                        false);
     else if (!m_quietCheck)
         Q_EMIT message(i18n("All libraries are up to date."), false);
@@ -270,7 +272,7 @@ void LibraryManager::addFile(const QUrl &file)
 void LibraryManager::removeLibrary(qint64 id, bool deleteFile)
 {
     const auto lib = Library::byId(id);
-    ZimReader::close(id);  // let go of the file before it is deleted
+    ZimReader::close(id); // let go of the file before it is deleted
     ArticleStore::clear();
     QString error;
     if (!Library::remove(id, deleteFile, &error)) {
@@ -280,7 +282,7 @@ void LibraryManager::removeLibrary(qint64 id, bool deleteFile)
     reloadInstalled();
     syncCatalogState();
     Q_EMIT folderChanged();
-    if (!error.isEmpty() && lib)  // removed, but its file could not be deleted
+    if (!error.isEmpty() && lib) // removed, but its file could not be deleted
         Q_EMIT message(i18n("Removed %1 from KAthenaeum, but its file could not be deleted: %2", lib->title, lib->path), true);
     else if (lib)
         Q_EMIT message(deleteFile ? i18n("Deleted %1", lib->title) : i18n("Removed %1 from KAthenaeum; the file is still on disk", lib->title), false);

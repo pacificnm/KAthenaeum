@@ -5,9 +5,9 @@
 #include "core/mapregions.h"
 
 #include <QHash>
+#include <QObject>
 #include <QPointer>
 #include <QTimer>
-#include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
@@ -47,25 +47,37 @@ public:
     static MapManager *instance();
     static MapManager *create(QQmlEngine *, QJSEngine *);
 
-    void initialize();  // after the database is open: regions left downloading by a previous run are marked failed
+    void initialize(); // after the database is open: regions left downloading by a previous run are marked failed
 
     QVariantList regions() const;
     bool hasMaps() const;
     bool hasWorld() const;
-    int revision() const { return m_revision; }
-    bool catalogLoading() const { return m_catalogLoading; }
-    bool catalogLoaded() const { return !m_catalog.isEmpty(); }
-    QString catalogError() const { return m_catalogError; }
+    int revision() const
+    {
+        return m_revision;
+    }
+    bool catalogLoading() const
+    {
+        return m_catalogLoading;
+    }
+    bool catalogLoaded() const
+    {
+        return !m_catalog.isEmpty();
+    }
+    QString catalogError() const
+    {
+        return m_catalogError;
+    }
     QString folder() const;
     double freeSpace() const;
-    bool available() const;  // the map's fonts and style are installed
+    bool available() const; // the map's fonts and style are installed
 
     // The map's style, light or dark, made from the regions ready to show: a file URL
     Q_INVOKABLE QString styleUrl(bool dark);
 
     // ---- the regions to choose from (Geofabrik's list), for Settings ----
     Q_INVOKABLE void loadCatalog();
-    Q_INVOKABLE QVariantList catalogChildren(const QString &parent) const;  // "" for the continents
+    Q_INVOKABLE QVariantList catalogChildren(const QString &parent) const; // "" for the continents
     Q_INVOKABLE QVariantList searchCatalog(const QString &text) const;
     Q_INVOKABLE QVariantMap catalogRegion(const QString &id) const;
     // The region's outline for drawing it: {aspect: width / height, paths: [[point 0..1, …], …]} in Web Mercator
@@ -116,12 +128,12 @@ private:
 
     QNetworkAccessManager *m_network;
     MapDownloader *m_downloader;
-    QTimer m_progressTimer;  // coalesces download progress into list updates
+    QTimer m_progressTimer; // coalesces download progress into list updates
     QList<MapRegionInfo> m_catalog;
     QHash<QString, qsizetype> m_catalogIndex;
     bool m_catalogLoading = false;
     QString m_catalogError;
-    QHash<QString, QPointer<MapExtract>> m_estimates;  // "region@zoom" being measured
+    QHash<QString, QPointer<MapExtract>> m_estimates; // "region@zoom" being measured
     QHash<QString, std::shared_ptr<PMTiles::Archive>> m_archives;
     int m_revision = 0;
 };

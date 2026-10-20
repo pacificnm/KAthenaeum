@@ -8,28 +8,43 @@
 class Drafter;
 
 // AI drafts: runs one at a time, shows progress, and saves the result as a new document of its project. One for the
-// whole app, not one per project page: leaving the page during a draft threw the draft away (the review, 2026-10-19).
+// whole app, not one per project page: leaving the page during a draft must not throw the draft away.
 class DraftController : public QObject
 {
     Q_OBJECT
     QML_NAMED_ELEMENT(Drafting)
     QML_SINGLETON
     Q_PROPERTY(bool running READ running NOTIFY stateChanged)
-    Q_PROPERTY(qint64 projectId READ projectId NOTIFY stateChanged)  // the project being drafted for
+    Q_PROPERTY(qint64 projectId READ projectId NOTIFY stateChanged) // the project being drafted for
     Q_PROPERTY(int step READ step NOTIFY stateChanged)
     Q_PROPERTY(int total READ total NOTIFY stateChanged)
     Q_PROPERTY(QString label READ label NOTIFY stateChanged)
-    Q_PROPERTY(QString streamed READ streamed NOTIFY stateChanged)  // chat notes as they are written
+    Q_PROPERTY(QString streamed READ streamed NOTIFY stateChanged) // chat notes as they are written
 
 public:
     explicit DraftController(QObject *parent = nullptr);
-    qint64 projectId() const { return m_projectId; }
+    qint64 projectId() const
+    {
+        return m_projectId;
+    }
 
     bool running() const;
-    int step() const { return m_step; }
-    int total() const { return m_total; }
-    QString label() const { return m_label; }
-    QString streamed() const { return m_streamed; }
+    int step() const
+    {
+        return m_step;
+    }
+    int total() const
+    {
+        return m_total;
+    }
+    QString label() const
+    {
+        return m_label;
+    }
+    QString streamed() const
+    {
+        return m_streamed;
+    }
 
     Q_INVOKABLE void summarizeProject(qint64 projectId);
     Q_INVOKABLE void summarizeChat(qint64 projectId, qint64 chatId);

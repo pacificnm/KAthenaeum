@@ -18,10 +18,12 @@ private Q_SLOTS:
     void init()
     {
         QString error;
-        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error),
-                 qPrintable(error));
+        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error), qPrintable(error));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void aPassageIsHighlightedOnce()
     {
@@ -29,10 +31,14 @@ private Q_SLOTS:
         QVERIFY(a > 0);
         const auto h = Highlights::byId(a);
         QCOMPARE(h->text, QStringLiteral("Water is a polar molecule."));
-        QCOMPARE(h->color, QStringLiteral("yellow"));  // the default
+        QCOMPARE(h->color, QStringLiteral("yellow")); // the default
         // the same passage again (other spacing and case): the same highlight, its colour and note changed
-        QCOMPARE(Highlights::add(1, QStringLiteral("Water"), QStringLiteral("Water"), QStringLiteral("water is a POLAR\nmolecule."),
-                                 QStringLiteral("green"), QStringLiteral("why it dissolves salt")),
+        QCOMPARE(Highlights::add(1,
+                                 QStringLiteral("Water"),
+                                 QStringLiteral("Water"),
+                                 QStringLiteral("water is a POLAR\nmolecule."),
+                                 QStringLiteral("green"),
+                                 QStringLiteral("why it dissolves salt")),
                  a);
         QCOMPARE(Highlights::byId(a)->color, QStringLiteral("green"));
         QCOMPARE(Highlights::byId(a)->note, QStringLiteral("why it dissolves salt"));
@@ -47,7 +53,7 @@ private Q_SLOTS:
     void whatCannotBeHighlighted()
     {
         QVERIFY(Highlights::tooShort(QStringLiteral("wet")));
-        QVERIFY(Highlights::tooShort(QStringLiteral("a b c d e f g")));  // seven letters
+        QVERIFY(Highlights::tooShort(QStringLiteral("a b c d e f g"))); // seven letters
         QVERIFY(!Highlights::tooShort(QStringLiteral("photosynthesis")));
         QCOMPARE(Highlights::add(1, QStringLiteral("Water"), {}, QStringLiteral("wet")), 0);
         QCOMPARE(Highlights::add(0, QStringLiteral("Water"), {}, QStringLiteral("long enough passage")), 0);
@@ -66,7 +72,11 @@ private Q_SLOTS:
 
     void theArticleMarksThem()
     {
-        const qint64 id = Highlights::add(3, QStringLiteral("Ice"), QStringLiteral("Ice"), QStringLiteral("Ice floats on water."), QStringLiteral("blue"),
+        const qint64 id = Highlights::add(3,
+                                          QStringLiteral("Ice"),
+                                          QStringLiteral("Ice"),
+                                          QStringLiteral("Ice floats on water."),
+                                          QStringLiteral("blue"),
                                           QStringLiteral("density"));
         const QList<Highlight> marks = Highlights::marksFor(3, QStringLiteral("Ice"));
         QCOMPARE(marks.size(), 1);
@@ -80,7 +90,12 @@ private Q_SLOTS:
     {
         Highlights::add(1, QStringLiteral("Water"), QStringLiteral("Water"), QStringLiteral("Water is a polar molecule."), QStringLiteral("yellow"));
         QTest::qWait(5);
-        Highlights::add(1, QStringLiteral("Ice"), QStringLiteral("Ice"), QStringLiteral("Ice floats on water."), QStringLiteral("blue"), QStringLiteral("density"));
+        Highlights::add(1,
+                        QStringLiteral("Ice"),
+                        QStringLiteral("Ice"),
+                        QStringLiteral("Ice floats on water."),
+                        QStringLiteral("blue"),
+                        QStringLiteral("density"));
         QTest::qWait(5);
         Highlights::add(1, QStringLiteral("Water"), QStringLiteral("Water"), QStringLiteral("It dissolves many salts."), QStringLiteral("blue"));
         // grouped by article, the one changed last first; within it, in the order made
@@ -90,9 +105,9 @@ private Q_SLOTS:
         QCOMPARE(all[1].text, QStringLiteral("It dissolves many salts."));
         QCOMPARE(all[2].path, QStringLiteral("Ice"));
         QCOMPARE(Highlights::all(QStringLiteral("blue")).size(), 2);
-        QCOMPARE(Highlights::all({}, QStringLiteral("density")).size(), 1);  // a note matches
-        QCOMPARE(Highlights::all({}, QStringLiteral("ice")).size(), 1);      // so does an article's title
-        QCOMPARE(Highlights::all({}, QStringLiteral("100%")).size(), 0);     // LIKE's wildcards are only letters
+        QCOMPARE(Highlights::all({}, QStringLiteral("density")).size(), 1); // a note matches
+        QCOMPARE(Highlights::all({}, QStringLiteral("ice")).size(), 1); // so does an article's title
+        QCOMPARE(Highlights::all({}, QStringLiteral("100%")).size(), 0); // LIKE's wildcards are only letters
 
         // as Markdown, by article: a heading linking to it, each passage quoted, its note under it
         QCOMPARE(Highlights::markdown(Highlights::all()),

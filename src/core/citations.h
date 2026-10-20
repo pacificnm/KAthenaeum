@@ -14,23 +14,27 @@ struct LibraryRecord;
 // in an offline copy (Kiwix), dated by the copy; any other library as the collection it is.
 namespace Citations
 {
-enum class Style { Mla, Apa, Chicago };
+enum class Style {
+    Mla,
+    Apa,
+    Chicago
+};
 
-QStringList styleNames();  // "mla", "apa", "chicago": the order they are offered in
-Style style(const QString &name);  // an unknown name is MLA
+QStringList styleNames(); // "mla", "apa", "chicago": the order they are offered in
+Style style(const QString &name); // an unknown name is MLA
 QString name(Style style);
-QString label(Style style);  // "MLA (9th edition)"
-QString shortLabel(Style style);  // "MLA": the style's own name, the same in every language
-QString listHeading(Style style);  // what the list is called: Works Cited, References, Bibliography
+QString label(Style style); // "MLA (9th edition)"
+QString shortLabel(Style style); // "MLA": the style's own name, the same in every language
+QString listHeading(Style style); // what the list is called: Works Cited, References, Bibliography
 
 // What a citation is made from
 struct Source {
-    QString title;  // the article's
-    QString path;   // in the ZIM
-    QString site;   // "Wikipedia", or the library's title
-    QString publisher;  // "Wikimedia Foundation", or the ZIM's creator
-    QString url;    // the article's address on the web, when it has one
-    QDate copied;   // when the offline copy was made (the ZIM's date)
+    QString title; // the article's
+    QString path; // in the ZIM
+    QString site; // "Wikipedia", or the library's title
+    QString publisher; // "Wikimedia Foundation", or the ZIM's creator
+    QString url; // the article's address on the web, when it has one
+    QDate copied; // when the offline copy was made (the ZIM's date)
 };
 // A Wikimedia library's site name and the article's address: from the ZIM's name ("wikipedia_en_all" ->
 // https://en.wikipedia.org/wiki/<path>), which a mwoffliner ZIM always has

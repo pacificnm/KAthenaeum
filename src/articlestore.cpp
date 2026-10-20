@@ -4,21 +4,21 @@
 
 #include "core/zimreader.h"
 
-#include "core/library.h"
 #include "core/highlights.h"
+#include "core/library.h"
 #include "core/projects.h"
 #include "core/settings.h"
 
 #include <KLocalizedString>
 
 #include <QCache>
-#include <QSet>
 #include <QColor>
+#include <QSet>
 
 namespace
 {
 using ArticleCache = QCache<QString, ArticleStore::Article>;
-Q_GLOBAL_STATIC(ArticleCache, cache, 24)  // rendered articles, most recently used kept
+Q_GLOBAL_STATIC(ArticleCache, cache, 24) // rendered articles, most recently used kept
 
 QString key(qint64 libraryId, const QString &path)
 {
@@ -27,8 +27,7 @@ QString key(qint64 libraryId, const QString &path)
 
 QColor mix(const QColor &a, const QColor &b, double t)
 {
-    return QColor::fromRgbF(float(a.redF() * (1 - t) + b.redF() * t), float(a.greenF() * (1 - t) + b.greenF() * t),
-                            float(a.blueF() * (1 - t) + b.blueF() * t));
+    return QColor::fromRgbF(float(a.redF() * (1 - t) + b.redF() * t), float(a.greenF() * (1 - t) + b.greenF() * t), float(a.blueF() * (1 - t) + b.blueF() * t));
 }
 
 // Article styling, adapted from Athenaeum's article.css, with the colours taken from the desktop
@@ -37,11 +36,19 @@ QString css(const QPalette &p)
     const QColor bg = p.color(QPalette::Base);
     const QColor text = p.color(QPalette::Text);
     const bool dark = bg.lightness() < 128;
-    QString vars = QStringLiteral(":root { --bg: %1; --text: %2; --muted: %3; --border: %4; --surface: %5; --surface-2: %6;"
-                                  " --link: %7; --link-visited: %8; --accent-soft: %9; color-scheme: %10; %11 }")
-                       .arg(bg.name(), text.name(), mix(text, bg, 0.4).name(), mix(text, bg, 0.82).name(), mix(text, bg, 0.97).name(),
-                            mix(text, bg, 0.92).name(), p.color(QPalette::Link).name(), p.color(QPalette::LinkVisited).name(),
-                            mix(p.color(QPalette::Highlight), bg, 0.85).name(), dark ? QStringLiteral("dark") : QStringLiteral("light"),
+    QString vars = QStringLiteral(
+                       ":root { --bg: %1; --text: %2; --muted: %3; --border: %4; --surface: %5; --surface-2: %6;"
+                       " --link: %7; --link-visited: %8; --accent-soft: %9; color-scheme: %10; %11 }")
+                       .arg(bg.name(),
+                            text.name(),
+                            mix(text, bg, 0.4).name(),
+                            mix(text, bg, 0.82).name(),
+                            mix(text, bg, 0.97).name(),
+                            mix(text, bg, 0.92).name(),
+                            p.color(QPalette::Link).name(),
+                            p.color(QPalette::LinkVisited).name(),
+                            mix(p.color(QPalette::Highlight), bg, 0.85).name(),
+                            dark ? QStringLiteral("dark") : QStringLiteral("light"),
                             // highlighter colours: see-through, so the text keeps its own colour in light and dark pages
                             dark ? QStringLiteral("--hl-yellow: rgba(250, 204, 21, 0.38); --hl-green: rgba(74, 222, 128, 0.32);"
                                                   " --hl-blue: rgba(96, 165, 250, 0.38); --hl-pink: rgba(244, 114, 182, 0.38);")
@@ -90,24 +97,26 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 @media (max-width: 640px) { body { padding: 16px; } .article table.infobox, .article table.ib-chembox { float: none; width: 100%; margin: 1em 0; } }
 )");
     // the whole window, or a column of comfortable reading width (Settings; full by default: on a big screen the 860-pixel
-    // column left most of it empty, the user, 2026-10-19)
+    // column leaves most of it empty)
     rules += AppSettings::articleFullWidth() ? QStringLiteral("main { max-width: none; margin: 0; }\n")
                                              : QStringLiteral("main { max-width: 860px; margin: 0 auto; }\n");
     // Wikipedia hard-codes light backgrounds inline; keep their text readable. !important: the infobox rules are more
-    // specific, and an infobox section header ("Names") stayed white on pale yellow (the review, 2026-10-19).
+    // specific, and an infobox section header ("Names") would stay white on pale yellow.
     if (dark)
-        rules += QStringLiteral(".article [style*='background'], .article [style*='background'] * { color: #1b1d21 !important; }"
-                                " .article [style*='background'] a { color: #234a9e !important; }\n");
+        rules += QStringLiteral(
+            ".article [style*='background'], .article [style*='background'] * { color: #1b1d21 !important; }"
+            " .article [style*='background'] a { color: #234a9e !important; }\n");
     return vars + rules;
 }
 
 QByteArray document(const QString &title, const QString &body, const QPalette &palette)
 {
     // No scripts at all (JavaScript is off in the view too), and nothing may load from anywhere but the ZIM
-    return QStringLiteral("<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
-                          "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src zim:; style-src 'unsafe-inline'\">"
-                          "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-                          "<title>%1</title><style>%2</style></head><body><main><h1>%1</h1><div class=\"article\">%3</div></main></body></html>")
+    return QStringLiteral(
+               "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+               "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src zim:; style-src 'unsafe-inline'\">"
+               "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+               "<title>%1</title><style>%2</style></head><body><main><h1>%1</h1><div class=\"article\">%3</div></main></body></html>")
         .arg(title.toHtmlEscaped(), css(palette), body)
         .toUtf8();
 }
@@ -148,11 +157,14 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
         if (!marked.contains(h.text.simplified().toLower()))
             marks << h;
     auto rendered = ArticleRenderer::render(
-        content->data, content->path, QStringLiteral("zim://lib%1/").arg(libraryId),
+        content->data,
+        content->path,
+        QStringLiteral("zim://lib%1/").arg(libraryId),
         [libraryId](const QString &p) {
             return ZimReader::hasEntry(libraryId, p);
         },
-        nullptr, marks);
+        nullptr,
+        marks);
     if (!rendered)
         return std::nullopt;
     auto *a = new Article{libraryId, content->path, std::move(*rendered)};
@@ -174,7 +186,7 @@ QByteArray ArticleStore::page(const Article &article, const QPalette &palette)
 QByteArray ArticleStore::notFoundPage(qint64 libraryId, const QString &path, const QPalette &palette)
 {
     const auto library = Library::byId(libraryId);
-    if (!library || !library->fileExists())  // a saved chat or project can outlive its library
+    if (!library || !library->fileExists()) // a saved chat or project can outlive its library
         return document(i18n("Library not installed"),
                         QStringLiteral("<p>%1</p>")
                             .arg(i18n("The library this article came from is no longer installed. Add it again in the Library Manager "

@@ -25,6 +25,8 @@ include(ECMSetupVersion)
 include(ECMAddTests)
 include(ECMDeprecationSettings)
 include(FeatureSummary)
+include(KDEClangFormat)
+include(KDEGitCommitHooks)
 
 option(BUILD_BENCHMARKS "Build askbench and mapbench, which measure Ask and map cutting on real data (not tests)" OFF)
 
@@ -102,6 +104,11 @@ install(FILES data/copyright DESTINATION ${KATHENAEUM_DOC_DIR})
 install(DIRECTORY LICENSES/ DESTINATION ${KATHENAEUM_DOC_DIR}/licenses)
 # MapLibre Native's licence and its own third-party notices (data/thirdparty/maplibre, copied from its source)
 install(DIRECTORY data/thirdparty/maplibre DESTINATION ${KATHENAEUM_DOC_DIR})
+
+# `cmake --build build --target clang-format` formats the C++ sources with KDE's settings; a pre-commit hook checks it
+file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.h ${CMAKE_SOURCE_DIR}/autotests/*.cpp)
+kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
+kde_configure_git_pre_commit_hook(CHECKS CLANG_FORMAT)
 
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 

@@ -29,11 +29,15 @@ private Q_SLOTS:
     void init()
     {
         QString error;
-        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("db/%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error), qPrintable(error));
+        QVERIFY2(Database::open(m_dir.filePath(QStringLiteral("db/%1.sqlite").arg(QString::fromLatin1(QTest::currentTestFunction()))), &error),
+                 qPrintable(error));
         QDir(m_dir.filePath(QStringLiteral("zim"))).removeRecursively();
         QVERIFY(QDir().mkpath(m_dir.filePath(QStringLiteral("zim"))));
     }
-    void cleanup() { Database::close(); }
+    void cleanup()
+    {
+        Database::close();
+    }
 
     void settingsRoundTrip()
     {
@@ -63,7 +67,7 @@ private Q_SLOTS:
 
         const auto result = Library::scan(folder);
         QVERIFY(result.added.isEmpty());
-        QCOMPARE(result.errors.size(), 1);  // the broken file; the partial one is not even looked at
+        QCOMPARE(result.errors.size(), 1); // the broken file; the partial one is not even looked at
         QVERIFY(result.errors.first().startsWith(QStringLiteral("broken_2026-01.zim: ")));
         QVERIFY(Library::all().isEmpty());
     }
@@ -77,7 +81,7 @@ private Q_SLOTS:
         auto result = Library::scan(m_dir.filePath(QStringLiteral("zim")));
         QCOMPARE(result.added, QStringList{QStringLiteral("test_2026-01.zim")});
         QVERIFY(result.errors.isEmpty());
-        QCOMPARE(Library::scan(m_dir.filePath(QStringLiteral("zim"))).added.size(), 0);  // nothing new the second time
+        QCOMPARE(Library::scan(m_dir.filePath(QStringLiteral("zim"))).added.size(), 0); // nothing new the second time
 
         const auto all = Library::all();
         QCOMPARE(all.size(), 1);

@@ -19,16 +19,23 @@ QDateTime timestamp(const QVariant &v)
 
 ChatRecord chat(const QSqlQuery &q)
 {
-    return {q.value(0).toLongLong(), q.value(1).toString(), timestamp(q.value(2)), q.value(3).toInt(),
-            q.value(4).toLongLong(), q.value(5).toString(), q.value(6).toString(), q.value(7).toLongLong(), q.value(8).toLongLong()};
+    return {q.value(0).toLongLong(),
+            q.value(1).toString(),
+            timestamp(q.value(2)),
+            q.value(3).toInt(),
+            q.value(4).toLongLong(),
+            q.value(5).toString(),
+            q.value(6).toString(),
+            q.value(7).toLongLong(),
+            q.value(8).toLongLong()};
 }
 
-const char *ChatSelect = "SELECT c.id, c.title, c.updated_at, (SELECT count(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user'), "
-                         "coalesce(c.library_id, 0), c.article_path, c.article_title, coalesce(c.project_id, 0), coalesce(c.lesson_id, 0) FROM chats c";
+const char *ChatSelect =
+    "SELECT c.id, c.title, c.updated_at, (SELECT count(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user'), "
+    "coalesce(c.library_id, 0), c.article_path, c.article_title, coalesce(c.project_id, 0), coalesce(c.lesson_id, 0) FROM chats c";
 }
 
-qint64 Chats::create(const QString &title, qint64 articleLibraryId, const QString &articlePath, const QString &articleTitle, qint64 projectId,
-                     qint64 lessonId)
+qint64 Chats::create(const QString &title, qint64 articleLibraryId, const QString &articlePath, const QString &articleTitle, qint64 projectId, qint64 lessonId)
 {
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO chats (title, library_id, article_path, article_title, project_id, lesson_id) VALUES (?, ?, ?, ?, ?, ?)"));

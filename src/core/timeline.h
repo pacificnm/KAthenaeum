@@ -14,13 +14,13 @@
 namespace Timeline
 {
 struct Date {
-    double value = 0;  // years, BC negative ("31 BC" -1 rounds to -31); a month and day add a fraction
-    QString label;     // as the article writes it: "14 October 1066", "the 1840s", "7,700 years ago"
-    int precision = 1;  // 0 approximate (a decade, a century, years ago), 1 a year, 2 a month, 3 a day
+    double value = 0; // years, BC negative ("31 BC" -1 rounds to -31); a month and day add a fraction
+    QString label; // as the article writes it: "14 October 1066", "the 1840s", "7,700 years ago"
+    int precision = 1; // 0 approximate (a decade, a century, years ago), 1 a year, 2 a month, 3 a day
 };
 struct Event {
     Date date;
-    QString text;  // the sentence
+    QString text; // the sentence
     ArticleRef article;
     QString section;
 };

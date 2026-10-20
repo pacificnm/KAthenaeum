@@ -15,11 +15,11 @@
 struct ProjectRecord {
     qint64 id = 0;
     QString title;
-    QString description;  // the research question or goal; the project chat's model is told it
+    QString description; // the research question or goal; the project chat's model is told it
     QDateTime updatedAt;
     int articles = 0;
     int clips = 0;
-    int chats = 0;  // started in the project or attached to it
+    int chats = 0; // started in the project or attached to it
     int documents = 0;
 };
 
@@ -33,17 +33,17 @@ struct ArticleRef {
 struct ProjectItem {
     qint64 id = 0;
     qint64 projectId = 0;
-    QString kind;  // article | clip | chat
-    ArticleRef article;      // an article; for a clip, the first article it came from (none for a saved answer with no source)
-    QList<ArticleRef> refs;  // a clip: every article it came from
-    QString section;         // a clip: the heading it was taken under
-    QString text;            // a clip: the saved passage
+    QString kind; // article | clip | chat
+    ArticleRef article; // an article; for a clip, the first article it came from (none for a saved answer with no source)
+    QList<ArticleRef> refs; // a clip: every article it came from
+    QString section; // a clip: the heading it was taken under
+    QString text; // a clip: the saved passage
     QString note;
-    Vector embedding;  // a clip, once embedded
+    Vector embedding; // a clip, once embedded
     QString embedModel;
-    qint64 chatId = 0;  // an attached chat
+    qint64 chatId = 0; // an attached chat
     QString chatTitle;
-    QString lesson;  // the classroom lesson it was added for ("Lesson 3: Fractions"), if any
+    QString lesson; // the classroom lesson it was added for ("Lesson 3: Fractions"), if any
     QDateTime createdAt;
 };
 
@@ -51,7 +51,7 @@ struct DocumentRecord {
     qint64 id = 0;
     qint64 projectId = 0;
     QString title;
-    QString content;  // Markdown
+    QString content; // Markdown
     QDateTime updatedAt;
 };
 
@@ -59,24 +59,24 @@ struct DocumentRecord {
 namespace Projects
 {
 // ---- projects ----
-qint64 create(const QString &title, const QString &description = {});  // 0 on failure (an empty title is one)
+qint64 create(const QString &title, const QString &description = {}); // 0 on failure (an empty title is one)
 bool update(qint64 id, const QString &title, const QString &description);
-bool remove(qint64 id);  // its sources and documents go with it; its chats stay, as ordinary chats
-QList<ProjectRecord> all();  // most recently used first
+bool remove(qint64 id); // its sources and documents go with it; its chats stay, as ordinary chats
+QList<ProjectRecord> all(); // most recently used first
 std::optional<ProjectRecord> byId(qint64 id);
-QList<qint64> containing(qint64 libraryId, const QString &path);  // projects that have this article as a source
+QList<qint64> containing(qint64 libraryId, const QString &path); // projects that have this article as a source
 
 // ---- sources ----
 // Idempotent: adding an article twice keeps one item, and never replaces a note with an empty one. Returns the item id.
 qint64 addArticle(qint64 projectId, const ArticleRef &article, const QString &note = {});
 qint64 addClip(qint64 projectId, const QString &text, const QList<ArticleRef> &refs, const QString &section = {}, const QString &note = {});
-qint64 attachChat(qint64 projectId, qint64 chatId);  // idempotent
+qint64 attachChat(qint64 projectId, qint64 chatId); // idempotent
 bool setNote(qint64 projectId, qint64 itemId, const QString &note);
 // The lesson an item was added for; an item already labelled keeps its first lesson
 bool setLesson(qint64 itemId, const QString &lesson);
 bool removeItem(qint64 projectId, qint64 itemId);
 bool setEmbedding(qint64 itemId, const Vector &v, const QString &model);
-QList<ProjectItem> items(qint64 projectId, const QString &kind = {});  // newest first
+QList<ProjectItem> items(qint64 projectId, const QString &kind = {}); // newest first
 // The excerpts saved from this article, in any project, as highlights for its page: the same passage saved in several
 // projects is one highlight naming them all, with their notes
 QList<Highlight> highlightsFor(qint64 libraryId, const QString &path);
@@ -88,7 +88,7 @@ qint64 createDocument(qint64 projectId, const QString &title, const QString &con
 std::optional<DocumentRecord> document(qint64 id);
 bool saveDocument(qint64 id, const QString &title, const QString &content);
 bool removeDocument(qint64 id);
-QList<DocumentRecord> documents(qint64 projectId);  // most recently changed first
+QList<DocumentRecord> documents(qint64 projectId); // most recently changed first
 
 // ---- Markdown ----
 // A link to an article inside the app (zim://lib<id>/<path>) as it goes into a document

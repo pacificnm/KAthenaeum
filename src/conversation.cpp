@@ -139,7 +139,7 @@ SavedAnswer saveAnswer(const AnswerContext &c, const AnswerResult &result)
     return out;
 }
 
-bool s_quitting = false;  // set when the app starts to quit: an answer still running then is saved as stopped
+bool s_quitting = false; // set when the app starts to quit: an answer still running then is saved as stopped
 
 QString seconds(int ms)
 {
@@ -203,11 +203,11 @@ Conversation::Conversation(QObject *parent)
 Conversation::~Conversation()
 {
     if (!busy() || s_quitting || m_answering < 0) {
-        m_answerer->stop();  // quitting: saves what was written as stopped
+        m_answerer->stop(); // quitting: saves what was written as stopped
         return;
     }
     // The page was left during an answer (the reader opened something else): let it finish and save it, rather than
-    // stop it (it was stopped before; the review, 2026-10-19). The answerer now belongs to the app until it is done.
+    // stop it. The answerer belongs to the app until it is done.
     auto context = std::make_shared<AnswerContext>(
         AnswerContext{m_chatId, m_answerModel, m_embeddingModel, m_messages.at(m_answering).sources, m_messages.at(m_answering).note});
     Answerer *answerer = m_answerer;
@@ -224,7 +224,7 @@ Conversation::~Conversation()
         answerer->deleteLater();
     });
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, answerer, [answerer] {
-        answerer->stop();  // saved as stopped
+        answerer->stop(); // saved as stopped
     });
 }
 
@@ -235,9 +235,15 @@ int Conversation::rowCount(const QModelIndex &parent) const
 
 QHash<int, QByteArray> Conversation::roleNames() const
 {
-    return {{RoleRole, "role"},     {TextRole, "text"},           {StatusRole, "status"},
-            {PhaseRole, "phase"},   {ErrorRole, "error"},         {NoteRole, "note"},
-            {SourcesRole, "sources"}, {CitationsRole, "citations"}, {StatsRole, "stats"},
+    return {{RoleRole, "role"},
+            {TextRole, "text"},
+            {StatusRole, "status"},
+            {PhaseRole, "phase"},
+            {ErrorRole, "error"},
+            {NoteRole, "note"},
+            {SourcesRole, "sources"},
+            {CitationsRole, "citations"},
+            {StatsRole, "stats"},
             {ContentRole, "content"}};
 }
 
@@ -313,7 +319,7 @@ bool Conversation::busy() const
 void Conversation::setArticleLibraryId(qint64 id)
 {
     if (id == m_article.libraryId || m_chatId > 0)
-        return;  // a saved chat keeps the article it is about
+        return; // a saved chat keeps the article it is about
     m_article.libraryId = id;
     Q_EMIT articleChanged();
 }
@@ -337,7 +343,7 @@ void Conversation::setArticleTitle(const QString &title)
 void Conversation::setProjectId(qint64 id)
 {
     if (id == m_projectId || m_chatId > 0)
-        return;  // a saved chat keeps its project
+        return; // a saved chat keeps its project
     m_projectId = id;
     Q_EMIT projectChanged();
 }
@@ -345,7 +351,7 @@ void Conversation::setProjectId(qint64 id)
 void Conversation::setLessonId(qint64 id)
 {
     if (id == m_lessonId || m_chatId > 0)
-        return;  // a saved chat keeps its lesson
+        return; // a saved chat keeps its lesson
     m_lessonId = id;
     Q_EMIT lessonChanged();
 }
@@ -417,7 +423,7 @@ void Conversation::ask(const QString &question)
         if (r.fileExists() && (!m_article.isSet() || r.id == m_article.libraryId))
             libraries << r.id;
     if (libraries.isEmpty() && !m_article.isSet()) {
-        // nothing to answer from: say so, without saving an empty chat to the Chats list (the review)
+        // nothing to answer from: say so, without saving an empty chat to the Chats list
         Message user;
         user.role = QStringLiteral("user");
         user.content = q;
@@ -437,8 +443,7 @@ void Conversation::ask(const QString &question)
             earlier << m.content;
 
     if (m_chatId <= 0) {
-        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title, m_lessonId > 0 ? 0 : m_projectId,
-                                 m_lessonId);
+        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title, m_lessonId > 0 ? 0 : m_projectId, m_lessonId);
         m_title = q.simplified().left(200);
         Q_EMIT chatIdChanged();
     }
@@ -511,7 +516,7 @@ void Conversation::ask(const QString &question)
             c.text = i.text;
             c.libraryId = i.article.libraryId;
             c.path = i.article.path;
-            if (i.embedModel == model)  // a vector from another model cannot be compared: it is made again
+            if (i.embedModel == model) // a vector from another model cannot be compared: it is made again
                 c.vector = i.embedding;
             project.clips << c;
         }
