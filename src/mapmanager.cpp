@@ -13,8 +13,10 @@
 
 #include <KLocalizedString>
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -175,10 +177,11 @@ double MapManager::freeSpace() const
 
 QString MapManager::assetsFolder() const
 {
-    const QString installed = QStandardPaths::locate(QStandardPaths::GenericDataLocation, QStringLiteral("kathenaeum/map"), QStandardPaths::LocateDirectory);
-    if (!installed.isEmpty())
-        return installed;
-    return QStringLiteral(KATHENAEUM_SOURCE_DIR "/data/map");  // running from the build directory
+    // beside the program first (its own prefix, or the build directory), so an older installed copy is not used instead
+    const QString beside = QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).filePath(QStringLiteral(KATHENAEUM_MAP_ASSETS));
+    if (QFileInfo::exists(beside))
+        return beside;
+    return QStandardPaths::locate(QStandardPaths::GenericDataLocation, QStringLiteral("kathenaeum/map"), QStandardPaths::LocateDirectory);
 }
 
 bool MapManager::available() const

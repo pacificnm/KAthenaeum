@@ -64,10 +64,10 @@ add_executable(kathenaeum
     zimschemehandler.cpp zimschemehandler.h
 )
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+# install paths relative to the prefix (bin/..), the same in the build directory (see the top-level CMakeLists.txt)
 target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}"
-    KATHENAEUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-    KATHENAEUM_MAPLIBRE_QML="${KATHENAEUM_PRIVATE_DIR}/qml"
-    KATHENAEUM_MAPLIBRE_QML_BUILD="${MAPLIBRE_PREFIX}/qml")
+    KATHENAEUM_MAP_ASSETS="${KDE_INSTALL_DATADIR}/kathenaeum/map"
+    KATHENAEUM_MAPLIBRE_QML="${KATHENAEUM_PRIVATE_DIR}/qml")
 
 set_source_files_properties(qml/Util.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 

@@ -149,9 +149,8 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&networkFactory);
     KLocalization::setupLocalizedContext(&engine);
-    // MapLibre's QML plugin: in the app's private folder once installed, else where it was built
-    const QString maplibre = QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).filePath(QStringLiteral(KATHENAEUM_MAPLIBRE_QML));
-    engine.addImportPath(QFile::exists(maplibre + QStringLiteral("/MapLibre/qmldir")) ? maplibre : QStringLiteral(KATHENAEUM_MAPLIBRE_QML_BUILD));
+    // MapLibre's QML plugin, in the app's private folder (the build directory has the same layout)
+    engine.addImportPath(QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).filePath(QStringLiteral(KATHENAEUM_MAPLIBRE_QML)));
     engine.loadFromModule("KAthenaeum", "Main");
     if (engine.rootObjects().isEmpty())
         return 1;
