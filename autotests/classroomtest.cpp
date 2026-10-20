@@ -3,6 +3,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include "core/chats.h"
 #include "core/classroom.h"
 #include "core/database.h"
 #include "core/library.h"
@@ -263,6 +264,150 @@ private Q_SLOTS:
         QVERIFY(Classroom::setProject(course, project));
         QVERIFY(Projects::remove(project));
         QCOMPARE(Classroom::course(course)->projectId, 0);
+    }
+
+    void questionsAsTheModelWritesThem()
+    {
+        const auto q = Classroom::parseQuestion(QStringLiteral(
+            "**Question:** Which dynasty did Vespasian found?\nA) The Nerva–Antonine dynasty\nB) The Julio-Claudian dynasty\n"
+            "(C) The Five Good Emperors\nD. The Flavian dynasty\n**Answer:** D) The Flavian dynasty\nWhy: \"Vespasian became the founder of the brief Flavian dynasty\""));
+        QVERIFY(q);
+        QCOMPARE(q->text, QStringLiteral("Which dynasty did Vespasian found?"));
+        QCOMPARE(q->options.size(), 4);
+        QCOMPARE(q->options[2], QStringLiteral("The Five Good Emperors"));
+        QCOMPARE(q->answer, 3);
+        QVERIFY(q->explanation.contains(QLatin1String("Flavian")));
+        // not a question: an option missing, two the same, no answer
+        QVERIFY(!Classroom::parseQuestion(QStringLiteral("Question: What?\nA) a\nB) b\nC) c\nAnswer: A")));
+        QVERIFY(!Classroom::parseQuestion(QStringLiteral("Question: What?\nA) a\nB) a\nC) c\nD) d\nAnswer: A")));
+        QVERIFY(!Classroom::parseQuestion(QStringLiteral("Question: What?\nA) a\nB) b\nC) c\nD) d")));
+        // a question without its label
+        QVERIFY(Classroom::parseQuestion(QStringLiteral("What is lava?\nA) Rock\nB) Water\nC) Ice\nD) Air\nCorrect answer: (a)")));
+    }
+
+    void anAnswerMustBeInItsPassage()
+    {
+        const QString passage = QStringLiteral("Vespasian became the founder of the brief Flavian dynasty, followed by the Nerva–Antonine dynasty. "
+                                               "The eruption of Krakatoa in 1883 was heard 4,800 km away.");
+        Classroom::Question q;
+        q.text = QStringLiteral("Which dynasty did Vespasian found?");
+        q.options = {QStringLiteral("The Julio-Claudian dynasty"), QStringLiteral("The Flavian dynasty"), QStringLiteral("The Severan dynasty"),
+                     QStringLiteral("The Five Good Emperors")};
+        q.answer = 1;
+        QVERIFY(Classroom::answerInPassage(q, passage));
+        q.answer = 2;  // the key on an option the passage does not have
+        QVERIFY(!Classroom::answerInPassage(q, passage));
+        q.answer = 0;
+        q.options[0] = QStringLiteral("The Julio-Claudian dynasty");
+        QVERIFY(!Classroom::answerInPassage(q, passage));
+        // a figure must be there as written
+        Classroom::Question year;
+        year.text = QStringLiteral("When did Krakatoa erupt?");
+        year.options = {QStringLiteral("1883"), QStringLiteral("1815"), QStringLiteral("1902"), QStringLiteral("1980")};
+        year.answer = 0;
+        QVERIFY(Classroom::answerInPassage(year, passage));
+        year.options[0] = QStringLiteral("1884");
+        QVERIFY(!Classroom::answerInPassage(year, passage));
+        // a question about something the passage does not say (its answer happens to be there)
+        Classroom::Question premise;
+        premise.text = QStringLiteral("What ended the conflict between Julius Caesar and Pompey?");
+        premise.options = {QStringLiteral("The Flavian dynasty"), QStringLiteral("A treaty"), QStringLiteral("A storm"), QStringLiteral("A plague")};
+        premise.answer = 0;
+        QVERIFY(!Classroom::answerInPassage(premise, passage));
+    }
+
+    void shuffledOptionsKeepTheirAnswer()
+    {
+        Classroom::Question q;
+        q.options = {QStringLiteral("a"), QStringLiteral("b"), QStringLiteral("c"), QStringLiteral("d")};
+        q.answer = 1;
+        QSet<int> positions;
+        for (quint32 seed = 0; seed < 40; ++seed) {
+            const auto s = Classroom::shuffled(q, seed);
+            QCOMPARE(s.options.at(s.answer), QStringLiteral("b"));
+            QCOMPARE(QSet<QString>(s.options.cbegin(), s.options.cend()).size(), 4);
+            positions.insert(s.answer);
+        }
+        QCOMPARE(positions.size(), 4);  // the answer lands on every letter
+    }
+
+    void quizzesAreGradedAndMissesReviewed()
+    {
+        const qint64 course = Classroom::createCourse(QStringLiteral("history"), QStringLiteral("Rome"), QStringLiteral("adult"), {}, {});
+        Classroom::Lesson l;
+        l.title = QStringLiteral("The Republic");
+        l.readings = {{{2, QStringLiteral("Roman_Republic"), QStringLiteral("Roman Republic")}, 0.9}};
+        QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Rise"), {l}}}));
+        const auto unit = Classroom::syllabus(course).first();
+        const qint64 lesson = unit.lessons.first().id;
+        QVERIFY(!Classroom::latestQuiz(QStringLiteral("lesson"), lesson));
+        QCOMPARE(Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"), {}}), 0);  // no questions, no quiz
+
+        auto question = [&](const QString &text, int answer) {
+            Classroom::Question q;
+            q.text = text;
+            q.options = {QStringLiteral("w"), QStringLiteral("x"), QStringLiteral("y"), QStringLiteral("z")};
+            q.answer = answer;
+            q.evidence = QStringLiteral("the passage");
+            q.source = {2, QStringLiteral("Roman_Republic"), QStringLiteral("Roman Republic")};
+            q.lessonId = lesson;
+            return q;
+        };
+        const qint64 quiz = Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"),
+                                                 {question(QStringLiteral("One?"), 0), question(QStringLiteral("Two?"), 1), question(QStringLiteral("Three?"), 2)}});
+        QVERIFY(quiz > 0);
+        QCOMPARE(Classroom::latestQuiz(QStringLiteral("lesson"), lesson)->questions.size(), 3);
+        QCOMPARE(Classroom::quiz(quiz)->questions[1].source.title, QStringLiteral("Roman Republic"));
+
+        const auto first = Classroom::submit(quiz, {0, 3, -1});
+        QCOMPARE(first->score, 1);
+        QCOMPARE(first->total, 3);
+        auto missed = Classroom::missed(course);
+        QCOMPARE(missed.size(), 2);
+        QCOMPARE(missed[0].question.text, QStringLiteral("Two?"));
+        QCOMPARE(missed[0].chosen, 3);
+        QCOMPARE(missed[1].chosen, -1);  // not answered counts as missed
+        QCOMPARE(missed[0].lessonTitle, QStringLiteral("The Republic"));
+
+        // a better try: the latest attempt is what is reviewed, the best what is scored
+        QVERIFY(Classroom::submit(quiz, {0, 1, 2}));
+        QVERIFY(Classroom::missed(course).isEmpty());
+        QVERIFY(Classroom::submit(quiz, {1, 1, 2}));
+        QCOMPARE(Classroom::bestAttempt(quiz)->score, 3);
+        QCOMPARE(Classroom::latestAttempt(quiz)->score, 2);
+        QCOMPARE(Classroom::missed(course).size(), 1);
+        QVERIFY(!Classroom::submit(quiz + 100, {0}));
+
+        // a unit's test; planning the course again removes both
+        QVERIFY(Classroom::saveQuiz({0, course, 0, unit.id, QStringLiteral("unit"), {question(QStringLiteral("Four?"), 3)}}) > 0);
+        QCOMPARE(Classroom::latestQuiz(QStringLiteral("unit"), unit.id)->kind, QStringLiteral("unit"));
+        QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Again"), {l}}}));
+        QVERIFY(!Classroom::latestQuiz(QStringLiteral("lesson"), lesson));
+        QVERIFY(!Classroom::latestQuiz(QStringLiteral("unit"), unit.id));
+    }
+
+    void theTeacherGuides()
+    {
+        Classroom::Course c;
+        c.title = QStringLiteral("Rome");
+        c.level = QStringLiteral("7");
+        Classroom::Lesson l;
+        l.title = QStringLiteral("The Republic");
+        const QString p = Classroom::tutorPrompt(c, {QStringLiteral("Ada Lovelace"), {}, {}, {}}, l);
+        QVERIFY(p.contains(QLatin1String("You are Ada's teacher")));
+        QVERIFY(p.contains(QLatin1String("do not just give the answer")));
+        QVERIFY(p.contains(QLatin1String("grade 7")));
+        // its chats keep their lesson
+        const qint64 course = Classroom::createCourse(QStringLiteral("history"), QStringLiteral("Rome"), QStringLiteral("7"), {}, {});
+        QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Rise"), {l}}}));
+        const qint64 lesson = Classroom::syllabus(course).first().lessons.first().id;
+        const qint64 chat = Chats::create(QStringLiteral("Why?"), 0, {}, {}, 0, lesson);
+        QVERIFY(chat > 0);
+        QCOMPARE(Chats::byId(chat)->lessonId, lesson);
+        QCOMPARE(Chats::aboutLesson(lesson).size(), 1);
+        // planning again: the chat stays, without its lesson
+        QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Again"), {l}}}));
+        QCOMPARE(Chats::byId(chat)->lessonId, 0);
     }
 
     void aLessonsReadings()

@@ -9,10 +9,50 @@
 
 #include "core/projects.h"
 
+#include "core/chats.h"
+
 #include <KLocalizedString>
 
 namespace
 {
+// the best score of the newest quiz of a lesson or test of a unit, in percent; -1 if not taken
+int bestPercent(const QString &kind, qint64 targetId)
+{
+    const auto q = Classroom::latestQuiz(kind, targetId);
+    const auto a = q ? Classroom::bestAttempt(q->id) : std::nullopt;
+    return a && a->total > 0 ? int(std::lround(100.0 * a->score / a->total)) : -1;
+}
+
+QVariantMap graded(const Classroom::Question &q, int chosen)
+{
+    const auto lesson = Classroom::lesson(q.lessonId);
+    return {{QStringLiteral("text"), q.text},
+            {QStringLiteral("options"), q.options},
+            {QStringLiteral("answer"), q.answer},
+            {QStringLiteral("chosen"), chosen},
+            {QStringLiteral("correct"), chosen == q.answer},
+            {QStringLiteral("explanation"), q.explanation},
+            {QStringLiteral("evidence"), q.evidence},
+            {QStringLiteral("libraryId"), q.source.libraryId},
+            {QStringLiteral("path"), q.source.path},
+            {QStringLiteral("title"), q.source.title},
+            {QStringLiteral("lessonId"), q.lessonId},
+            {QStringLiteral("lessonTitle"), lesson ? lesson->title : QString()}};
+}
+
+QVariantMap result(const Classroom::Quiz &quiz, const Classroom::Attempt &attempt)
+{
+    QVariantList questions;
+    for (int i = 0; i < quiz.questions.size(); ++i)
+        questions << graded(quiz.questions.at(i), attempt.answers.value(i, -1));
+    const int percent = attempt.total > 0 ? int(std::lround(100.0 * attempt.score / attempt.total)) : 0;
+    return {{QStringLiteral("score"), attempt.score},
+            {QStringLiteral("total"), attempt.total},
+            {QStringLiteral("percent"), percent},
+            {QStringLiteral("passed"), attempt.total > 0 && double(attempt.score) / attempt.total >= Classroom::PassMark},
+            {QStringLiteral("questions"), questions}};
+}
+
 Teacher::Models models()
 {
     ModelSettings *m = ModelSettings::instance();
@@ -52,6 +92,11 @@ ClassroomController::ClassroomController(QObject *parent)
                 Q_EMIT courseReady(subject, c->title);
             else if (status == QLatin1String("error"))
                 Q_EMIT failed(i18n("The course could not be planned: %1", error));
+        } else if (job == QLatin1String("quiz")) {
+            if (status == QLatin1String("done"))
+                Q_EMIT quizReady(m_quizKind, subject);
+            else if (status == QLatin1String("error"))
+                Q_EMIT failed(i18n("The quiz could not be written: %1", error));
         } else if (status == QLatin1String("done")) {
             if (Classroom::syncLesson(subject))  // the introduction, as a document of the course's project
                 Q_EMIT ProjectsNotifier::instance()->changed();
@@ -227,12 +272,16 @@ QVariantMap ClassroomController::course(qint64 courseId) const
         QVariantList lessons;
         for (const Classroom::Lesson &l : u.lessons)
             lessons.append(QVariantMap{{QStringLiteral("id"), l.id},
+                                       {QStringLiteral("quizScore"), bestPercent(QStringLiteral("lesson"), l.id)},
                                        {QStringLiteral("title"), l.title},
                                        {QStringLiteral("objective"), l.objective},
                                        {QStringLiteral("completed"), l.completed()},
                                        {QStringLiteral("hasIntro"), !l.intro.isEmpty()},
                                        {QStringLiteral("readings"), int(l.readings.size())}});
-        units.append(QVariantMap{{QStringLiteral("id"), u.id}, {QStringLiteral("title"), u.title}, {QStringLiteral("lessons"), lessons}});
+        units.append(QVariantMap{{QStringLiteral("id"), u.id},
+                                 {QStringLiteral("title"), u.title},
+                                 {QStringLiteral("testScore"), bestPercent(QStringLiteral("unit"), u.id)},
+                                 {QStringLiteral("lessons"), lessons}});
     }
     return {{QStringLiteral("id"), c->id},
             {QStringLiteral("title"), c->title},
@@ -381,4 +430,65 @@ bool ClassroomController::keepHighlight(qint64 lessonId, qint64 libraryId, const
     if (kept)
         Q_EMIT ProjectsNotifier::instance()->changed();
     return kept;
+}
+
+// ---- quizzes, tests and review ----
+
+bool ClassroomController::makeQuiz(const QString &kind, qint64 targetId)
+{
+    if (m_teacher->running())
+        return false;
+    m_quizKind = kind == QLatin1String("unit") ? QStringLiteral("unit") : QStringLiteral("lesson");
+    m_streamed.clear();
+    m_teacher->writeQuiz(m_quizKind, targetId, models());
+    Q_EMIT stateChanged();
+    return true;
+}
+
+QVariantMap ClassroomController::quiz(const QString &kind, qint64 targetId) const
+{
+    const auto q = Classroom::latestQuiz(kind, targetId);
+    if (!q)
+        return {};
+    QVariantList questions;
+    for (const Classroom::Question &x : q->questions)
+        questions.append(QVariantMap{{QStringLiteral("text"), x.text}, {QStringLiteral("options"), x.options}});
+    QVariantMap out{{QStringLiteral("id"), q->id}, {QStringLiteral("kind"), q->kind}, {QStringLiteral("questions"), questions}};
+    if (const auto a = Classroom::latestAttempt(q->id))
+        out.insert(QStringLiteral("result"), result(*q, *a));
+    return out;
+}
+
+QVariantMap ClassroomController::submitQuiz(qint64 quizId, const QVariantList &answers)
+{
+    QList<int> chosen;
+    for (const QVariant &v : answers)
+        chosen << (v.isValid() && !v.isNull() ? v.toInt() : -1);
+    const auto attempt = Classroom::submit(quizId, chosen);
+    const auto q = attempt ? Classroom::quiz(quizId) : std::nullopt;
+    if (!q)
+        return {};
+    const QVariantMap out = result(*q, *attempt);
+    // passing a lesson's quiz finishes the lesson
+    if (q->kind == QLatin1String("lesson") && out.value(QStringLiteral("passed")).toBool())
+        Classroom::setCompleted(q->lessonId, true);
+    Q_EMIT coursesChanged();
+    return out;
+}
+
+QVariantList ClassroomController::missed(qint64 courseId) const
+{
+    QVariantList out;
+    for (const Classroom::Missed &m : Classroom::missed(courseId)) {
+        QVariantMap g = graded(m.question, m.chosen);
+        g.insert(QStringLiteral("quizKind"), m.quizKind);
+        out << g;
+    }
+    return out;
+}
+
+qint64 ClassroomController::latestChat(qint64 lessonId) const
+{
+    const QList<ChatRecord> chats = Chats::aboutLesson(lessonId);
+    return chats.isEmpty() ? 0 : chats.first().id;
 }

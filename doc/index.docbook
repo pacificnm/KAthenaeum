@@ -25,7 +25,7 @@
 <legalnotice>&FDLNotice;</legalnotice>
 
 <date>2026-10-20</date>
-<releaseinfo>0.15.0</releaseinfo>
+<releaseinfo>0.16.0</releaseinfo>
 
 <abstract>
 <para>
@@ -414,6 +414,66 @@ panel shows at a time; <guibutton>Lesson</guibutton> in the header brings the le
 <guibutton>Next Lesson</guibutton>; the arrows in the header move between lessons.
 </para>
 <para>
+A lesson has three tabs: <guilabel>Lesson</guilabel> (the introduction and readings), <guilabel>Quiz</guilabel> and
+<guilabel>Ask Your Teacher</guilabel>.
+</para>
+</sect1>
+
+<sect1 id="quizzes">
+<title>Quizzes, Tests and Review</title>
+<para>
+<guibutton>Write the Quiz</guibutton> in a lesson's <guilabel>Quiz</guilabel> tab has the teacher write up to five
+multiple-choice questions from the lesson's readings. Each question is kept only if &kathenaeum; finds its answer, and the
+question's own subject, in the passage it was written from; the teacher is never trusted to know the answer by itself.
+Choose your answers and press <guibutton>Check My Answers</guibutton>: each question then shows the right answer, why,
+and the passage it comes from, with <guibutton>Read It</guibutton> to open the reading. With 70% or more, the lesson is
+marked finished. <guibutton>Try Again</guibutton> asks the same questions; <guibutton>New Questions</guibutton> has
+new ones written. A quiz takes about a minute to write.
+</para>
+<screenshot>
+<screeninfo>A graded quiz</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="quiz.png" format="PNG"/></imageobject>
+<textobject><phrase>A lesson quiz after answering: the score, the right answers ticked, and the passage each comes from</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+Each unit of a course has a test (<guibutton>Take the Unit Test</guibutton> on the course's page), with questions on each
+of its lessons. The course's page shows each lesson's quiz score and each unit's test score, and a
+<guilabel>To review</guilabel> list of the questions you got wrong in your latest tries, with the right answer, the
+reading, and <guibutton>Ask Your Teacher</guibutton>.
+</para>
+<screenshot>
+<screeninfo>What to review</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="review.png" format="PNG"/></imageobject>
+<textobject><phrase>A course's page with two questions to review and a lesson's quiz score</phrase></textobject>
+</mediaobject>
+</screenshot>
+</sect1>
+
+<sect1 id="teacher">
+<title>Asking Your Teacher</title>
+<para>
+The <guilabel>Ask Your Teacher</guilabel> tab of a lesson is a chat with the teacher about it. It answers from the
+lesson's readings, at your level, and helps you work things out rather than handing you answers: ask it to explain
+something, try your answer to one of the lesson's questions and it tells you whether you are right, or bring it a quiz
+question you missed (<guibutton>Ask Your Teacher</guibutton> under it fills the question in). The chat is kept; the
+lesson opens it again next time, and <guibutton>New Chat with the Teacher</guibutton> starts another. It also appears
+under <guilabel>Chats</guilabel>.
+</para>
+<screenshot>
+<screeninfo>The teacher</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="teacher.png" format="PNG"/></imageobject>
+<textobject><phrase>The teacher correcting a misconception about seismic waves from the reading, and asking a question back</phrase></textobject>
+</mediaobject>
+</screenshot>
+</sect1>
+
+<sect1 id="course-project">
+<title>A Course in a Project</title>
+<para>
 <guibutton>Keep in a Project…</guibutton> on a course's page keeps the course in a
 <link linkend="projects">research project</link>: a new one named after it, or one you have. Each lesson's readings
 become the project's sources (marked with their lesson), each introduction a document with the readings linked and a
@@ -423,8 +483,9 @@ on the course, the lesson and the Lesson panel opens it; the project shows which
 </para>
 <para>
 The teacher is a small model. It explains and asks questions well when it has the reading in front of it, which is why
-every lesson is built on articles from your libraries; but it can still be wrong. Read the articles, and check what
-matters. Quizzes, tests and a teacher to talk with about each lesson are planned for a later version.
+every lesson is built on articles from your libraries, and every quiz answer is checked against them; but it can still be
+wrong, and the readings come from an encyclopedia written for adults, so some questions may be harder than your level.
+Read the articles, and check what matters.
 </para>
 </sect1>
 </chapter>

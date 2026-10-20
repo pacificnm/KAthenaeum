@@ -26,6 +26,7 @@ struct ProjectScope {
     QList<ArticleScope> articles;  // in installed libraries only
     QList<Rag::Clip> clips;        // newest first; an empty vector = to be embedded with this question
     bool alsoLibrary = false;      // also search the libraries (libraryIds), as a separate group
+    QString system;                // instead of the project chat's system prompt (the classroom's teacher)
     bool isSet() const { return id > 0; }
 };
 

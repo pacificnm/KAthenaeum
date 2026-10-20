@@ -5,10 +5,14 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import KAthenaeum
 
-// One lesson: the teacher's introduction (written the first time the lesson is opened), its readings from the
-// libraries, and marking it done.
-Kirigami.ScrollablePage {
+// One lesson, in three views: the lesson (the teacher's introduction, written the first time it is opened, and its
+// readings from the libraries), its quiz, and a chat with the teacher about it.
+Kirigami.Page {
     id: page
+
+    padding: 0
+    property int startTab: 0      // 1: the quiz, 2: the teacher
+    property string askText       // a question to put to the teacher (from a missed quiz question)
 
     required property var lessonId
     property var lesson: ({})
@@ -20,11 +24,43 @@ Kirigami.ScrollablePage {
 
     title: Util.pageTitle(lesson.title ?? i18n("Lesson"))
 
+    header: QQC2.ToolBar {
+        padding: 0
+        contentItem: SegmentedTabs {
+            id: tabs
+            tabs: [
+                { text: i18n("Lesson"), icon: "applications-education-symbolic" },
+                { text: i18n("Quiz"), icon: "checkmark" },
+                { text: i18n("Ask Your Teacher"), icon: "dialog-messages" }
+            ]
+        }
+    }
+
+    function askTeacher(question) {
+        tabs.currentIndex = 2;
+        teacher.setQuestion(question);
+        teacher.focusInput();
+    }
+
+    // the teacher: the latest chat about this lesson, or a new one
+    Conversation {
+        id: conversation
+        lessonId: page.lessonId
+        Component.onCompleted: {
+            const chat = Classroom.latestChat(page.lessonId);
+            if (chat > 0)
+                chatId = chat;
+        }
+    }
+
     function refresh() {
         page.lesson = Classroom.lesson(page.lessonId);
     }
     // the introduction is written when the lesson is first opened (unless the teacher is busy: then on request)
     Component.onCompleted: {
+        tabs.currentIndex = startTab;
+        if (askText !== "")
+            Qt.callLater(() => page.askTeacher(askText));
         refresh();
         if ((lesson.intro ?? "") === "" && (lesson.readings ?? []).length > 0)
             Classroom.writeIntro(page.lessonId);
@@ -54,6 +90,17 @@ Kirigami.ScrollablePage {
             onTriggered: page.openLesson(page.lesson.nextId)
         },
         Kirigami.Action {
+            text: i18n("New Chat with the Teacher")
+            icon.name: "list-add"
+            visible: tabs.currentIndex === 2
+            enabled: conversation.chatId > 0 && !conversation.busy
+            onTriggered: {
+                conversation.chatId = 0;
+                conversation.lessonId = page.lessonId;
+                teacher.focusInput();
+            }
+        },
+        Kirigami.Action {
             text: i18n("Write the Introduction Again")
             icon.name: "view-refresh"
             enabled: !Classroom.busy && (page.lesson.readings ?? []).length > 0
@@ -62,8 +109,21 @@ Kirigami.ScrollablePage {
         }
     ]
 
+    StackLayout {
+        anchors.fill: parent
+        currentIndex: tabs.currentIndex
+
+    QQC2.ScrollView {
+        id: lessonScroll
+        contentWidth: availableWidth
+        QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+
     ColumnLayout {
+        x: Kirigami.Units.gridUnit
+        width: lessonScroll.availableWidth - Kirigami.Units.gridUnit * 2
         spacing: Kirigami.Units.largeSpacing
+
+        Item { implicitHeight: Kirigami.Units.smallSpacing }
 
         // where it is
         ColumnLayout {
@@ -306,6 +366,49 @@ Kirigami.ScrollablePage {
             Item { Layout.fillWidth: true }
         }
     }
+
+    }  // the lesson's scroll view
+
+    // the quiz
+    QQC2.ScrollView {
+        id: quizScroll
+        contentWidth: availableWidth
+        QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+        ColumnLayout {
+            x: Kirigami.Units.gridUnit
+            width: quizScroll.availableWidth - Kirigami.Units.gridUnit * 2
+            Item { implicitHeight: Kirigami.Units.largeSpacing }
+            QuizView {
+                Layout.fillWidth: true
+                kind: "lesson"
+                targetId: page.lessonId
+                onOpenReading: (libraryId, path) => page.openArticle(libraryId, path)
+                onAskTeacher: (lessonId, question) => page.askTeacher(question)
+            }
+            Item { implicitHeight: Kirigami.Units.gridUnit }
+        }
+    }
+
+    // the teacher
+    ColumnLayout {
+        spacing: 0
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            Layout.margins: Kirigami.Units.smallSpacing
+            visible: conversation.chatId === 0
+            type: Kirigami.MessageType.Information
+            text: i18n("Ask about anything in this lesson, or try your answer to one of its questions. Your teacher answers from the lesson's readings and will help you work things out rather than just giving answers.")
+        }
+        ChatView {
+            id: teacher
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            conversation: conversation
+            onOpenArticle: (libraryId, path, fragment) => page.openArticle(libraryId, path)
+            onOpenSettings: applicationWindow().show(applicationWindow().componentOf("settings"))
+        }
+    }
+    }  // the stack
 
     CourseProjectDialog {
         id: projectDialog

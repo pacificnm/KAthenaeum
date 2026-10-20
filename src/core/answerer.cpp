@@ -192,6 +192,7 @@ void Answerer::ask()
             return;
         }
         const QString system = m_request.article.isSet() ? Rag::articleSystemPrompt(m_request.article.title)
+            : m_request.project.isSet() && !m_request.project.system.isEmpty() ? m_request.project.system
             : m_request.project.isSet() ? Rag::projectSystemPrompt(m_request.project.title, m_request.project.goal, m_request.project.alsoLibrary)
                                         : Rag::systemPrompt();
         QJsonArray messages{QJsonObject{{QStringLiteral("role"), QStringLiteral("system")}, {QStringLiteral("content"), system}}};

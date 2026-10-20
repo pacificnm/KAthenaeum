@@ -126,7 +126,66 @@ qint64 keepHighlight(qint64 lessonId, const QString &text, const ArticleRef &art
 QString lessonDocument(const Lesson &lesson);
 bool setCompleted(qint64 lessonId, bool completed);
 
+// ---- quizzes (a lesson's) and tests (a unit's) ----
+struct Question {
+    qint64 id = 0;
+    QString text;
+    QStringList options;  // four
+    int answer = 0;       // index into options
+    QString explanation;
+    QString evidence;  // the passage it was written from, which has the answer
+    ArticleRef source;
+    qint64 lessonId = 0;
+};
+struct Quiz {
+    qint64 id = 0;
+    qint64 courseId = 0;
+    qint64 lessonId = 0;  // a lesson's quiz
+    qint64 unitId = 0;    // a unit's test
+    QString kind;         // lesson | unit
+    QList<Question> questions;
+};
+struct Attempt {
+    qint64 id = 0;
+    QList<int> answers;
+    int score = 0;
+    int total = 0;
+    QDateTime at;
+};
+constexpr int QuizQuestions = 5;
+constexpr int TestQuestionsPerLesson = 2;
+constexpr double PassMark = 0.7;
+qint64 saveQuiz(const Quiz &quiz);
+std::optional<Quiz> quiz(qint64 id);
+// The newest quiz of a lesson ("lesson", lessonId) or test of a unit ("unit", unitId)
+std::optional<Quiz> latestQuiz(const QString &kind, qint64 targetId);
+// Grades the answers (index per question, -1 none) and keeps the attempt; nothing for an unknown quiz
+std::optional<Attempt> submit(qint64 quizId, const QList<int> &answers);
+std::optional<Attempt> latestAttempt(qint64 quizId);
+std::optional<Attempt> bestAttempt(qint64 quizId);
+// What the learner got wrong in their latest attempt at each quiz and test of the course, newest first
+struct Missed {
+    Question question;
+    int chosen = -1;
+    QString quizKind;
+    QString lessonTitle;
+};
+QList<Missed> missed(qint64 courseId);
+
 // ---- what the teacher is asked, and how its answers are read ----
+// One multiple-choice question on a passage, at the course's level
+QString questionPrompt(const Course &course, const QString &lessonTitle, const QString &passage);
+// "Question: …", four options "A) …" to "D) …", "Answer: B", "Why: …"; nothing unless it has all of them and the four
+// options differ
+std::optional<Question> parseQuestion(const QString &text);
+// Is the right option stated in the passage? Most of its words (or its figure) must be there, and most of the question's
+// own words; no wrong option may match the passage better. A question whose answer the passage does not have is never
+// asked (the model is not trusted to know).
+bool answerInPassage(const Question &question, const QString &passage);
+// The options in another order (the model favours some letters), the answer following its option
+Question shuffled(Question question, quint32 seed);
+// The tutor: guides the learner through the lesson's readings with hints and questions rather than answers
+QString tutorPrompt(const Course &course, const Profile &profile, const Lesson &lesson);
 QString syllabusPrompt(const Course &course, const Profile &profile, int units, int lessonsPerUnit);
 // "Unit 1: Title" lines, then "- Lesson title | Article title | what it teaches" lines under each (numbered, bulleted,
 // bold and "##" forms too; "Title: what it teaches" without an article). The template's own words ("Lesson title",

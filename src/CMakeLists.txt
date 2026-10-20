@@ -80,6 +80,8 @@ qt_add_qml_module(kathenaeum
         qml/LessonPage.qml
         qml/NewCourseDialog.qml
         qml/ProfileDialog.qml
+        qml/QuizView.qml
+        qml/UnitTestPage.qml
         qml/DefinitionPopup.qml
         qml/HighlightCard.qml
         qml/NotesPage.qml

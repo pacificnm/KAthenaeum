@@ -15,12 +15,18 @@ Kirigami.ScrollablePage {
 
     signal openLesson(var lessonId)
     signal openProject(var projectId)
+    signal openUnitTest(var unitId, string unitTitle)
+    signal openReading(var libraryId, string path)
+    signal askTeacher(var lessonId, string question)
     signal closed()
 
     title: Util.pageTitle(course.title ?? i18n("Course"))
 
+    property var missed: []
+    property bool showAllMissed: false
     function refresh() {
         page.course = Classroom.course(page.courseId);
+        page.missed = Classroom.missed(page.courseId);
     }
     Component.onCompleted: refresh()
     Connections {
@@ -166,6 +172,92 @@ Kirigami.ScrollablePage {
             }
         }
 
+        // what to look at again: questions got wrong in the latest quizzes and tests
+        Kirigami.ShadowedRectangle {
+            Layout.fillWidth: true
+            visible: !page.planning && page.missed.length > 0
+            implicitHeight: reviewLayout.implicitHeight + Kirigami.Units.gridUnit * 1.5
+            radius: Kirigami.Units.cornerRadius * 2
+            color: Qt.alpha(Kirigami.Theme.neutralTextColor, 0.08)
+            ColumnLayout {
+                id: reviewLayout
+                anchors { fill: parent; margins: Kirigami.Units.largeSpacing * 1.5 }
+                spacing: Kirigami.Units.largeSpacing
+                RowLayout {
+                    Kirigami.Icon {
+                        source: "view-refresh"
+                        Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                        Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+                    }
+                    Kirigami.Heading {
+                        level: 3
+                        textFormat: Text.PlainText
+                        text: i18np("To review: %1 question", "To review: %1 questions", page.missed.length)
+                    }
+                    Item { Layout.fillWidth: true }
+                    AppButton {
+                        visible: page.missed.length > 3
+                        kind: "flat"
+                        text: page.showAllMissed ? i18n("Show Fewer") : i18n("Show All")
+                        onClicked: page.showAllMissed = !page.showAllMissed
+                    }
+                }
+                Repeater {
+                    model: page.showAllMissed ? page.missed : page.missed.slice(0, 3)
+                    delegate: ColumnLayout {
+                        id: miss
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 2
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            textFormat: Text.PlainText
+                            text: miss.modelData.text
+                            wrapMode: Text.Wrap
+                            font.weight: Font.DemiBold
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            text: i18n("The answer: %1", miss.modelData.options[miss.modelData.answer])
+                            color: Kirigami.Theme.positiveTextColor
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            visible: miss.modelData.chosen >= 0
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            text: i18n("You answered: %1", miss.modelData.chosen >= 0 ? miss.modelData.options[miss.modelData.chosen] : "")
+                            opacity: 0.7
+                        }
+                        RowLayout {
+                            QQC2.Label {
+                                textFormat: Text.PlainText
+                                text: miss.modelData.lessonTitle
+                                font: Kirigami.Theme.smallFont
+                                opacity: 0.6
+                            }
+                            AppButton {
+                                kind: "flat"
+                                icon.name: "document-open"
+                                text: i18n("Read It")
+                                onClicked: page.openReading(miss.modelData.libraryId, miss.modelData.path)
+                            }
+                            AppButton {
+                                kind: "flat"
+                                icon.name: "dialog-messages"
+                                text: i18n("Ask Your Teacher")
+                                onClicked: page.askTeacher(miss.modelData.lessonId,
+                                                           i18n("I got this question wrong: “%1” I answered “%2”. Can you help me understand?", miss.modelData.text,
+                                                                miss.modelData.chosen >= 0 ? miss.modelData.options[miss.modelData.chosen] : i18n("nothing")))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // the syllabus
         Repeater {
             model: page.planning ? [] : (page.course.units ?? [])
@@ -191,6 +283,19 @@ Kirigami.ScrollablePage {
                         textFormat: Text.PlainText
                         text: unit.modelData.title
                         elide: Text.ElideRight
+                    }
+                    QQC2.Label {
+                        visible: unit.modelData.testScore >= 0
+                        textFormat: Text.PlainText
+                        text: i18n("Test: %1%", unit.modelData.testScore)
+                        color: unit.modelData.testScore >= 70 ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.neutralTextColor
+                        font: Kirigami.Theme.smallFont
+                    }
+                    AppButton {
+                        kind: "flat"
+                        icon.name: "checkmark"
+                        text: unit.modelData.testScore >= 0 ? i18n("Unit Test") : i18n("Take the Unit Test")
+                        onClicked: page.openUnitTest(unit.modelData.id, unit.modelData.title)
                     }
                 }
 
@@ -246,6 +351,13 @@ Kirigami.ScrollablePage {
                                     opacity: 0.7
                                     font: Kirigami.Theme.smallFont
                                 }
+                            }
+                            QQC2.Label {
+                                visible: row.modelData.quizScore >= 0
+                                textFormat: Text.PlainText
+                                text: i18n("Quiz %1%", row.modelData.quizScore)
+                                color: row.modelData.quizScore >= 70 ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.neutralTextColor
+                                font: Kirigami.Theme.smallFont
                             }
                             QQC2.Label {
                                 textFormat: Text.PlainText

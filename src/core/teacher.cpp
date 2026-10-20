@@ -8,6 +8,7 @@
 #include "zimreader.h"
 
 #include <QFutureWatcher>
+#include <QSqlQuery>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -421,6 +422,200 @@ void Teacher::introWritten(const QString &raw)
             return;
         }
         save(Rag::attribute(text, spans, vectors, m_context.sources));
+    });
+}
+
+// ---- a quiz or a test ----
+
+void Teacher::writeQuiz(const QString &kind, qint64 targetId, const Models &models)
+{
+    stop();
+    ++m_generation;
+    m_models = models;
+    m_running = true;
+    m_job = QStringLiteral("quiz");
+    m_subjectId = targetId;
+    m_quizKind = kind;
+    m_quizLessons.clear();
+    m_quizRead.clear();
+    m_quizQueue.clear();
+    m_quizWanted.clear();
+    m_questions.clear();
+    m_quizRank = 0;
+    m_quizTried = 0;
+    qint64 courseId = 0;
+    if (kind == QLatin1String("unit")) {
+        QSqlQuery q;
+        q.prepare(QStringLiteral("SELECT course_id FROM course_units WHERE id = ?"));
+        q.addBindValue(targetId);
+        courseId = q.exec() && q.next() ? q.value(0).toLongLong() : 0;
+        for (const Classroom::Unit &u : Classroom::syllabus(courseId))
+            if (u.id == targetId)
+                m_quizLessons = u.lessons;
+        for (const Classroom::Lesson &l : std::as_const(m_quizLessons))
+            m_quizWanted.insert(l.id, Classroom::TestQuestionsPerLesson);
+    } else if (const auto l = Classroom::lesson(targetId)) {
+        courseId = l->courseId;
+        m_quizLessons = {*l};
+        m_quizWanted.insert(l->id, Classroom::QuizQuestions);
+    }
+    const auto course = Classroom::course(courseId);
+    if (!course || m_quizLessons.isEmpty()) {
+        finish(QStringLiteral("error"), QStringLiteral("This lesson or unit no longer exists."));
+        return;
+    }
+    m_course = *course;
+    QList<qint64> open;
+    for (const Classroom::Lesson &l : std::as_const(m_quizLessons))
+        for (const Classroom::Reading &r : l.readings)
+            if (!open.contains(r.article.libraryId))
+                open << r.article.libraryId;
+    ZimSearch::prepare(open);
+    Q_EMIT progress(0, 1, QStringLiteral("Reading the lessons"));
+    const quint64 generation = m_generation;
+    withCapabilities([this, generation] {
+        using Read = QList<std::pair<qint64, QList<ZimSearch::Article>>>;
+        auto *watcher = new QFutureWatcher<Read>(this);
+        connect(watcher, &QFutureWatcher<Read>::finished, this, [this, watcher, generation] {
+            watcher->deleteLater();
+            if (generation != m_generation)
+                return;
+            quizPassages(watcher->result());
+        });
+        watcher->setFuture(QtConcurrent::run([lessons = m_quizLessons] {
+            Read out;
+            for (const Classroom::Lesson &l : lessons) {
+                QList<ZimSearch::Article> articles;
+                for (const Classroom::Reading &r : l.readings) {
+                    const auto content = ZimReader::content(r.article.libraryId, r.article.path);
+                    if (!content)
+                        continue;
+                    ZimSearch::Article a;
+                    a.found.libraryId = r.article.libraryId;
+                    a.found.path = content->path;
+                    a.found.title = r.article.title;
+                    a.passages = Extract::extract(content->data).passages;
+                    if (!a.passages.isEmpty())
+                        articles << a;
+                }
+                out.append({l.id, articles});
+            }
+            return out;
+        }));
+    });
+}
+
+void Teacher::quizPassages(const QList<std::pair<qint64, QList<ZimSearch::Article>>> &read)
+{
+    m_quizRead = read;
+    rankQuizPassages();
+}
+
+// each lesson's passages, ranked against the lesson (one embedding request per lesson), then the questions written
+void Teacher::rankQuizPassages()
+{
+    if (m_quizRank >= m_quizRead.size()) {
+        nextQuestion();
+        return;
+    }
+    const auto &[lessonId, articles] = m_quizRead.at(m_quizRank);
+    Classroom::Lesson lesson;
+    for (const Classroom::Lesson &l : std::as_const(m_quizLessons))
+        if (l.id == lessonId)
+            lesson = l;
+    // passages with enough in them to ask about; not the infobox's facts ("the official language of Rome", asked in both
+    // a quiz and its unit's test: trivia, 2026-10-20)
+    QList<Rag::Candidate> pool;
+    for (const Rag::Candidate &c : Rag::pickPassages(Classroom::lessonQuery(m_course, lesson), articles))
+        if (c.text.size() >= 250 && c.section != QLatin1String("Key facts"))
+            pool << c;
+    QStringList input{Embedding::formatQuery(m_models.embedding, Classroom::lessonMeaning(m_course, lesson))};
+    for (const Rag::Candidate &c : std::as_const(pool))
+        input << Embedding::formatDocument(m_models.embedding, c.text.left(3000));
+    Q_EMIT progress(0, 1, QStringLiteral("Choosing what to ask about “%1”").arg(lesson.title));
+    const quint64 generation = m_generation;
+    m_reply = m_client->embed(m_models.embedding, input, this, [this, generation, pool, lesson](const QList<Vector> &vectors, const QString &error) mutable {
+        if (generation != m_generation)
+            return;
+        m_reply.clear();
+        Vector question;
+        if (error.isEmpty() && vectors.size() == pool.size() + 1) {
+            question = vectors.at(0);
+            for (int i = 0; i < pool.size(); ++i)
+                pool[i].vector = vectors.at(i + 1);
+        }
+        // the best passages, a few more than the questions wanted (some questions are not kept)
+        const int wanted = m_quizWanted.value(lesson.id);
+        for (const Rag::Candidate &c : Rag::rank(pool, question, wanted + 3))
+            m_quizQueue.append({lesson.id, lesson.title, c});
+        ++m_quizRank;
+        rankQuizPassages();
+    });
+}
+
+void Teacher::nextQuestion()
+{
+    // the next passage of a lesson that still wants questions
+    int wantedTotal = 0;
+    for (int w : std::as_const(m_quizWanted))
+        wantedTotal += w;
+    qsizetype pick = -1;
+    if (wantedTotal > 0) {
+        // round the lessons: a unit test asks about each in turn
+        QHash<qint64, int> asked;
+        for (const Classroom::Question &q : std::as_const(m_questions))
+            ++asked[q.lessonId];
+        int fewest = INT_MAX;
+        for (qsizetype i = 0; i < m_quizQueue.size(); ++i) {
+            const qint64 l = m_quizQueue.at(i).lessonId;
+            if (m_quizWanted.value(l) > 0 && asked.value(l) < fewest) {
+                fewest = asked.value(l);
+                pick = i;
+            }
+        }
+    }
+    if (pick < 0) {
+        if (m_questions.isEmpty()) {
+            finish(QStringLiteral("error"), QStringLiteral("The teacher could not write questions from this lesson's readings. Try again."));
+            return;
+        }
+        Classroom::Quiz quiz;
+        quiz.courseId = m_course.id;
+        quiz.kind = m_quizKind;
+        (m_quizKind == QLatin1String("unit") ? quiz.unitId : quiz.lessonId) = m_subjectId;
+        quiz.questions = m_questions;
+        if (Classroom::saveQuiz(quiz) <= 0)
+            finish(QStringLiteral("error"), QStringLiteral("The quiz could not be saved."));
+        else
+            finish(QStringLiteral("done"));
+        return;
+    }
+    const QuizPassage item = m_quizQueue.takeAt(pick);
+    ++m_quizTried;
+    const int total = int(m_questions.size()) + wantedTotal;
+    Q_EMIT progress(int(m_questions.size()) + 1, total + 1, QStringLiteral("Writing question %1 of %2").arg(m_questions.size() + 1).arg(total));
+    complete(Classroom::questionPrompt(m_course, item.lessonTitle, item.passage.text), 400, [this, item](const QString &text, const QString &error) {
+        if (!error.isEmpty()) {
+            finish(QStringLiteral("error"), error);
+            return;
+        }
+        // kept only when its answer is in the passage it was written from
+        if (auto q = Classroom::parseQuestion(Rag::tidyAnswer(text)); q && Classroom::answerInPassage(*q, item.passage.text)) {
+            q->evidence = item.passage.text.left(1500);
+            q->source = {item.passage.libraryId, item.passage.path, item.passage.title};
+            q->lessonId = item.lessonId;
+            m_questions << Classroom::shuffled(*q, quint32(qHash(q->text)));
+            m_quizWanted[item.lessonId] -= 1;
+        }
+        // a lesson whose passages ran out wants no more
+        for (auto it = m_quizWanted.begin(); it != m_quizWanted.end(); ++it) {
+            const bool left = std::any_of(m_quizQueue.cbegin(), m_quizQueue.cend(), [&it](const QuizPassage &p) {
+                return p.lessonId == it.key();
+            });
+            if (!left)
+                it.value() = 0;
+        }
+        nextQuestion();
     });
 }
 

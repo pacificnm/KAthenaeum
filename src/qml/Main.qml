@@ -44,6 +44,15 @@ Kirigami.ApplicationWindow {
         section = "classroom";
         replace ? pageStack.replace(lessonPage, { lessonId: lessonId }) : pageStack.push(lessonPage, { lessonId: lessonId });
     }
+    // a lesson's teacher, with a question ready to send (from a quiz question got wrong)
+    function askTeacher(lessonId, question) {
+        section = "classroom";
+        pageStack.push(lessonPage, { lessonId: lessonId, startTab: 2, askText: question });
+    }
+    function openUnitTest(unitId, unitTitle, courseTitle) {
+        section = "classroom";
+        pageStack.push(unitTestPage, { unitId: unitId, unitTitle: unitTitle, courseTitle: courseTitle ?? "" });
+    }
     // the catalog, showing the libraries with this title (a library a course needs)
     function findLibrary(title) {
         LibraryManager.catalog.category = "";
@@ -273,8 +282,18 @@ Kirigami.ApplicationWindow {
         id: coursePage
         CoursePage {
             onOpenLesson: lessonId => root.openLesson(lessonId, false)
+            onOpenUnitTest: (unitId, unitTitle) => root.openUnitTest(unitId, unitTitle, course.title)
+            onOpenReading: (libraryId, path) => root.openArticle(libraryId, path)
+            onAskTeacher: (lessonId, question) => root.askTeacher(lessonId, question)
             onOpenProject: projectId => root.openProject(projectId)
             onClosed: root.show(classroomPage)
+        }
+    }
+    Component {
+        id: unitTestPage
+        UnitTestPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+            onAskTeacher: (lessonId, question) => root.askTeacher(lessonId, question)
         }
     }
     Component {

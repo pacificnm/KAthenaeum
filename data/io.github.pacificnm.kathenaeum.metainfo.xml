@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.16.0" date="2026-10-20">
+      <description>
+        <p>Classroom: lesson quizzes and unit tests written from the readings, each answer checked against the passage it comes from, graded with the right answer and the passage; scores on the course page and a list of what to review. Ask Your Teacher: a chat on every lesson that guides with hints and questions rather than handing over answers.</p>
+      </description>
+    </release>
     <release version="0.15.0" date="2026-10-20">
       <description>
         <p>Classroom: a lesson's readings open with the lesson beside them, its questions first. A course can be kept in a research project: its readings become sources marked with their lesson, each introduction a document to answer in, and what you highlight while reading is saved there too.</p>

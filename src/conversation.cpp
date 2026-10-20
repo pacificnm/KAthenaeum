@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "conversation.h"
 
+#include "core/classroom.h"
+
 #include "core/answerer.h"
 #include "core/chats.h"
 #include "core/library.h"
@@ -339,6 +341,14 @@ void Conversation::setProjectId(qint64 id)
     Q_EMIT projectChanged();
 }
 
+void Conversation::setLessonId(qint64 id)
+{
+    if (id == m_lessonId || m_chatId > 0)
+        return;  // a saved chat keeps its lesson
+    m_lessonId = id;
+    Q_EMIT lessonChanged();
+}
+
 void Conversation::setChatId(qint64 id)
 {
     if (id == m_chatId)
@@ -365,6 +375,10 @@ void Conversation::load()
             if (chat->projectId > 0 && chat->projectId != m_projectId) {
                 m_projectId = chat->projectId;
                 Q_EMIT projectChanged();
+            }
+            if (chat->lessonId != m_lessonId) {
+                m_lessonId = chat->lessonId;
+                Q_EMIT lessonChanged();
             }
         }
         for (const MessageRecord &r : Chats::messages(m_chatId)) {
@@ -422,7 +436,8 @@ void Conversation::ask(const QString &question)
             earlier << m.content;
 
     if (m_chatId <= 0) {
-        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title, m_projectId);
+        m_chatId = Chats::create(q, m_article.isSet() ? m_article.libraryId : 0, m_article.path, m_article.title, m_lessonId > 0 ? 0 : m_projectId,
+                                 m_lessonId);
         m_title = q.simplified().left(200);
         Q_EMIT chatIdChanged();
     }
@@ -453,7 +468,24 @@ void Conversation::ask(const QString &question)
     }
     ModelSettings *models = ModelSettings::instance();
     ProjectScope project;
-    if (m_projectId > 0) {
+    if (m_lessonId > 0) {
+        // the teacher: the lesson's readings are the sources, and it guides rather than tells
+        const auto lesson = Classroom::lesson(m_lessonId);
+        const auto course = lesson ? Classroom::course(lesson->courseId) : std::nullopt;
+        if (!lesson || !course) {
+            AnswerResult gone;
+            gone.status = QStringLiteral("error");
+            gone.error = i18n("This chat's lesson no longer exists (its course was planned again or deleted).");
+            finished(gone);
+            return;
+        }
+        project.id = lesson->id;
+        project.title = lesson->title;
+        project.system = Classroom::tutorPrompt(*course, Classroom::profile(), *lesson);
+        for (const Classroom::Reading &r : lesson->readings)
+            if (libraries.contains(r.article.libraryId))
+                project.articles << ArticleScope{r.article.libraryId, r.article.path, r.article.title};
+    } else if (m_projectId > 0) {
         const auto p = Projects::byId(m_projectId);
         if (!p) {
             AnswerResult gone;
@@ -499,7 +531,18 @@ void Conversation::finished(const AnswerResult &result)
     if (m_answering < 0)
         return;
     Message &m = m_messages[m_answering];
-    const SavedAnswer kept = saveAnswer({m_chatId, m_answerModel, m_embeddingModel, m.sources, m.note}, result);
+    AnswerResult shown = result;
+    if (m_lessonId > 0) {
+        // the teacher's encouragement and questions back are not claims: only a figure no reading has is flagged, and
+        // with one reading "[1]" after every sentence says nothing (as in a lesson's introduction)
+        for (Rag::Citation &c : shown.citations) {
+            if (c.reason == QLatin1String("topic"))
+                c.reason.clear();
+            if (m.sources.size() < 2)
+                c.sources.clear();
+        }
+    }
+    const SavedAnswer kept = saveAnswer({m_chatId, m_answerModel, m_embeddingModel, m.sources, m.note}, shown);
     m.id = kept.id;
     m.status = result.status;
     m.content = kept.content;

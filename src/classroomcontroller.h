@@ -23,7 +23,8 @@ class ClassroomController : public QObject
     Q_PROPERTY(QVariantList grades READ grades CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY stateChanged)
     Q_PROPERTY(QString job READ job NOTIFY stateChanged)  // "plan" | "intro" | ""
-    Q_PROPERTY(qint64 jobSubject READ jobSubject NOTIFY stateChanged)  // the course being planned, or the lesson
+    Q_PROPERTY(qint64 jobSubject READ jobSubject NOTIFY stateChanged)  // the course being planned, or the lesson (or unit)
+    Q_PROPERTY(QString quizKind READ quizKind NOTIFY stateChanged)  // a quiz being written: "lesson" or "unit"
     Q_PROPERTY(int step READ step NOTIFY stateChanged)
     Q_PROPERTY(int total READ total NOTIFY stateChanged)
     Q_PROPERTY(QString label READ label NOTIFY stateChanged)
@@ -45,6 +46,7 @@ public:
     int total() const { return m_total; }
     QString label() const { return m_label; }
     QString streamed() const { return m_streamed; }
+    QString quizKind() const { return m_quizKind; }
 
     // {name, grade, interests, goals}
     Q_INVOKABLE bool saveProfile(const QVariantMap &profile);
@@ -70,6 +72,20 @@ public:
     Q_INVOKABLE bool setCompleted(qint64 lessonId, bool completed);
     Q_INVOKABLE void stop();
 
+    // ---- quizzes, tests and review ----
+    // Has the teacher write a lesson's quiz ("lesson", lessonId) or a unit's test ("unit", unitId); false when busy
+    Q_INVOKABLE bool makeQuiz(const QString &kind, qint64 targetId);
+    // The newest quiz or test: {id, kind, questions: [{text, options}], result: (see submit) | absent} or an empty map
+    Q_INVOKABLE QVariantMap quiz(const QString &kind, qint64 targetId) const;
+    // Grades it and keeps the attempt; passing a lesson's quiz marks the lesson finished.
+    // {score, total, percent, passed, questions: [{text, options, answer, chosen, correct, explanation, evidence, libraryId,
+    //  path, title, lessonTitle}]}
+    Q_INVOKABLE QVariantMap submitQuiz(qint64 quizId, const QVariantList &answers);
+    // What was got wrong in the course's latest attempts (the same shape as a graded question, with lessonId)
+    Q_INVOKABLE QVariantList missed(qint64 courseId) const;
+    // The most recent chat with the teacher about the lesson, or 0
+    Q_INVOKABLE qint64 latestChat(qint64 lessonId) const;
+
     // ---- a course kept in a research project ----
     // Ties the course to a project (0: a new one named after the course) and puts in what its lessons have so far.
     // The project's id, or 0.
@@ -87,6 +103,7 @@ Q_SIGNALS:
     void stateChanged();
     void courseReady(qint64 courseId, const QString &title);
     void introReady(qint64 lessonId);
+    void quizReady(const QString &kind, qint64 targetId);
     void failed(const QString &message);
 
 private:
@@ -97,4 +114,5 @@ private:
     int m_total = 0;
     QString m_label;
     QString m_streamed;
+    QString m_quizKind;
 };

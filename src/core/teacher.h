@@ -5,6 +5,7 @@
 #include "rag.h"
 #include "zimsearch.h"
 
+#include <QHash>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
@@ -55,6 +56,9 @@ public:
     // (opens archives: call on the UI thread)
     void planCourse(qint64 courseId, const QList<qint64> &libraries, const QList<qint64> &simpleFirst, const Models &models);
     void writeIntro(qint64 lessonId, const Models &models);
+    // A lesson's quiz ("lesson", lessonId) or a unit's test ("unit", unitId): questions written from the readings' best
+    // passages, each kept only if its answer is in its passage. subject() is then the lesson or unit.
+    void writeQuiz(const QString &kind, qint64 targetId, const Models &models);
     void stop();
     bool running() const { return m_running; }
     QString job() const { return m_job; }  // "plan" | "intro"
@@ -77,6 +81,9 @@ private:
     void introSources(const QList<ZimSearch::Article> &articles);
     void introWritten(const QString &text);
     void finish(const QString &status, const QString &error = {});
+    void quizPassages(const QList<std::pair<qint64, QList<ZimSearch::Article>>> &read);
+    void rankQuizPassages();
+    void nextQuestion();
 
     QPointer<OllamaClient> m_client;
     QPointer<QNetworkReply> m_reply;
@@ -98,6 +105,20 @@ private:
     QSet<QString> m_used;  // "libraryId/path" of readings already given to a lesson
     QString m_planText;
     QStringList m_considered;
+    // a quiz
+    QString m_quizKind;
+    QList<Classroom::Lesson> m_quizLessons;
+    QList<std::pair<qint64, QList<ZimSearch::Article>>> m_quizRead;  // (lesson, its readings)
+    int m_quizRank = 0;  // the lesson whose passages are being ranked
+    struct QuizPassage {
+        qint64 lessonId;
+        QString lessonTitle;
+        Rag::Candidate passage;
+    };
+    QList<QuizPassage> m_quizQueue;  // in the order questions are written
+    QHash<qint64, int> m_quizWanted;  // questions still wanted per lesson
+    QList<Classroom::Question> m_questions;
+    int m_quizTried = 0;
     // an introduction
     Classroom::Lesson m_lesson;
     Rag::Context m_context;

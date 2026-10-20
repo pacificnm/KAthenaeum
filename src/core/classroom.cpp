@@ -3,6 +3,7 @@
 
 #include "database.h"
 #include "library.h"
+#include "zimsearch.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -11,6 +12,7 @@
 #include <QSet>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QRandomGenerator>
 #include <QTimeZone>
 
 namespace
@@ -762,4 +764,312 @@ QString Classroom::introPrompt(const Course &course, const Profile &profile, con
                   .arg(name, profile.interests.trimmed().isEmpty() ? QString() : QStringLiteral(" or from the student's interests where it fits naturally"),
                        isYoung(course.level) ? QString() : QStringLiteral(" (a serious learner: no childish comparisons)"));
     return prompt;
+}
+
+// ---- quizzes and tests ----
+
+namespace
+{
+QByteArray intsJson(const QList<int> &values)
+{
+    QJsonArray a;
+    for (int v : values)
+        a.append(v);
+    return QJsonDocument(a).toJson(QJsonDocument::Compact);
+}
+
+QList<int> intsFrom(const QByteArray &json)
+{
+    QList<int> out;
+    for (const QJsonValue &v : QJsonDocument::fromJson(json).array())
+        out << v.toInt(-1);
+    return out;
+}
+
+std::optional<Classroom::Attempt> attemptWhere(qint64 quizId, const char *order)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT id, answers, score, total, created_at FROM quiz_attempts WHERE quiz_id = ? ORDER BY %1 LIMIT 1")
+                  .arg(QLatin1String(order)));
+    q.addBindValue(quizId);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    return Classroom::Attempt{q.value(0).toLongLong(), intsFrom(q.value(1).toByteArray()), q.value(2).toInt(), q.value(3).toInt(), timestamp(q.value(4))};
+}
+}
+
+qint64 Classroom::saveQuiz(const Quiz &quiz)
+{
+    if (quiz.questions.isEmpty())
+        return 0;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.transaction())
+        return 0;
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO quizzes (course_id, lesson_id, unit_id, kind) VALUES (?, ?, ?, ?)"));
+    q.addBindValue(quiz.courseId);
+    q.addBindValue(quiz.lessonId > 0 ? QVariant(quiz.lessonId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(quiz.unitId > 0 ? QVariant(quiz.unitId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(quiz.kind);
+    bool ok = q.exec();
+    const qint64 id = q.lastInsertId().toLongLong();
+    for (int i = 0; ok && i < quiz.questions.size(); ++i) {
+        const Question &question = quiz.questions.at(i);
+        QSqlQuery insert;
+        insert.prepare(QStringLiteral("INSERT INTO quiz_questions (quiz_id, position, question, options, answer, explanation, evidence, library_id, path, "
+                                      "title, lesson_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+        insert.addBindValue(id);
+        insert.addBindValue(i);
+        insert.addBindValue(question.text);
+        insert.addBindValue(QString::fromUtf8(QJsonDocument(QJsonArray::fromStringList(question.options)).toJson(QJsonDocument::Compact)));
+        insert.addBindValue(question.answer);
+        insert.addBindValue(Database::text(question.explanation));
+        insert.addBindValue(Database::text(question.evidence));
+        insert.addBindValue(question.source.libraryId > 0 ? QVariant(question.source.libraryId) : QVariant(QMetaType::fromType<qint64>()));
+        insert.addBindValue(Database::text(question.source.path));
+        insert.addBindValue(Database::text(question.source.title));
+        insert.addBindValue(question.lessonId > 0 ? QVariant(question.lessonId) : QVariant(QMetaType::fromType<qint64>()));
+        ok = insert.exec();
+    }
+    if (!ok || !db.commit()) {
+        db.rollback();
+        return 0;
+    }
+    touch(quiz.courseId);
+    return id;
+}
+
+std::optional<Classroom::Quiz> Classroom::quiz(qint64 id)
+{
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT id, course_id, coalesce(lesson_id, 0), coalesce(unit_id, 0), kind FROM quizzes WHERE id = ?"));
+    q.addBindValue(id);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    Quiz out{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toLongLong(), q.value(3).toLongLong(), q.value(4).toString(), {}};
+    QSqlQuery questions;
+    questions.prepare(QStringLiteral("SELECT id, question, options, answer, explanation, evidence, coalesce(library_id, 0), path, title, "
+                                     "coalesce(lesson_id, 0) FROM quiz_questions WHERE quiz_id = ? ORDER BY position"));
+    questions.addBindValue(id);
+    if (questions.exec())
+        while (questions.next()) {
+            Question question;
+            question.id = questions.value(0).toLongLong();
+            question.text = questions.value(1).toString();
+            for (const QJsonValue &v : QJsonDocument::fromJson(questions.value(2).toByteArray()).array())
+                question.options << v.toString();
+            question.answer = questions.value(3).toInt();
+            question.explanation = questions.value(4).toString();
+            question.evidence = questions.value(5).toString();
+            question.source = {questions.value(6).toLongLong(), questions.value(7).toString(), questions.value(8).toString()};
+            question.lessonId = questions.value(9).toLongLong();
+            out.questions << question;
+        }
+    return out;
+}
+
+std::optional<Classroom::Quiz> Classroom::latestQuiz(const QString &kind, qint64 targetId)
+{
+    QSqlQuery q;
+    q.prepare(kind == QLatin1String("unit") ? QStringLiteral("SELECT id FROM quizzes WHERE kind = 'unit' AND unit_id = ? ORDER BY id DESC LIMIT 1")
+                                            : QStringLiteral("SELECT id FROM quizzes WHERE kind = 'lesson' AND lesson_id = ? ORDER BY id DESC LIMIT 1"));
+    q.addBindValue(targetId);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    return quiz(q.value(0).toLongLong());
+}
+
+std::optional<Classroom::Attempt> Classroom::submit(qint64 quizId, const QList<int> &answers)
+{
+    const auto qz = quiz(quizId);
+    if (!qz)
+        return std::nullopt;
+    Attempt a;
+    a.total = int(qz->questions.size());
+    for (int i = 0; i < qz->questions.size(); ++i) {
+        const int chosen = answers.value(i, -1);
+        a.answers << chosen;
+        if (chosen == qz->questions.at(i).answer)
+            ++a.score;
+    }
+    QSqlQuery q;
+    q.prepare(QStringLiteral("INSERT INTO quiz_attempts (quiz_id, answers, score, total) VALUES (?, ?, ?, ?)"));
+    q.addBindValue(quizId);
+    q.addBindValue(QString::fromUtf8(intsJson(a.answers)));
+    q.addBindValue(a.score);
+    q.addBindValue(a.total);
+    if (!q.exec())
+        return std::nullopt;
+    a.id = q.lastInsertId().toLongLong();
+    a.at = QDateTime::currentDateTimeUtc();
+    touch(qz->courseId);
+    return a;
+}
+
+std::optional<Classroom::Attempt> Classroom::latestAttempt(qint64 quizId)
+{
+    return attemptWhere(quizId, "id DESC");
+}
+
+std::optional<Classroom::Attempt> Classroom::bestAttempt(qint64 quizId)
+{
+    return attemptWhere(quizId, "score * 1.0 / max(total, 1) DESC, id DESC");
+}
+
+QList<Classroom::Missed> Classroom::missed(qint64 courseId)
+{
+    QList<Missed> out;
+    // the newest quiz of each lesson and test of each unit: older ones were replaced by new questions
+    QSqlQuery q;
+    q.prepare(QStringLiteral("SELECT max(id) FROM quizzes WHERE course_id = ? GROUP BY kind, coalesce(lesson_id, 0), coalesce(unit_id, 0) "
+                             "ORDER BY max(id) DESC"));
+    q.addBindValue(courseId);
+    QList<qint64> ids;
+    if (q.exec())
+        while (q.next())
+            ids << q.value(0).toLongLong();
+    for (qint64 id : std::as_const(ids)) {
+        const auto attempt = latestAttempt(id);
+        const auto qz = attempt ? quiz(id) : std::nullopt;
+        if (!qz)
+            continue;
+        for (int i = 0; i < qz->questions.size(); ++i) {
+            const int chosen = attempt->answers.value(i, -1);
+            if (chosen == qz->questions.at(i).answer)
+                continue;
+            const auto l = lesson(qz->questions.at(i).lessonId);
+            out << Missed{qz->questions.at(i), chosen, qz->kind, l ? l->title : QString()};
+        }
+    }
+    return out;
+}
+
+QString Classroom::questionPrompt(const Course &course, const QString &lessonTitle, const QString &passage)
+{
+    return QStringLiteral("You are a teacher writing a quiz for the lesson \"%1\" of the course \"%2\", for a student at the level of %3.\n\n"
+                          "The passage:\n\n%4\n\n"
+                          "Write one multiple-choice question that checks the student understood an important idea or fact in this passage, "
+                          "one a student at this level should know: not a technical detail beyond the level. The options must be real answers "
+                          "to the question, not the question's own words. "
+                          "The right answer must be stated in the passage. Give four options: the right one, and three wrong ones that "
+                          "sound believable, all about the same length. Do not write \"according to the passage\". "
+                          "Use exactly this form and write nothing else:\n\n"
+                          "Question: <the question>\nA) <option>\nB) <option>\nC) <option>\nD) <option>\nAnswer: <the letter of the right "
+                          "option>\nWhy: <one sentence from the passage that shows it>")
+        .arg(lessonTitle, course.title, levelForPrompt(course.level), passage.left(2500));
+}
+
+std::optional<Classroom::Question> Classroom::parseQuestion(const QString &text)
+{
+    static const QRegularExpression option(QStringLiteral("^\\(?([A-Da-d])[).:]\\s*(.+)$"));
+    static const QRegularExpression label(QStringLiteral("^(question|answer|correct answer|why|explanation)\\s*:\\s*(.*)$"), QRegularExpression::CaseInsensitiveOption);
+    Question out;
+    QString options[4];
+    QString answerLetter;
+    for (QString line : text.split(QLatin1Char('\n'))) {
+        line = line.trimmed();
+        line.remove(QStringLiteral("**"));
+        line = line.trimmed();
+        if (line.startsWith(QLatin1String("- ")))
+            line = line.mid(2).trimmed();
+        if (line.isEmpty())
+            continue;
+        if (const auto m = label.match(line); m.hasMatch()) {
+            const QString key = m.captured(1).toLower();
+            const QString value = m.captured(2).trimmed();
+            if (key == QLatin1String("question"))
+                out.text = value;
+            else if (key.contains(QLatin1String("answer")))
+                answerLetter = value.left(3);
+            else
+                out.explanation = value;
+            continue;
+        }
+        if (const auto m = option.match(line); m.hasMatch()) {
+            options[m.captured(1).toUpper().at(0).unicode() - 'A'] = m.captured(2).trimmed();
+            continue;
+        }
+        if (out.text.isEmpty() && line.endsWith(QLatin1Char('?')))  // a question without its label
+            out.text = line;
+    }
+    static const QRegularExpression letter(QStringLiteral("([A-Da-d])"));
+    const auto lm = letter.match(answerLetter.remove(QLatin1Char('(')));
+    if (out.text.isEmpty() || !lm.hasMatch())
+        return std::nullopt;
+    QSet<QString> distinct;
+    for (const QString &o : options) {
+        if (o.isEmpty())
+            return std::nullopt;
+        distinct.insert(o.simplified().toLower());
+        out.options << o;
+    }
+    if (distinct.size() != 4)
+        return std::nullopt;
+    out.answer = lm.captured(1).toUpper().at(0).unicode() - 'A';
+    return out;
+}
+
+bool Classroom::answerInPassage(const Question &question, const QString &passage)
+{
+    const QString answer = question.options.value(question.answer);
+    if (answer.isEmpty())
+        return false;
+    // a figure ("1883", "6,000 km") must be there as it is written
+    static const QRegularExpression figure(QStringLiteral("\\d[\\d,.]*"));
+    for (auto it = figure.globalMatch(answer); it.hasNext();) {
+        const QString f = it.next().captured(0);
+        if (f.size() > 1 && !passage.contains(f))
+            return false;
+    }
+    auto share = [&passage](const QString &option) {
+        QStringList stems;
+        for (const QString &t : ZimSearch::terms(option))
+            stems << ZimSearch::stem(t);
+        return stems.isEmpty() ? (passage.contains(option, Qt::CaseInsensitive) ? 1.0 : 0.0) : ZimSearch::overlap(stems, passage);
+    };
+    // the question's own words too: "What ended the conflict between Caesar and Pompey?" was answered "the Battle of
+    // Actium" from a passage about Antony and Octavian (2026-10-20)
+    if (share(question.text) < 0.5)
+        return false;
+    // most of its words, and no wrong option more of them (a key pointing at the wrong letter is caught here)
+    const double right = share(answer);
+    if (right < 0.5)
+        return false;
+    for (int i = 0; i < question.options.size(); ++i)
+        if (i != question.answer && share(question.options.at(i)) > right)
+            return false;
+    return true;
+}
+
+Classroom::Question Classroom::shuffled(Question question, quint32 seed)
+{
+    QRandomGenerator random(seed);
+    QList<int> order{0, 1, 2, 3};
+    for (int i = 3; i > 0; --i)
+        std::swap(order[i], order[int(random.bounded(i + 1))]);
+    QStringList options;
+    int answer = 0;
+    for (int i = 0; i < order.size(); ++i) {
+        options << question.options.value(order.at(i));
+        if (order.at(i) == question.answer)
+            answer = i;
+    }
+    question.options = options;
+    question.answer = answer;
+    return question;
+}
+
+QString Classroom::tutorPrompt(const Course &course, const Profile &profile, const Lesson &lesson)
+{
+    const QString name = profile.name.trimmed().isEmpty() ? QStringLiteral("the student") : profile.name.trimmed().section(QLatin1Char(' '), 0, 0);
+    return QStringLiteral(
+               "You are %1's teacher for the lesson \"%2\" of the course \"%3\". %1 is at the level of %4. The sources below are the "
+               "lesson's readings.\n\n"
+               "Help %1 learn, rather than doing the work for them. When they ask a question the lesson wants them to answer, do not just "
+               "give the answer: give a hint, say which source has it, and ask a short question that leads them there. When they give "
+               "an answer, say whether it is right, using the sources, and explain briefly; if it is partly right, say which part. When they "
+               "ask for an explanation of something hard, explain it simply, with an example, then check they followed with one question. "
+               "Use only facts from the sources; if they do not cover something, say so and suggest what to read. Keep replies short "
+               "(under 120 words), warm, and in words that suit the level. Do not write source numbers.")
+        .arg(name, lesson.title, course.title, levelForPrompt(course.level));
 }

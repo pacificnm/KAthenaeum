@@ -26,6 +26,9 @@ class Conversation : public QAbstractListModel
     // a saved chat brings its own). alsoLibrary: search the libraries too, as a separate group of sources.
     Q_PROPERTY(qint64 projectId READ projectId WRITE setProjectId NOTIFY projectChanged)
     Q_PROPERTY(bool alsoLibrary MEMBER m_alsoLibrary NOTIFY alsoLibraryChanged)
+    // A chat with the classroom's teacher about a lesson: answers from the lesson's readings, guiding rather than telling
+    // (set before the first question; a saved chat brings its own)
+    Q_PROPERTY(qint64 lessonId READ lessonId WRITE setLessonId NOTIFY lessonChanged)
 
 public:
     enum Role {
@@ -61,6 +64,8 @@ public:
     void setArticleTitle(const QString &title);
     qint64 projectId() const { return m_projectId; }
     void setProjectId(qint64 id);
+    qint64 lessonId() const { return m_lessonId; }
+    void setLessonId(qint64 id);
 
     Q_INVOKABLE void ask(const QString &question);
     Q_INVOKABLE void stop();
@@ -74,6 +79,7 @@ Q_SIGNALS:
     void busyChanged();
     void articleChanged();
     void projectChanged();
+    void lessonChanged();
     void alsoLibraryChanged();
     // A chat was created or a message saved: the Chats list is out of date
     void saved();
@@ -103,6 +109,7 @@ private:
     qint64 m_chatId = 0;
     ArticleScope m_article;
     qint64 m_projectId = 0;
+    qint64 m_lessonId = 0;
     bool m_alsoLibrary = false;
     QString m_answerModel;     // the models of the answer being written, as asked (Settings may change meanwhile)
     QString m_embeddingModel;

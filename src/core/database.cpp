@@ -257,6 +257,41 @@ const QList<QStringList> migrations = {
         QStringLiteral("ALTER TABLE course_lessons ADD COLUMN document_id INTEGER REFERENCES project_documents (id) ON DELETE SET NULL"),
         QStringLiteral("ALTER TABLE project_items ADD COLUMN lesson TEXT NOT NULL DEFAULT ''"),
     },
+    {
+        // Quizzes (a lesson's) and tests (a unit's): multiple-choice questions written from the readings' passages, each
+        // with its answer checked against the passage it came from (evidence), and the learner's attempts. A chat with the
+        // teacher about a lesson keeps its lesson.
+        QStringLiteral("CREATE TABLE quizzes ("
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                       " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
+                       " lesson_id INTEGER REFERENCES course_lessons (id) ON DELETE CASCADE,"
+                       " unit_id INTEGER REFERENCES course_units (id) ON DELETE CASCADE,"
+                       " kind TEXT NOT NULL,"  // lesson | unit
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX quizzes_lesson ON quizzes (lesson_id)"),
+        QStringLiteral("CREATE INDEX quizzes_unit ON quizzes (unit_id)"),
+        QStringLiteral("CREATE TABLE quiz_questions ("
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                       " quiz_id INTEGER NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,"
+                       " position INTEGER NOT NULL,"
+                       " question TEXT NOT NULL,"
+                       " options TEXT NOT NULL,"  // JSON ["…", "…", "…", "…"]
+                       " answer INTEGER NOT NULL,"  // index into options
+                       " explanation TEXT NOT NULL DEFAULT '',"
+                       " evidence TEXT NOT NULL DEFAULT '',"  // the passage it was written from
+                       " library_id INTEGER, path TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',"
+                       " lesson_id INTEGER)"),  // which lesson it tests (a unit test has several)
+        QStringLiteral("CREATE INDEX quiz_questions_quiz ON quiz_questions (quiz_id, position)"),
+        QStringLiteral("CREATE TABLE quiz_attempts ("
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                       " quiz_id INTEGER NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,"
+                       " answers TEXT NOT NULL,"  // JSON [chosen index per question, -1 none]
+                       " score INTEGER NOT NULL,"
+                       " total INTEGER NOT NULL,"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE INDEX quiz_attempts_quiz ON quiz_attempts (quiz_id, created_at)"),
+        QStringLiteral("ALTER TABLE chats ADD COLUMN lesson_id INTEGER REFERENCES course_lessons (id) ON DELETE SET NULL"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)
