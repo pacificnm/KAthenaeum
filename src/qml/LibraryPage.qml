@@ -165,11 +165,9 @@ Kirigami.ScrollablePage {
             visible: page.recent.length > 0
             Repeater {
                 model: page.recent
-                delegate: Kirigami.Chip {
+                delegate: ArticleChip {
                     required property var modelData
-                    text: Util.plain(modelData.title)
-                    closable: false
-                    checkable: false
+                    text: modelData.title
                     onClicked: page.openArticle(page.libraryId, modelData.path)
                 }
             }
@@ -193,17 +191,17 @@ Kirigami.ScrollablePage {
                     spacing: Kirigami.Units.smallSpacing
                     Repeater {
                         model: overview.modelData.entries
-                        delegate: Kirigami.Chip {
+                        delegate: ArticleChip {
                             required property var modelData
-                            text: Util.plain(modelData.title)
-                            closable: false
-                            checkable: false
+                            text: modelData.title
                             onClicked: page.openArticle(page.libraryId, modelData.path)
                         }
                     }
                     QQC2.Button {
                         visible: overview.modelData.more
-                        text: i18n("All…")
+                        text: i18n("Show All")
+                        icon.name: "go-next-symbolic"
+                        LayoutMirroring.enabled: true  // the arrow after the words
                         flat: true
                         onClicked: page.openTitles(page.libraryId, overview.modelData.label, overview.modelData.prefix, true)
                     }

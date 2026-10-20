@@ -14,8 +14,21 @@ Kirigami.ApplicationWindow {
     width: Kirigami.Units.gridUnit * 60
     height: Kirigami.Units.gridUnit * 40
 
+    // the sidebar section a top-level page belongs to (pages pushed on top keep their section)
+    property string section: "libraries"
+    function sectionOf(component) {
+        return component === librariesPage ? "libraries" : component === searchPage ? "search" : component === mapPage ? "map"
+             : component === askPage ? "ask" : component === chatsPage ? "chats" : component === projectsPage ? "projects"
+             : component === libraryManagerPage ? "manager" : component === settingsPage ? "settings" : component === aboutPage ? "about" : section;
+    }
+    function componentOf(name) {
+        return { libraries: librariesPage, search: searchPage, map: mapPage, ask: askPage, chats: chatsPage, projects: projectsPage,
+                 manager: libraryManagerPage, settings: settingsPage, about: aboutPage }[name];
+    }
+
     // One place that switches the main page, so the drawer and other pages share it
     function show(component, properties) {
+        section = sectionOf(component);
         pageStack.clear();
         pageStack.push(component, properties ?? {});
     }
@@ -58,27 +71,26 @@ Kirigami.ApplicationWindow {
         pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), fragment: fragment ?? "" });
     }
 
+    // Each page's title in the header, with a back button when there is somewhere to go back to (a breadcrumb trail
+    // of every page, with back and forward arrows, looked dated: the user, 2026-10-19)
     pageStack.columnView.columnResizeMode: Kirigami.ColumnView.SingleColumn
-    pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.Breadcrumb
+    pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.ToolBar
+    pageStack.globalToolBar.showNavigationButtons: Kirigami.ApplicationHeaderStyle.ShowBackButton
 
-    globalDrawer: Kirigami.GlobalDrawer {
-        isMenu: false
+    globalDrawer: Sidebar {
+        id: sidebar
+        current: root.section
+        activeDownloads: LibraryManager.activeDownloads
         modal: !root.wideScreen
-        collapsible: true
-        collapsed: !root.wideScreen
-        showHeaderWhenCollapsed: true
-        actions: [
-            Kirigami.Action { text: i18n("Search"); icon.name: "search"; shortcut: StandardKey.Find; onTriggered: root.show(searchPage) },
-            Kirigami.Action { text: i18n("Libraries"); icon.name: "bookmarks"; onTriggered: root.show(librariesPage) },
-            Kirigami.Action { text: i18n("Ask"); icon.name: "dialog-messages"; onTriggered: root.show(askPage) },
-            Kirigami.Action { text: i18n("Chats"); icon.name: "view-history"; onTriggered: root.show(chatsPage) },
-            Kirigami.Action { text: i18n("Projects"); icon.name: "folder-bookmark"; onTriggered: root.show(projectsPage) },
-            Kirigami.Action { text: i18n("Map"); icon.name: "map-flat"; onTriggered: root.show(mapPage) },
-            Kirigami.Action { separator: true },
-            Kirigami.Action { text: i18n("Library Manager"); icon.name: "folder-download"; onTriggered: root.show(libraryManagerPage) },
-            Kirigami.Action { text: i18n("Settings"); icon.name: "settings-configure"; onTriggered: root.show(settingsPage) },
-            Kirigami.Action { text: i18n("About KAthenaeum"); icon.name: "help-about"; onTriggered: root.show(aboutPage) }
-        ]
+        drawerOpen: root.wideScreen
+        onNavigate: name => root.show(root.componentOf(name))
+        onSearch: text => text !== "" ? root.show(searchPage, { initialQuery: text }) : root.show(searchPage)
+    }
+    onWideScreenChanged: sidebar.drawerOpen = wideScreen
+
+    Shortcut {
+        sequences: [StandardKey.Find]
+        onActivated: sidebar.focusSearch()
     }
 
     pageStack.initialPage: librariesPage

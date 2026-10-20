@@ -13,55 +13,106 @@ Kirigami.ScrollablePage {
 
     title: i18n("Libraries")
 
-    ListView {
-        id: list
+    // the libraries as cards, and one more to get others
+    GridView {
+        id: grid
+
+        readonly property int columns: Math.max(1, Math.floor(width / (Kirigami.Units.gridUnit * 16)))
+        cellWidth: Math.floor(width / columns)
+        cellHeight: Kirigami.Units.gridUnit * 7
+        topMargin: Kirigami.Units.largeSpacing
         model: LibraryManager.installed
 
-        delegate: QQC2.ItemDelegate {
-            id: row
+        delegate: Item {
+            id: cell
             required property var model
-            width: ListView.view.width
-            highlighted: false
-            onClicked: page.openLibrary(row.model.libraryId)
+            width: grid.cellWidth
+            height: grid.cellHeight
 
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.largeSpacing
-                LibraryIcon {
-                    source: row.model.icon
+            Kirigami.ShadowedRectangle {
+                anchors { fill: parent; margins: Kirigami.Units.largeSpacing / 2 + Kirigami.Units.smallSpacing }
+                radius: Kirigami.Units.cornerRadius * 2
+                color: Kirigami.Theme.backgroundColor
+                border.width: 1
+                border.color: hover.hovered ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.15)
+                shadow.size: hover.hovered ? Kirigami.Units.largeSpacing * 1.5 : Kirigami.Units.smallSpacing
+                shadow.color: Qt.rgba(0, 0, 0, hover.hovered ? 0.18 : 0.08)
+                shadow.yOffset: hover.hovered ? 2 : 1
+                Behavior on shadow.size { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                Kirigami.Theme.colorSet: Kirigami.Theme.View
+                Kirigami.Theme.inherit: false
+
+                HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: page.openLibrary(cell.model.libraryId) }
+                Accessible.role: Accessible.Button
+                Accessible.name: cell.model.title
+
+                RowLayout {
+                    anchors { fill: parent; margins: Kirigami.Units.largeSpacing * 1.5 }
+                    spacing: Kirigami.Units.largeSpacing * 1.5
+                    Rectangle {
+                        Layout.preferredWidth: Kirigami.Units.iconSizes.huge + Kirigami.Units.largeSpacing * 2
+                        Layout.preferredHeight: Layout.preferredWidth
+                        Layout.alignment: Qt.AlignTop
+                        radius: Kirigami.Units.cornerRadius * 2
+                        color: Qt.alpha(Kirigami.Theme.highlightColor, 0.06)
+                        LibraryIcon {
+                            anchors.centerIn: parent
+                            width: Kirigami.Units.iconSizes.large
+                            height: Kirigami.Units.iconSizes.large
+                            source: cell.model.icon
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        spacing: Kirigami.Units.smallSpacing
+                        Kirigami.Heading {
+                            Layout.fillWidth: true
+                            level: 3
+                            textFormat: Text.PlainText
+                            text: cell.model.title
+                            elide: Text.ElideRight
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            textFormat: Text.PlainText
+                            text: cell.model.description
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                            visible: text !== ""
+                        }
+                        QQC2.Label {
+                            Layout.fillWidth: true
+                            textFormat: Text.PlainText
+                            opacity: 0.7
+                            font: Kirigami.Theme.smallFont
+                            wrapMode: Text.Wrap
+                            text: Util.metaLine(cell.model.flavour, cell.model.size, cell.model.articleCount, cell.model.date)
+                        }
+                    }
                 }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Kirigami.Units.smallSpacing
-                    Kirigami.Heading {
-                        textFormat: Text.PlainText
-                        Layout.fillWidth: true
-                        level: 4
-                        text: row.model.title
-                        elide: Text.ElideRight
-                    }
-                    QQC2.Label {
-                        textFormat: Text.PlainText
-                        Layout.fillWidth: true
-                        text: row.model.description
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                    }
-                    QQC2.Label {
-                        textFormat: Text.PlainText
-                        Layout.fillWidth: true
-                        opacity: 0.7
-                        font: Kirigami.Theme.smallFont
-                        text: Util.metaLine(row.model.flavour, row.model.size, row.model.articleCount, row.model.date)
-                    }
-                }
+            }
+        }
+
+        footer: Item {
+            width: grid.width
+            height: grid.count > 0 ? Kirigami.Units.gridUnit * 4 : 0
+            visible: grid.count > 0
+            QQC2.Button {
+                anchors.centerIn: parent
+                text: i18n("Get More Libraries…")
+                icon.name: "folder-download"
+                flat: true
+                onClicked: page.openLibraryManager()
             }
         }
 
         Kirigami.PlaceholderMessage {
             anchors.centerIn: parent
             width: parent.width - Kirigami.Units.gridUnit * 4
-            visible: list.count === 0
+            visible: grid.count === 0
             icon.name: "bookmarks"
             text: i18n("No libraries yet")
             explanation: i18n("Download a Wikipedia library from the Library Manager to start reading and asking questions.")

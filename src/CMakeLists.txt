@@ -90,6 +90,8 @@ qt_add_qml_module(kathenaeum
         qml/MapPage.qml
         qml/MapRegionsPage.qml
         qml/RegionSilhouette.qml
+        qml/Sidebar.qml
+        qml/ArticleChip.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE

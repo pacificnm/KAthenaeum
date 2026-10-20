@@ -13,8 +13,8 @@ Item {
     Image {
         id: image
         anchors.fill: parent
-        sourceSize.width: 48
-        sourceSize.height: 48
+        sourceSize.width: Math.max(48, width)
+        sourceSize.height: Math.max(48, height)
         fillMode: Image.PreserveAspectFit
         asynchronous: true
     }
