@@ -23,6 +23,7 @@ add_library(kathenaeum_core STATIC
     core/mapregions.cpp core/mapregions.h
     core/maptiling.cpp core/maptiling.h
     core/mvt.cpp core/mvt.h
+    core/network.cpp core/network.h
     core/ollama.cpp core/ollama.h
     core/pmtiles.cpp core/pmtiles.h
     core/projects.cpp core/projects.h

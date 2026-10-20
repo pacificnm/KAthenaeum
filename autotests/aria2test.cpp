@@ -63,6 +63,9 @@ private Q_SLOTS:
         const QStringList args = Aria2::arguments(QStringLiteral("/data/zim"), QUrl(QStringLiteral("https://download.kiwix.org/a_2026-01.zim.meta4")));
         QVERIFY(args.contains(QStringLiteral("-c")));
         QVERIFY(args.contains(QStringLiteral("--follow-metalink=mem")));
+        // the user's aria2.conf is ignored, and certificates are always checked
+        QVERIFY(args.contains(QStringLiteral("--no-conf=true")));
+        QVERIFY(args.contains(QStringLiteral("--check-certificate=true")));
         QCOMPARE(args.at(args.indexOf(QStringLiteral("--dir")) + 1), QStringLiteral("/data/zim"));
         QCOMPARE(args.last(), QStringLiteral("https://download.kiwix.org/a_2026-01.zim.meta4"));
     }

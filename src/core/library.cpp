@@ -192,14 +192,14 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
             *error = QStringLiteral("no such library");
         return false;
     }
-    if (deleteFile && record->fileExists() && !QFile::remove(record->path)) {
+    // forgotten, remembered as removed, and taken out of projects together, or none of it; the file only once that has
+    // been committed (deleted first, a failed transaction left a library whose file was gone)
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.transaction()) {
         if (error)
-            *error = QStringLiteral("could not delete %1").arg(record->path);
+            *error = db.lastError().text();
         return false;
     }
-    // deleted and remembered together, or neither
-    QSqlDatabase db = QSqlDatabase::database();
-    db.transaction();
     QSqlQuery q;
     q.prepare(QStringLiteral("DELETE FROM libraries WHERE id = ?"));
     q.addBindValue(id);
@@ -216,12 +216,20 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
     q.addBindValue(Database::text(record->uuid));
     q.addBindValue(Database::text(record->path));
     q.addBindValue(Database::text(record->title));
-    if (!q.exec() || !db.commit()) {
+    // its articles leave projects; saved excerpts stay (they hold their own text)
+    if (!q.exec() || !Projects::forgetLibrary(id)) {
         if (error)
             *error = q.lastError().text();
         db.rollback();
         return false;
     }
-    Projects::forgetLibrary(id);  // its articles leave projects; saved excerpts stay
+    if (!db.commit()) {
+        if (error)
+            *error = db.lastError().text();
+        db.rollback();
+        return false;
+    }
+    if (deleteFile && record->fileExists() && !QFile::remove(record->path) && error)
+        *error = QStringLiteral("could not delete %1").arg(record->path);  // removed all the same: see the header
     return true;
 }

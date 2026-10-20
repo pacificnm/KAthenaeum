@@ -272,6 +272,43 @@ private Q_SLOTS:
         QVERIFY(qAbs(MapTiling::xToLon(MapTiling::lonToX(-122.67, 12), 12) + 122.67) < 1e-9);
     }
 
+    void aLeafPointingAtItselfIsRefused()
+    {
+        // a hostile or broken map file: the root's one entry is a leaf, and the leaf's one entry points at the leaf
+        // itself. Followed without a limit, it was fetched for ever.
+        QByteArray leaf;
+        quint32 length = 8;
+        for (int i = 0; i < 4; ++i) {  // the leaf holds its own length: settle on a size that does not change
+            leaf = PMTiles::serializeDirectory({{0, 0, length, 0}});
+            length = quint32(leaf.size());
+        }
+        const QByteArray root = PMTiles::serializeDirectory({{0, 0, length, 0}});
+        PMTiles::Header h;
+        h.internalCompression = PMTiles::NoCompression;
+        h.rootOffset = PMTiles::HeaderSize;
+        h.rootLength = quint64(root.size());
+        h.metadataOffset = h.rootOffset + h.rootLength;
+        h.metadataLength = 0;
+        h.leavesOffset = h.metadataOffset;
+        h.leavesLength = quint64(leaf.size());
+        h.dataOffset = h.leavesOffset + h.leavesLength;
+        h.maxZoom = 3;
+        QTemporaryDir dir;
+        const QString source = dir.filePath(QStringLiteral("cycle.pmtiles"));
+        QFile f(source);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(PMTiles::serializeHeader(h) + root + leaf);
+        f.close();
+
+        FileRangeReader reader(source);
+        MapExtract extract(&reader, {{{{-10, 36}, {15, 36}, {15, 55}, {-10, 55}, {-10, 36}}}}, 3, dir.filePath(QStringLiteral("out.pmtiles")));
+        QSignalSpy finished(&extract, &MapExtract::finished);
+        extract.start();
+        QVERIFY(finished.wait(5000));
+        QVERIFY(!finished.first().first().toString().isEmpty());  // an error, not an endless fetch
+        QVERIFY2(reader.reads() <= 6, qPrintable(QString::number(reader.reads())));
+    }
+
     void extractCutsTheRegionOut()
     {
         QTemporaryDir dir;

@@ -484,6 +484,7 @@ bool store(qint64 regionId, const std::vector<MapPlace> &places, QString *error)
     if (!d.commit()) {
         if (error)
             *error = d.lastError().text();
+        d.rollback();  // left open, the transaction would take in every later write
         return false;
     }
     return true;

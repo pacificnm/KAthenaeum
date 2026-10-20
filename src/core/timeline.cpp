@@ -205,10 +205,11 @@ QString Timeline::period(double value)
         return QStringLiteral("Over 10,000 years ago");
     if (value < -1000)
         return QStringLiteral("%1 millennium BC").arg(ordinal(int(std::ceil(-value / 1000.0))));
+    // there is no year 0: 100 BC to 1 BC is the 1st century BC, AD 1 to 100 the 1st century
     if (value < 0)
-        return QStringLiteral("%1 century BC").arg(ordinal(int(std::floor(-value / 100.0)) + 1));
+        return QStringLiteral("%1 century BC").arg(ordinal(std::max(1, int(std::ceil(-value / 100.0)))));
     if (value < 1000)
-        return QStringLiteral("%1 century").arg(ordinal(int(std::floor(value / 100.0)) + 1));
+        return QStringLiteral("%1 century").arg(ordinal(std::max(1, int(std::ceil(value / 100.0)))));
     return QStringLiteral("%1s").arg(int(std::floor(value / 100.0)) * 100);
 }
 

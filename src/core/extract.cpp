@@ -42,11 +42,15 @@ struct Doc {
     ~Doc() { if (doc) xmlFreeDoc(doc); }
 };
 
-QList<xmlNodePtr> nodes(htmlDocPtr doc, const char *expr)
+// `ok`, when given, says whether the query ran: a query libxml2 could not finish (a page past its limits) is not an empty
+// one, and the drop list must not treat it as "nothing to drop" (the renderer's rule, XPathResult::ok)
+QList<xmlNodePtr> nodes(htmlDocPtr doc, const char *expr, bool *ok = nullptr)
 {
     QList<xmlNodePtr> out;
     xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
     xmlXPathObjectPtr obj = xmlXPathEvalExpression(reinterpret_cast<const xmlChar *>(expr), ctx);
+    if (ok)
+        *ok = obj != nullptr;
     if (obj && obj->nodesetval)
         for (int i = 0; i < obj->nodesetval->nodeNr; ++i)
             out.append(obj->nodesetval->nodeTab[i]);
@@ -286,7 +290,11 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         // the whole article away, and merely counting it as matched made every table and style "nested" and kept them
         // all. lxml's getparent() check skipped the root the same way.
         QSet<xmlNodePtr> droppable;
-        for (xmlNodePtr n : nodes(d.doc, DropXPath)) {
+        bool ran = false;
+        const QList<xmlNodePtr> matches = nodes(d.doc, DropXPath, &ran);
+        if (!ran)
+            return {};  // fail closed: scripts and styles must never reach passages or a prompt
+        for (xmlNodePtr n : matches) {
             const bool root = !n->parent || n->parent->type == XML_HTML_DOCUMENT_NODE || n->parent->type == XML_DOCUMENT_NODE;
             if (n->type == XML_ELEMENT_NODE && !root)
                 droppable.insert(n);

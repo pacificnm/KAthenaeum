@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "catalog.h"
 
+#include "network.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -12,6 +14,7 @@
 
 namespace
 {
+constexpr qint64 MaxFeedBytes = 32 << 20;  // the English catalog is about 1.5 MB
 const QString Acquisition = QStringLiteral("http://opds-spec.org/acquisition/open-access");
 const QString Thumbnail = QStringLiteral("http://opds-spec.org/image/thumbnail");
 
@@ -189,10 +192,16 @@ void CatalogFeed::fetch()
 {
     if (m_reply)
         return;
-    QNetworkRequest request(m_feedUrl);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkRequest request = Network::guarded(QNetworkRequest(m_feedUrl));
     request.setTransferTimeout(60000);
     m_reply = m_network->get(request);
+    Network::allowRedirects(m_reply, &Catalog::isKiwixUrl);
+    // the English catalog is about 1.5 MB: a reply far bigger than that is not the catalog, and is not kept in memory
+    QNetworkReply *reply = m_reply;
+    connect(reply, &QNetworkReply::downloadProgress, reply, [reply](qint64 received) {
+        if (received > MaxFeedBytes)
+            reply->abort();
+    });
     connect(m_reply, &QNetworkReply::finished, this, &CatalogFeed::finished);
     Q_EMIT changed();
 }

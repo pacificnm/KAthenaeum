@@ -86,5 +86,9 @@ private:
 // gzip, as PMTiles stores directories and (from Protomaps) tiles
 QByteArray gzip(const QByteArray &data);
 std::optional<QByteArray> gunzip(const QByteArray &data, qsizetype limit = 256 << 20);
-std::optional<QByteArray> decompress(const QByteArray &data, quint8 compression);
+// limit: the most the data may grow to (a small gzip bomb could otherwise ask for gigabytes)
+std::optional<QByteArray> decompress(const QByteArray &data, quint8 compression, qsizetype limit);
+// Uncompressed size limits: the planet build's largest leaf directory is a few MB, a vector tile well under 1 MB
+constexpr qsizetype DirectoryLimit = 32 << 20;
+constexpr qsizetype TileLimit = 8 << 20;
 }

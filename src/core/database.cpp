@@ -347,6 +347,11 @@ bool Database::open(const QString &path, QString *error)
         return refuse();
 
     const int current = schemaVersion();
+    if (current < 0) {
+        if (error)
+            *error = QStringLiteral("The database's schema version could not be read");
+        return refuse();
+    }
     if (current > latestVersion()) {
         if (error)
             *error = QStringLiteral("The database was made by a newer KAthenaeum (schema %1, this build knows %2)").arg(current).arg(latestVersion());

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "mapextract.h"
 
+#include "mapregions.h"
+#include "network.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
@@ -48,9 +51,14 @@ void HttpRangeReader::send(const std::shared_ptr<Request> &r)
 {
     QNetworkRequest request(m_url);
     request.setRawHeader("Range", QByteArray("bytes=") + QByteArray::number(r->offset) + '-' + QByteArray::number(r->offset + r->length - 1));
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(60000);
-    QNetworkReply *reply = m_network->get(request);
+    QNetworkReply *reply = m_network->get(Network::guarded(request));
+    Network::allowRedirects(reply, &MapCatalog::isAllowedUrl);
+    // a server that ignores the range and sends the whole planet (138 GB) is stopped, not buffered
+    connect(reply, &QNetworkReply::downloadProgress, reply, [reply, length = r->length](qint64 received) {
+        if (quint64(received) > length)
+            reply->abort();
+    });
     reply->setParent(this);
     m_running.append(reply);
     connect(reply, &QNetworkReply::finished, this, [this, reply, r] {
@@ -179,11 +187,11 @@ void MapExtract::gotRoot(const QByteArray &data)
         if (m_cancelled)
             return;
         m_wanted = watcher->result();
-        const auto decoded = PMTiles::decompress(root, m_header.internalCompression);
+        const auto decoded = PMTiles::decompress(root, m_header.internalCompression, PMTiles::DirectoryLimit);
         const auto entries = decoded ? PMTiles::parseDirectory(*decoded) : std::nullopt;
         if (!entries)
             return fail(tr("The map file's directory could not be read"));
-        walk(*entries, UINT64_MAX);
+        walk(*entries, UINT64_MAX, 0);
         fetchLeaves();
     });
     watcher->setFuture(QtConcurrent::run([shape = m_shape, minZoom = int(m_header.minZoom), maxZoom = m_maxZoom] {
@@ -197,14 +205,16 @@ bool MapExtract::wanted(quint64 from, quint64 to) const
     return it != m_wanted.end() && *it < to;
 }
 
-void MapExtract::walk(const QList<PMTiles::Entry> &entries, quint64 end)
+void MapExtract::walk(const QList<PMTiles::Entry> &entries, quint64 end, int depth)
 {
+    if (depth >= MaxLeafDepth)
+        return fail(tr("The map file's directories are nested too deeply"));
     for (qsizetype i = 0; i < entries.size(); ++i) {
         const PMTiles::Entry &e = entries[i];
         if (e.runLength == 0) {
             const quint64 leafEnd = i + 1 < entries.size() ? entries[i + 1].tileId : end;
             if (wanted(e.tileId, leafEnd))
-                m_leaves.append({m_header.leavesOffset + e.offset, e.length, leafEnd});
+                m_leaves.append({m_header.leavesOffset + e.offset, e.length, leafEnd, depth + 1});
             continue;
         }
         const quint64 runEnd = e.tileId + e.runLength;
@@ -241,11 +251,14 @@ void MapExtract::fetchLeaves()
             if (!error.isEmpty())
                 return fail(error);
             for (const Leaf &leaf : group) {
-                const auto decoded = PMTiles::decompress(data.mid(qsizetype(leaf.offset - from), qsizetype(leaf.length)), m_header.internalCompression);
+                const auto decoded = PMTiles::decompress(data.mid(qsizetype(leaf.offset - from), qsizetype(leaf.length)), m_header.internalCompression,
+                                                         PMTiles::DirectoryLimit);
                 const auto entries = decoded ? PMTiles::parseDirectory(*decoded) : std::nullopt;
                 if (!entries)
                     return fail(tr("A directory of the map file could not be read"));
-                walk(*entries, leaf.end);  // a leaf may point to further leaves
+                walk(*entries, leaf.end, leaf.depth);  // a leaf may point to further leaves
+                if (m_failed)
+                    return;
             }
             fetchLeaves();
         });

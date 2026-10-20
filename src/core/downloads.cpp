@@ -100,7 +100,9 @@ QStringList Aria2::arguments(const QString &folder, const QUrl &url)
 {
     // -c resumes a partial file; the summary prints a progress line every second; the metalink stays in memory so no
     // .meta4 file is left beside the ZIM; aria2 checks the metalink's hashes itself, and we check the ZIM afterwards.
-    return {QStringLiteral("-x8"), QStringLiteral("-s8"), QStringLiteral("-c"),
+    // --no-conf: the user's own ~/.aria2/aria2.conf must not change how this download behaves (no certificate checks, a
+    // command run on completion, another folder); certificates are checked whatever it says.
+    return {QStringLiteral("--no-conf=true"), QStringLiteral("--check-certificate=true"), QStringLiteral("-x8"), QStringLiteral("-s8"), QStringLiteral("-c"),
             QStringLiteral("--file-allocation=none"), QStringLiteral("--auto-file-renaming=false"),
             QStringLiteral("--follow-metalink=mem"), QStringLiteral("--summary-interval=1"),
             QStringLiteral("--show-console-readout=false"), QStringLiteral("--console-log-level=warn"),
@@ -280,6 +282,8 @@ QString DownloadManager::resume(qint64 id)
 QString DownloadManager::launch(qint64 id)
 {
     const auto r = byId(id);
+    if (!r)
+        return QStringLiteral("The download no longer exists");
     auto *proc = new QProcess(this);
     proc->setProgram(aria2Program());
     proc->setArguments(Aria2::arguments(r->folder, r->url));

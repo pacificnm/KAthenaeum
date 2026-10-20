@@ -257,6 +257,24 @@ private Q_SLOTS:
         QCOMPARE(ArticleRenderer::parseGeo(QStringLiteral(" -33.86; 151.21 "))->second, 151.21);
     }
 
+    void aDropListedWrapperDoesNotShieldItsContent()
+    {
+        // the content root, or something above it, matching the drop list made everything inside count as "nested", and
+        // nothing was dropped (the review, found with these pages)
+        for (const QString &page : {QStringLiteral("<html><head><title>T</title></head><body><div class='mw-parser-output navbox'>"
+                                                   "<p>Text.</p><style>body{background:red}</style><script>alert(1)</script>"
+                                                   "<iframe src='x'></iframe><form><input name='a'></form></div></body></html>"),
+                                    QStringLiteral("<html><head><title>T</title></head><body><div class='noprint'><div class='mw-parser-output'>"
+                                                   "<p>Text.</p><style>p{color:red}</style><script>alert(1)</script><form><input></form>"
+                                                   "</div></div></body></html>")}) {
+            const auto out = ArticleRenderer::render(page.toUtf8(), QStringLiteral("Water"), QStringLiteral("zim://lib7/"), [](const QString &) { return true; });
+            QVERIFY(out);
+            QVERIFY2(out->html.contains(QLatin1String("Text.")), qPrintable(out->html));
+            for (const char *tag : {"<style", "<script", "<iframe", "<form", "<input"})
+                QVERIFY2(!out->html.contains(QLatin1String(tag)), qPrintable(out->html));
+        }
+    }
+
     void aPassageNoLongerInTheTextIsNotShown()
     {
         const auto out = marked(QStringLiteral("<p>Water is wet.</p>"), {{QStringLiteral("Something the article never said."), QString()},

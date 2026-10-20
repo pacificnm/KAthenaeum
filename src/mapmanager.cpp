@@ -5,6 +5,7 @@
 #include "core/mapextract.h"
 #include "core/maplookup.h"
 #include "core/mapplaces.h"
+#include "core/network.h"
 #include "core/maptiling.h"
 #include "core/pmtiles.h"
 #include "core/settings.h"
@@ -318,9 +319,10 @@ void MapManager::loadCatalog()
     m_catalogLoading = true;
     m_catalogError.clear();
     Q_EMIT catalogChanged();
-    QNetworkRequest request(MapCatalog::indexUrl());
+    QNetworkRequest request = Network::guarded(QNetworkRequest(MapCatalog::indexUrl()));
     request.setTransferTimeout(60000);
     QNetworkReply *reply = m_network->get(request);
+    Network::allowRedirects(reply, &MapCatalog::isAllowedUrl);
     connect(reply, &QNetworkReply::finished, this, [this, reply, use, cached] {
         reply->deleteLater();
         m_catalogLoading = false;
@@ -496,7 +498,8 @@ void MapManager::estimate(const QString &id, int maxZoom)
         }
     }
     // the size of the map: the planet build's directories for the region (a second or two)
-    QNetworkReply *builds = m_network->get(QNetworkRequest(MapCatalog::buildsUrl()));
+    QNetworkReply *builds = m_network->get(Network::guarded(QNetworkRequest(MapCatalog::buildsUrl())));
+    Network::allowRedirects(builds, &MapCatalog::isAllowedUrl);
     connect(builds, &QNetworkReply::finished, this, [this, builds, id, maxZoom, shape = r->shape, pbf = r->pbf] {
         builds->deleteLater();
         const QString build = MapCatalog::latestBuild(builds->readAll());
@@ -519,9 +522,8 @@ void MapManager::estimate(const QString &id, int maxZoom)
                 return;
             }
             // and the size of its OpenStreetMap data (read for places, then deleted)
-            QNetworkRequest head(pbf);
-            head.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-            QNetworkReply *reply = m_network->head(head);
+            QNetworkReply *reply = m_network->head(Network::guarded(QNetworkRequest(pbf)));
+            Network::allowRedirects(reply, &MapCatalog::isAllowedUrl);
             connect(reply, &QNetworkReply::finished, this, [this, reply, id, maxZoom, mapBytes, tiles] {
                 reply->deleteLater();
                 Q_EMIT estimated(id, maxZoom, mapBytes, tiles, reply->header(QNetworkRequest::ContentLengthHeader).toDouble(), QString());

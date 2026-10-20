@@ -416,12 +416,11 @@ bool Classroom::saveSyllabus(qint64 courseId, const QList<Unit> &units)
             ok = q.exec();
         }
     }
-    if (!ok) {
+    // a failed commit is rolled back too: left open, the transaction would take in every later write
+    if (!ok || !db.commit()) {
         db.rollback();
         return false;
     }
-    if (!db.commit())
-        return false;
     touch(courseId);
     return true;
 }
@@ -576,9 +575,13 @@ void Classroom::syncCourse(qint64 courseId)
             return;
     // an article two lessons read is labelled with the first of them (added last to first, it got the later one)
     const auto c = course(courseId);
+    if (!c)
+        return;
     QSet<QString> seen;
     for (auto it = lessons.crbegin(); it != lessons.crend(); ++it) {
         const auto l = lesson(*it);
+        if (!l)
+            continue;
         const QString label = lessonLabel(*it);
         for (const Reading &r : l->readings) {
             const QString key = QString::number(r.article.libraryId) + QLatin1Char('/') + r.article.path;
@@ -587,7 +590,7 @@ void Classroom::syncCourse(qint64 courseId)
             seen.insert(key);
             QSqlQuery q;
             q.prepare(QStringLiteral("UPDATE project_items SET lesson = ? WHERE project_id = ? AND kind = 'article' AND library_id = ? AND path = ?"));
-            q.addBindValue(label);
+            q.addBindValue(Database::text(label));
             q.addBindValue(c->projectId);
             q.addBindValue(r.article.libraryId);
             q.addBindValue(r.article.path);

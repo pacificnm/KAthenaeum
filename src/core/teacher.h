@@ -61,7 +61,7 @@ public:
     void writeQuiz(const QString &kind, qint64 targetId, const Models &models);
     void stop();
     bool running() const { return m_running; }
-    QString job() const { return m_job; }  // "plan" | "intro"
+    QString job() const { return m_job; }  // "plan" | "intro" | "quiz"
     qint64 subject() const { return m_subjectId; }  // the course or lesson being worked on
     QString planText() const { return m_planText; }  // the syllabus as the model wrote it (for measuring)
     // every article considered for each lesson, with its similarity, as "lesson\tsimilarity\ttitle" (for measuring)

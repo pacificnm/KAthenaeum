@@ -279,7 +279,9 @@ void LibraryManager::removeLibrary(qint64 id, bool deleteFile)
     reloadInstalled();
     syncCatalogState();
     Q_EMIT folderChanged();
-    if (lib)
+    if (!error.isEmpty() && lib)  // removed, but its file could not be deleted
+        Q_EMIT message(i18n("Removed %1 from KAthenaeum, but its file could not be deleted: %2", lib->title, lib->path), true);
+    else if (lib)
         Q_EMIT message(deleteFile ? i18n("Deleted %1", lib->title) : i18n("Removed %1 from KAthenaeum; the file is still on disk", lib->title), false);
 }
 

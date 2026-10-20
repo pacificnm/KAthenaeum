@@ -633,6 +633,7 @@ void Teacher::finish(const QString &status, const QString &error)
     if (!m_running)
         return;
     m_running = false;
+    ++m_generation;  // whatever is still on its way for this job is ignored (as Answerer and Drafter do)
     if (m_job == QLatin1String("plan") && status != QLatin1String("done"))
         Classroom::setStatus(m_subjectId, QStringLiteral("failed"),
                              status == QLatin1String("stopped") ? QStringLiteral("Planning was stopped. Press Plan Again.") : error);

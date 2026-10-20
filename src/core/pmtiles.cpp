@@ -132,7 +132,8 @@ std::optional<QList<Entry>> parseDirectory(const QByteArray &in)
 {
     qsizetype pos = 0;
     quint64 n = 0;
-    if (!getVarint(in, pos, n) || n > quint64(in.size()))  // every entry takes at least a byte per field
+    // every entry takes at least a byte for each of its four fields: a count beyond that is a lie, and would allocate it
+    if (!getVarint(in, pos, n) || n > quint64(in.size()) / 4)
         return std::nullopt;
     QList<Entry> entries(static_cast<qsizetype>(n));
     quint64 last = 0, v = 0;
@@ -269,7 +270,7 @@ QByteArray Archive::read(quint64 offset, quint64 length)
 
 std::optional<QList<Entry>> Archive::directory(quint64 offset, quint64 length)
 {
-    const auto raw = decompress(read(offset, length), m_header.internalCompression);
+    const auto raw = decompress(read(offset, length), m_header.internalCompression, DirectoryLimit);
     return raw ? parseDirectory(*raw) : std::nullopt;
 }
 
@@ -290,7 +291,7 @@ QByteArray Archive::tile(int z, quint32 x, quint32 y)
         if (e.runLength > 0) {
             if (id >= e.tileId + e.runLength)
                 return {};
-            const auto data = decompress(read(m_header.dataOffset + e.offset, e.length), m_header.tileCompression);
+            const auto data = decompress(read(m_header.dataOffset + e.offset, e.length), m_header.tileCompression, TileLimit);
             return data ? *data : QByteArray();
         }
         const quint64 at = m_header.leavesOffset + e.offset;
@@ -351,12 +352,12 @@ std::optional<QByteArray> gunzip(const QByteArray &data, qsizetype limit)
     return out;
 }
 
-std::optional<QByteArray> decompress(const QByteArray &data, quint8 compression)
+std::optional<QByteArray> decompress(const QByteArray &data, quint8 compression, qsizetype limit)
 {
     if (compression == NoCompression)
-        return data;
+        return data.size() <= limit ? std::optional<QByteArray>(data) : std::nullopt;
     if (compression == Gzip)
-        return gunzip(data);
+        return gunzip(data, limit);
     return std::nullopt;  // Protomaps uses gzip; brotli and zstd are not read here
 }
 }

@@ -7,6 +7,7 @@
 
 namespace
 {
+constexpr qsizetype MaxLineBytes = 1 << 20;  // a streamed line is one JSON object of a few hundred bytes
 constexpr int ShortTimeout = 10'000;
 constexpr int EmbedTimeout = 120'000;  // a model loads from disk on first use
 constexpr int ChatTimeout = 300'000;   // without a byte: loading the model and reading the prompt come first
@@ -108,7 +109,15 @@ QNetworkRequest OllamaClient::request(const QString &path, int timeoutMs) const
 
 QNetworkReply *OllamaClient::post(const QString &path, const QJsonObject &body, int timeoutMs)
 {
-    return m_nam.post(request(path, timeoutMs), QJsonDocument(body).toJson(QJsonDocument::Compact));
+    return owned(m_nam.post(request(path, timeoutMs), QJsonDocument(body).toJson(QJsonDocument::Compact)));
+}
+
+QNetworkReply *OllamaClient::owned(QNetworkReply *reply)
+{
+    // freed when it finishes whatever happens to the object that asked: its own handlers are connected with that object
+    // as context, and never run once it is gone, so the reply was kept until the client went
+    connect(reply, &QNetworkReply::finished, reply, &QObject::deleteLater);
+    return reply;
 }
 
 QNetworkReply *OllamaClient::embed(const QString &model, const QStringList &input, QObject *context, EmbedDone done)
@@ -148,6 +157,12 @@ QNetworkReply *OllamaClient::chat(const QJsonObject &body, QObject *context, Cha
         if (status(reply) != 200 || !failed->isEmpty())
             return;
         *buffer += reply->readAll();
+        // a line is one JSON object of a few hundred bytes: a megabyte without a line break is not Ollama talking
+        if (buffer->size() > MaxLineBytes && buffer->indexOf('\n') < 0) {
+            *failed = QStringLiteral("The model server sent a malformed reply");
+            reply->abort();
+            return;
+        }
         qsizetype nl;
         while ((nl = buffer->indexOf('\n')) >= 0 || (all && !buffer->trimmed().isEmpty())) {
             const QByteArray line = nl >= 0 ? buffer->left(nl) : *buffer;
@@ -216,7 +231,7 @@ void OllamaClient::capabilities(const QString &model, QObject *context, Capabili
 
 QNetworkReply *OllamaClient::names(const QString &path, const QString &listKey, QObject *context, Names done)
 {
-    QNetworkReply *reply = m_nam.get(request(path, ShortTimeout));
+    QNetworkReply *reply = owned(m_nam.get(request(path, ShortTimeout)));
     const QString base = m_baseUrl;
     connect(reply, &QNetworkReply::finished, context, [reply, done, base, listKey] {
         reply->deleteLater();

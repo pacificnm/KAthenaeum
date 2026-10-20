@@ -82,6 +82,12 @@ private Q_SLOTS:
         QCOMPARE(Timeline::period(2021), QStringLiteral("2000s"));
         QCOMPARE(Timeline::period(476), QStringLiteral("5th century"));
         QCOMPARE(Timeline::period(12), QStringLiteral("1st century"));
+        // the boundaries: there is no year 0, so a century ends on its hundredth year
+        QCOMPARE(Timeline::period(100), QStringLiteral("1st century"));
+        QCOMPARE(Timeline::period(101), QStringLiteral("2nd century"));
+        QCOMPARE(Timeline::period(-100), QStringLiteral("1st century BC"));
+        QCOMPARE(Timeline::period(-101), QStringLiteral("2nd century BC"));
+        QCOMPARE(Timeline::period(-1), QStringLiteral("1st century BC"));
         QCOMPARE(Timeline::period(-31), QStringLiteral("1st century BC"));
         QCOMPARE(Timeline::period(-350), QStringLiteral("4th century BC"));
         QCOMPARE(Timeline::period(-2500), QStringLiteral("3rd millennium BC"));

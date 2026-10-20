@@ -80,7 +80,7 @@ QList<ProjectItem> items(qint64 projectId, const QString &kind = {});  // newest
 // projects is one highlight naming them all, with their notes
 QList<Highlight> highlightsFor(qint64 libraryId, const QString &path);
 // A library was removed: its articles leave every project (saved excerpts stay: they hold their own text)
-void forgetLibrary(qint64 libraryId);
+bool forgetLibrary(qint64 libraryId);
 
 // ---- documents ----
 qint64 createDocument(qint64 projectId, const QString &title, const QString &content = {});

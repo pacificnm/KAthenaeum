@@ -109,7 +109,8 @@ private:
     };
     void gotRoot(const QByteArray &data);
     void gotWanted();
-    void walk(const QList<PMTiles::Entry> &entries, quint64 end);
+    // depth: of the directory the entries come from (the root is 0)
+    void walk(const QList<PMTiles::Entry> &entries, quint64 end, int depth);
     void fetchLeaves();
     void fetchTiles();
     void write();
@@ -127,7 +128,11 @@ private:
     QList<Found> m_found;
     struct Leaf {
         quint64 offset, length, end;  // end: the first tile id after the leaf's range
+        int depth;
     };
+    // the PMTiles writers nest leaves one level deep; a deeper chain (a leaf pointing at itself) is a broken or hostile
+    // file, and would be fetched forever (as PMTiles::Archive::tile, which stops at the same depth)
+    static constexpr int MaxLeafDepth = 4;
     QList<Leaf> m_leaves;
     int m_pending = 0;
     QFile m_data;

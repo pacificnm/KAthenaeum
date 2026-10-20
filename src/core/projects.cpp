@@ -329,12 +329,12 @@ QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
     return out;
 }
 
-void Projects::forgetLibrary(qint64 libraryId)
+bool Projects::forgetLibrary(qint64 libraryId)
 {
     QSqlQuery q;
     q.prepare(QStringLiteral("DELETE FROM project_items WHERE kind = 'article' AND library_id = ?"));
     q.addBindValue(libraryId);
-    q.exec();
+    return q.exec();
 }
 
 // ---- documents ----

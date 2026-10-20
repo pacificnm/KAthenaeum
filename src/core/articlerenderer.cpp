@@ -330,8 +330,10 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         for (xmlNodePtr n : matches) {
             if (n == root || n->type != XML_ELEMENT_NODE || !isInside(n, root))
                 continue;
+            // nested in another match inside the content, that is: the root itself, or anything above it, may match too
+            // (a page whose wrapper is classed "navbox", or sits in a "noprint" div), and must not shield what it holds
             bool nested = false;
-            for (xmlNodePtr p = n->parent; p && !nested; p = p->parent)
+            for (xmlNodePtr p = n->parent; p && p != root && !nested; p = p->parent)
                 nested = matched.contains(p);
             if (!nested)
                 outermost.append(n);

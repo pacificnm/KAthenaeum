@@ -68,6 +68,7 @@ public:
 
 private:
     QNetworkRequest request(const QString &path, int timeoutMs) const;
+    QNetworkReply *owned(QNetworkReply *reply);
     QNetworkReply *post(const QString &path, const QJsonObject &body, int timeoutMs);
     QNetworkReply *names(const QString &path, const QString &listKey, QObject *context, Names done);
 

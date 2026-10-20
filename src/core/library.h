@@ -49,6 +49,7 @@ struct ScanResult {
 // files from anywhere that no longer exist.
 ScanResult scan(const QString &folder);
 
-// Removes the library from KAthenaeum, and its file too when `deleteFile` is set.
+// Removes the library from KAthenaeum, and its file too when `deleteFile` is set. False (with `error`) if it could not be
+// removed. True once it is removed, even if its file could then not be deleted: `error` then says so, and the file stays.
 bool remove(qint64 id, bool deleteFile, QString *error = nullptr);
 }

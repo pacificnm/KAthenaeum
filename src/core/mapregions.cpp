@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "mapregions.h"
 
+#include "network.h"
+
 #include "database.h"
 #include "mapextract.h"
 #include "mapplaces.h"
@@ -336,14 +338,17 @@ void MapDownloader::startNext()
     m_info.pbf = next->pbf;
     m_done = m_total = 0;
     m_step = QStringLiteral("map");
-    *m_stop = false;
+    // a stop flag of its own: a cancelled job's worker may still be reading (it stops at its next check), and resetting a
+    // shared flag for the next job let it carry on to the end
+    m_stop = std::make_shared<std::atomic<bool>>(false);
     MapRegions::setStatus(m_id, QStringLiteral("downloading"));
     Q_EMIT changed(m_id);
     if (m_info.shape.isEmpty())
         return finish(tr("The region has no shape"));
 
     // the newest planet build
-    QNetworkReply *reply = m_network->get(QNetworkRequest(MapCatalog::buildsUrl()));
+    QNetworkReply *reply = m_network->get(Network::guarded(QNetworkRequest(MapCatalog::buildsUrl())));
+    Network::allowRedirects(reply, &MapCatalog::isAllowedUrl);
     m_reply = reply;
     connect(reply, &QNetworkReply::finished, this, [this, reply, id = m_id] {
         reply->deleteLater();
@@ -398,15 +403,11 @@ void MapDownloader::fetchPlaces()
     m_pbf = std::make_unique<QFile>(pbfPath());
     if (!m_pbf->open(QIODevice::WriteOnly | QIODevice::Truncate))
         return finish(tr("Could not write %1: %2").arg(pbfPath(), m_pbf->errorString()));
-    QNetworkRequest request(m_info.pbf);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkRequest request = Network::guarded(QNetworkRequest(m_info.pbf));
     request.setTransferTimeout(120000);
     QNetworkReply *reply = m_network->get(request);
+    Network::allowRedirects(reply, &MapCatalog::isAllowedUrl);
     m_reply = reply;
-    connect(reply, &QNetworkReply::redirected, this, [reply](const QUrl &url) {
-        if (!MapCatalog::isAllowedUrl(url))
-            reply->abort();
-    });
     connect(reply, &QNetworkReply::readyRead, this, [this, reply] {
         if (m_pbf && m_pbf->write(reply->readAll()) < 0)
             reply->abort();
@@ -437,9 +438,10 @@ void MapDownloader::indexPlaces()
     Q_EMIT changed(m_id);
     using Result = std::pair<std::optional<std::vector<MapPlace>>, QString>;
     auto *watcher = new QFutureWatcher<Result>(this);
-    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, id = m_id] {
+    // the path and id are this job's: a cancelled job finishing late must not remove the next job's file
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, id = m_id, path = pbfPath()] {
         watcher->deleteLater();
-        QFile::remove(pbfPath());
+        QFile::remove(path);
         if (id != m_id)
             return;
         const Result result = watcher->result();
