@@ -22,14 +22,30 @@ const char *DropXPath =
     "|//base|//area|//map|//video|//audio|//source|//track|//canvas|//dialog|//template|//svg";
 
 // NOT target/rel: the code below adds exactly those itself
-const QSet<QByteArray> KeepAttributes = {"class", "id", "href", "src", "alt", "title", "colspan", "rowspan", "scope",
-                                         "style", "lang", "dir", "width", "height"};
+const QSet<QByteArray> &keepAttributes()
+{
+    static const QSet<QByteArray> value = {"class", "id", "href", "src", "alt", "title", "colspan", "rowspan", "scope",
+                                             "style", "lang", "dir", "width", "height"};
+    return value;
+}
 
 // A backslash anywhere: CSS escapes spell anything ("u\\72l(" is url(), which got past this filter; the review, 2026-10-19)
-const QRegularExpression BadStyle(QStringLiteral("\\\\|url\\s*\\(|image-set|src\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
-                                  QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression External(QStringLiteral("^(?:[a-z][a-z0-9+.-]*:)?//|^(?:https?|ftp|mailto):"), QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression Scripting(QStringLiteral("^\\s*(?:javascript|data|vbscript):"), QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression &badStyle()
+{
+    static const QRegularExpression value(QStringLiteral("\\\\|url\\s*\\(|image-set|src\\s*\\(|expression|javascript|@import|behavior|-moz-binding|position\\s*:|z-index|!\\s*important"),
+                                      QRegularExpression::CaseInsensitiveOption);
+    return value;
+}
+const QRegularExpression &external()
+{
+    static const QRegularExpression value(QStringLiteral("^(?:[a-z][a-z0-9+.-]*:)?//|^(?:https?|ftp|mailto):"), QRegularExpression::CaseInsensitiveOption);
+    return value;
+}
+const QRegularExpression &scripting()
+{
+    static const QRegularExpression value(QStringLiteral("^\\s*(?:javascript|data|vbscript):"), QRegularExpression::CaseInsensitiveOption);
+    return value;
+}
 
 struct Doc {
     htmlDocPtr doc = nullptr;
@@ -168,7 +184,7 @@ QString ArticleRenderer::resolve(const QString &basePath, const QString &href)
         if (slash > 0)
             parts = basePath.left(slash).split(QLatin1Char('/'), Qt::SkipEmptyParts);
     }
-    for (const QString &segment : target.split(QLatin1Char('/'), Qt::SkipEmptyParts)) {
+    for (const auto qLatin1Char = target.split(QLatin1Char('/'), Qt::SkipEmptyParts); const QString &segment : qLatin1Char) {
         if (segment == QLatin1String("."))
             continue;
         if (segment == QLatin1String("..") && !parts.isEmpty() && parts.last() != QLatin1String(".."))
@@ -308,7 +324,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         return fail(QStringLiteral("not an article page"));
 
     // the subject's coordinates, before anything is dropped: Wikipedia keeps the decimal ones in a hidden span
-    for (xmlNodePtr g : xpath(d.doc, root, ".//span[@class='geo']")->nodes())
+    for (const auto nodes = xpath(d.doc, root, ".//span[@class='geo']")->nodes(); xmlNodePtr g : nodes)
         if (const auto ll = parseGeo(textOf(g))) {
             out.hasCoordinates = true;
             out.lat = ll->first;
@@ -348,12 +364,12 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         for (xmlAttrPtr a = el->properties; a; a = a->next) {
             const QByteArray n = reinterpret_cast<const char *>(a->name);
             const QByteArray lower = n.toLower();
-            if (!KeepAttributes.contains(lower) || lower.startsWith("on"))
+            if (!keepAttributes().contains(lower) || lower.startsWith("on"))
                 remove << n;
-            else if (lower == "style" && BadStyle.match(attr(el, "style")).hasMatch())
+            else if (lower == "style" && badStyle().match(attr(el, "style")).hasMatch())
                 remove << n;
         }
-        for (const QByteArray &n : remove)
+        for (const QByteArray &n : std::as_const(remove))
             removeAttr(el, n.constData());
     });
 
@@ -361,10 +377,10 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
     const auto links = xpath(d.doc, root, ".//a");
     if (!images->ok() || !links->ok())
         return fail(QStringLiteral("the page is too large or too complex to make safe"));
-    for (xmlNodePtr img : images->nodes()) {
+    for (const auto nodes = images->nodes(); xmlNodePtr img : nodes) {
         const QString src = attr(img, "src");
         // Offline ZIMs without pictures embed an alt-text placeholder as a data: URI; it adds nothing
-        const QString media = src.isEmpty() || src.startsWith(QLatin1String("data:")) || External.match(src).hasMatch() ? QString() : resolve(path, src);
+        const QString media = src.isEmpty() || src.startsWith(QLatin1String("data:")) || external().match(src).hasMatch() ? QString() : resolve(path, src);
         if (media.isEmpty() || !hasEntry(media)) {
             dropTree(img);
             continue;
@@ -373,15 +389,15 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
         setAttr(img, "loading", QStringLiteral("lazy"));
     }
 
-    for (xmlNodePtr a : links->nodes()) {
+    for (const auto nodes = links->nodes(); xmlNodePtr a : nodes) {
         if (!hasAttr(a, "href"))
             continue;
         const QString href = attr(a, "href").trimmed();
         if (href.startsWith(QLatin1Char('#')))
             continue;
-        if (Scripting.match(href).hasMatch()) {
+        if (scripting().match(href).hasMatch()) {
             removeAttr(a, "href");
-        } else if (External.match(href).hasMatch()) {
+        } else if (external().match(href).hasMatch()) {
             setAttr(a, "target", QStringLiteral("_blank"));
             setAttr(a, "rel", QStringLiteral("noopener noreferrer nofollow"));
             addClass(a, "wl-ext");
@@ -408,7 +424,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw, co
             removeAttr(el, "src");
     });
 
-    for (xmlNodePtr h : xpath(d.doc, root, ".//h2|.//h3")->nodes()) {
+    for (const auto nodes = xpath(d.doc, root, ".//h2|.//h3")->nodes(); xmlNodePtr h : nodes) {
         QString id = attr(h, "id");
         if (id.isEmpty() && h->parent && h->parent->type == XML_ELEMENT_NODE)
             id = attr(h->parent, "id");

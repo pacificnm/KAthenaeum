@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     MapExtract extract(reader, shape, a[6].toInt(), a[7]);
     QElapsedTimer timer;
     timer.start();
-    QObject::connect(&extract, &MapExtract::phaseChanged, [&](MapExtract::Phase p) {
+    QObject::connect(&extract, &MapExtract::phaseChanged, &extract, [&](MapExtract::Phase p) {
         printf("%6.1f s  phase %d", timer.elapsed() / 1000.0, int(p));
         if (p == MapExtract::Tiles)
             printf("  (%lld tiles, %.1f MB to fetch)", extract.tileCount(), extract.totalBytes() / 1e6);
@@ -36,12 +36,12 @@ int main(int argc, char **argv)
             app.exit(0);
         }
     });
-    QObject::connect(&extract, &MapExtract::progress, [&](qint64 done, qint64 total) {
+    QObject::connect(&extract, &MapExtract::progress, &extract, [&](qint64 done, qint64 total) {
         ++requests;
         if (requests % 20 == 0)
             printf("%6.1f s  %.1f of %.1f MB\n", timer.elapsed() / 1000.0, done / 1e6, total / 1e6), fflush(stdout);
     });
-    QObject::connect(&extract, &MapExtract::finished, [&](const QString &error) {
+    QObject::connect(&extract, &MapExtract::finished, &extract, [&](const QString &error) {
         printf("%6.1f s  %s\n", timer.elapsed() / 1000.0, error.isEmpty() ? "done" : qPrintable(error));
         app.exit(error.isEmpty() ? 0 : 1);
     });

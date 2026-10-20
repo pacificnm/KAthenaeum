@@ -14,7 +14,8 @@
 
 namespace
 {
-QCache<QString, ArticleStore::Article> cache(24);
+using ArticleCache = QCache<QString, ArticleStore::Article>;
+Q_GLOBAL_STATIC(ArticleCache, cache, 24)  // rendered articles, most recently used kept
 
 QString key(qint64 libraryId, const QString &path)
 {
@@ -129,7 +130,7 @@ bool ArticleStore::parse(const QUrl &url, qint64 *libraryId, QString *path)
 
 std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, const QString &path)
 {
-    if (const Article *a = cache.object(key(libraryId, path)))
+    if (const Article *a = cache->object(key(libraryId, path)))
         return *a;
     const auto content = ZimReader::content(libraryId, path);
     if (!content || !content->mimetype.startsWith(QLatin1String("text/html")))
@@ -140,7 +141,7 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
     QSet<QString> marked;
     for (const Highlight &h : std::as_const(marks))
         marked.insert(h.text.simplified().toLower());
-    for (const Highlight &h : Projects::highlightsFor(libraryId, content->path))
+    for (const auto excerpts = Projects::highlightsFor(libraryId, content->path); const Highlight &h : excerpts)
         if (!marked.contains(h.text.simplified().toLower()))
             marks << h;
     auto rendered = ArticleRenderer::render(
@@ -153,13 +154,13 @@ std::optional<ArticleStore::Article> ArticleStore::article(qint64 libraryId, con
         return std::nullopt;
     auto *a = new Article{libraryId, content->path, std::move(*rendered)};
     const Article copy = *a;
-    cache.insert(key(libraryId, path), a);
+    cache->insert(key(libraryId, path), a);
     return copy;
 }
 
 void ArticleStore::clear()
 {
-    cache.clear();
+    cache->clear();
 }
 
 QByteArray ArticleStore::page(const Article &article, const QPalette &palette)

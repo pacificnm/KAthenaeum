@@ -11,7 +11,7 @@
 #include <QNetworkReply>
 #include <QSaveFile>
 #include <QTimer>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 #include <algorithm>
 
 // ---- reading ranges ----

@@ -13,7 +13,7 @@ class RagTest : public QObject
     static QStringList spans(const QString &text)
     {
         QStringList out;
-        for (const auto &[a, b] : Rag::splitSentences(text))
+        for (const auto sentences = Rag::splitSentences(text); const auto &[a, b] : sentences)
             out << text.mid(a, b - a);
         return out;
     }

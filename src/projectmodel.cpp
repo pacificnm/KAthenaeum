@@ -94,7 +94,7 @@ void ProjectModel::refresh()
                                        {QStringLiteral("itemId"), i.id}};
             }
         }
-        for (const ChatRecord &c : Chats::inProject(m_id))
+        for (const auto projectChats = Chats::inProject(m_id); const ChatRecord &c : projectChats)
             m_chats << QVariantMap{{QStringLiteral("chatId"), c.id},
                                    {QStringLiteral("title"), c.title},
                                    {QStringLiteral("updated"), c.updatedAt.toLocalTime()},
@@ -105,7 +105,7 @@ void ProjectModel::refresh()
         std::stable_sort(m_chats.begin(), m_chats.end(), [](const QVariant &a, const QVariant &b) {
             return a.toMap().value(QStringLiteral("updated")).toDateTime() > b.toMap().value(QStringLiteral("updated")).toDateTime();
         });
-        for (const DocumentRecord &d : Projects::documents(m_id))
+        for (const auto docs = Projects::documents(m_id); const DocumentRecord &d : docs)
             m_documents << QVariantMap{{QStringLiteral("documentId"), d.id},
                                        {QStringLiteral("title"), d.title},
                                        {QStringLiteral("updated"), d.updatedAt.toLocalTime()},
@@ -151,7 +151,7 @@ bool ProjectModel::removeDocument(qint64 documentId)
 
 QString ProjectModel::articleLink(qint64 itemId) const
 {
-    for (const ProjectItem &i : Projects::items(m_id, QStringLiteral("article")))
+    for (const auto qStringLiteral = Projects::items(m_id, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
         if (i.id == itemId)
             return Projects::articleLink(i.article);
     return {};
@@ -159,7 +159,7 @@ QString ProjectModel::articleLink(qint64 itemId) const
 
 QString ProjectModel::quote(qint64 itemId) const
 {
-    for (const ProjectItem &i : Projects::items(m_id, QStringLiteral("clip")))
+    for (const auto qStringLiteral = Projects::items(m_id, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral)
         if (i.id == itemId)
             return Projects::quote(i);
     return {};
@@ -185,10 +185,10 @@ QVariantList ProjectModel::bibliography() const
     const QList<Citations::Source> sources = Projects::articleSources(m_id);
     const QDate today = QDate::currentDate();
     QVariantList out;
-    for (const QString &name : Citations::styleNames()) {
+    for (const auto styles = Citations::styleNames(); const QString &name : styles) {
         const Citations::Style style = Citations::style(name);
         QStringList text, html;
-        for (const Citations::Source &s : Citations::sortedSources(style, sources, today)) {
+        for (const auto ordered = Citations::sortedSources(style, sources, today); const Citations::Source &s : ordered) {
             text << Citations::format(style, s, today);
             html << QStringLiteral("<p>%1</p>").arg(Citations::html(style, s, today));
         }

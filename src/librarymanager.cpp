@@ -328,7 +328,7 @@ QVariantList LibraryManager::libraryList() const
 {
     QList<LibraryRecord> libraries;
     QHash<QString, int> titles;
-    for (const LibraryRecord &r : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &r : rows)
         if (r.fileExists()) {
             libraries << r;
             ++titles[r.title];

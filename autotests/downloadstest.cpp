@@ -117,7 +117,7 @@ private Q_SLOTS:
         q.addBindValue(m_folder);
         QVERIFY(q.exec());
         DownloadManager dm;
-        QVERIFY(dm.remove(dm.list().first().id));
+        QVERIFY(dm.remove(dm.list().constFirst().id));
         QVERIFY(QFile::exists(path));  // the row said failed, but a library uses this file
         QVERIFY(dm.list().isEmpty());
     }
@@ -135,7 +135,7 @@ private Q_SLOTS:
         QVERIFY(dm.start(kiwix(f), f, {}, 1839104, m_folder).contains(QStringLiteral("already downloading")));
         QVERIFY(completed.wait(120000) || !failed.isEmpty());
         QVERIFY2(failed.isEmpty(), failed.isEmpty() ? "" : qPrintable(failed.first().at(1).toString()));
-        const auto r = dm.list().first();
+        const auto r = dm.list().constFirst();
         QCOMPARE(r.status, QStringLiteral("complete"));
         QCOMPARE(r.progress(), 1.0);
         QVERIFY(QFile::exists(r.path()));
@@ -156,7 +156,7 @@ private Q_SLOTS:
         QSignalSpy completed(&dm, &DownloadManager::completed);
         const QString f = QStringLiteral("wikipedia_en_chemistry_mini_2026-10.zim");
         QCOMPARE(dm.start(kiwix(f), f, QStringLiteral("Chemistry"), 23322624, m_folder), QString());
-        const qint64 id = dm.list().first().id;
+        const qint64 id = dm.list().constFirst().id;
         QTRY_VERIFY_WITH_TIMEOUT(dm.byId(id)->doneBytes > 0, 60000);  // some data has arrived
         QVERIFY(dm.cancel(id));
         QTRY_COMPARE_WITH_TIMEOUT(dm.byId(id)->status, QStringLiteral("cancelled"), 10000);

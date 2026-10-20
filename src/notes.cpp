@@ -117,7 +117,7 @@ bool Notes::remove(qint64 id)
 QVariantList Notes::forArticle(qint64 libraryId, const QString &path) const
 {
     QVariantList out;
-    for (const HighlightRecord &h : Highlights::forArticle(libraryId, path))
+    for (const auto marks = Highlights::forArticle(libraryId, path); const HighlightRecord &h : marks)
         out << toVariant(h);
     return out;
 }
@@ -125,7 +125,7 @@ QVariantList Notes::forArticle(qint64 libraryId, const QString &path) const
 QVariantList Notes::all(const QString &color, const QString &text) const
 {
     QVariantList out;
-    for (const HighlightRecord &h : Highlights::all(color, text))
+    for (const auto rows = Highlights::all(color, text); const HighlightRecord &h : rows)
         out << toVariant(h);
     return out;
 }

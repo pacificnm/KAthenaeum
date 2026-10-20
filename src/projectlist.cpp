@@ -77,7 +77,7 @@ bool ProjectList::remove(qint64 projectId)
 QVariantList ProjectList::containing(qint64 libraryId, const QString &path) const
 {
     QVariantList out;
-    for (qint64 id : Projects::containing(libraryId, path))
+    for (const auto holding = Projects::containing(libraryId, path); qint64 id : holding)
         out << id;
     return out;
 }

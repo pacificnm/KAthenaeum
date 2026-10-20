@@ -49,7 +49,7 @@ std::optional<QList<Vector>> Ollama::parseEmbeddings(const QByteArray &body, QSt
         return std::nullopt;
     }
     QList<Vector> out;
-    for (const QJsonValue &row : list.toArray()) {
+    for (const auto array = list.toArray(); const QJsonValue &row : array) {
         Vector v;
         const QJsonArray a = row.toArray();
         v.reserve(a.size());
@@ -221,7 +221,7 @@ void OllamaClient::capabilities(const QString &model, QObject *context, Capabili
             return;
         }
         QStringList caps;
-        for (const QJsonValue &c : QJsonDocument::fromJson(body).object().value(QLatin1String("capabilities")).toArray())
+        for (const auto array = QJsonDocument::fromJson(body).object().value(QLatin1String("capabilities")).toArray(); const QJsonValue &c : array)
             caps << c.toString();
         if (self)
             self->m_capabilities.insert(model, caps);
@@ -243,7 +243,7 @@ QNetworkReply *OllamaClient::names(const QString &path, const QString &listKey, 
             return;
         }
         QStringList out;
-        for (const QJsonValue &m : QJsonDocument::fromJson(body).object().value(listKey).toArray())
+        for (const auto array = QJsonDocument::fromJson(body).object().value(listKey).toArray(); const QJsonValue &m : array)
             out << m.toObject().value(QLatin1String("name")).toString();
         done(out, {});
     });

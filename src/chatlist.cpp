@@ -61,7 +61,7 @@ void ChatList::refresh()
     beginResetModel();
     m_chats = m_libraryId > 0 && !m_path.isEmpty() ? Chats::aboutArticle(m_libraryId, m_path) : Chats::all();
     m_projectTitles.clear();
-    for (const ProjectRecord &p : Projects::all())
+    for (const auto rows = Projects::all(); const ProjectRecord &p : rows)
         m_projectTitles.insert(p.id, p.title);
     endResetModel();
     Q_EMIT countChanged();

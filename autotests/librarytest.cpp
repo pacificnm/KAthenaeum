@@ -98,7 +98,7 @@ private Q_SLOTS:
         QVERIFY(QFile::rename(path, path + QStringLiteral(".moved")));
         result = Library::scan(m_dir.filePath(QStringLiteral("zim")));
         QCOMPARE(result.missing, QStringList{QStringLiteral("test_2026-01.zim")});
-        QVERIFY(!Library::all().first().fileExists());
+        QVERIFY(!Library::all().constFirst().fileExists());
         QVERIFY(QFile::rename(path + QStringLiteral(".moved"), path));
 
         // removing without deleting keeps the file; with deleting, it goes

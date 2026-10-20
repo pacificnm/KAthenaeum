@@ -33,9 +33,13 @@ const char *BlocksXPath =
 const char *Contained = "ancestor::li or ancestor::dd or ancestor::blockquote";
 const char *ContainedQuote = "ancestor::dd or ancestor::blockquote";
 
-const QSet<QString> SkipSections = {QStringLiteral("references"), QStringLiteral("external links"), QStringLiteral("see also"),
-                                    QStringLiteral("notes"), QStringLiteral("further reading"), QStringLiteral("bibliography"),
-                                    QStringLiteral("citations"), QStringLiteral("sources"), QStringLiteral("footnotes")};
+const QSet<QString> &skipSections()
+{
+    static const QSet<QString> value = {QStringLiteral("references"), QStringLiteral("external links"), QStringLiteral("see also"),
+                                        QStringLiteral("notes"), QStringLiteral("further reading"), QStringLiteral("bibliography"),
+                                        QStringLiteral("citations"), QStringLiteral("sources"), QStringLiteral("footnotes")};
+    return value;
+}
 
 struct Doc {
     htmlDocPtr doc = nullptr;
@@ -171,7 +175,7 @@ void cellText(xmlNodePtr n, QString &out)
 QStringList infoboxFacts(htmlDocPtr doc)
 {
     QStringList lines;
-    for (xmlNodePtr row : nodes(doc, InfoboxRowsXPath)) {
+    for (const auto rows = nodes(doc, InfoboxRowsXPath); xmlNodePtr row : rows) {
         QList<xmlNodePtr> cells;
         for (xmlNodePtr c = row->children; c; c = c->next)
             if (c->type == XML_ELEMENT_NODE && (tag(c) == QLatin1String("th") || tag(c) == QLatin1String("td")))
@@ -242,7 +246,7 @@ QStringList Extract::splitLong(const QString &text)
     static const QRegularExpression sentenceEnd(QStringLiteral("(?<=[.!?])\\s+"));
     QStringList out;
     QString cur;
-    for (QString sent : text.split(sentenceEnd)) {
+    for (const auto parts = text.split(sentenceEnd); QString sent : parts) {
         while (sent.size() > MaxChars) {
             if (!cur.isEmpty()) {
                 out.append(cur);
@@ -279,7 +283,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         out.title = clean(titles.first());
 
     // a line break is a word break: "one<br>two" must not become "onetwo"
-    for (xmlNodePtr br : nodes(d.doc, "//br"))
+    for (const auto breaks = nodes(d.doc, "//br"); xmlNodePtr br : breaks)
         xmlAddNextSibling(br, xmlNewText(reinterpret_cast<const xmlChar *>(" ")));
 
     const QStringList facts = infoboxFacts(d.doc);  // before the tables are dropped
@@ -312,15 +316,15 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     QString section;
     int skipLevel = 0;  // heading level of the skipped section we are inside, 0 if none
     QList<Passage> blocks;
-    for (xmlNodePtr el : nodes(d.doc, BlocksXPath)) {
+    for (const auto elements = nodes(d.doc, BlocksXPath); xmlNodePtr el : elements) {
         QString text = clean(el);
         const QString t = tag(el);
         if (t == QLatin1String("h2") || t == QLatin1String("h3") || t == QLatin1String("h4")) {
-            const int level = t.mid(1).toInt();
+            const int level = QStringView(t).mid(1).toInt();
             if (skipLevel && level > skipLevel)
                 continue;  // a sub-heading of a skipped section (an h3 inside "Notes") stays skipped
             section = text;
-            skipLevel = SkipSections.contains(text.toLower()) ? level : 0;  // a heading of the same or a higher level ends the skip
+            skipLevel = skipSections().contains(text.toLower()) ? level : 0;  // a heading of the same or a higher level ends the skip
             continue;
         }
         if (skipLevel || text.isEmpty())
@@ -337,7 +341,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     QList<Passage> chunks;
     QString curSection, cur;
     for (const Passage &b : std::as_const(blocks)) {
-        for (const QString &piece : splitLong(b.text)) {
+        for (const auto pieces = splitLong(b.text); const QString &piece : pieces) {
             if (!cur.isEmpty() && (b.section != curSection || cur.size() + 2 + piece.size() > MaxChars)) {
                 chunks.append({curSection, cur});
                 cur.clear();

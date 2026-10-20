@@ -30,7 +30,7 @@ const QSet<QString> &stopWords()
             "who whom why will with won't would wouldn't you your yours yourself tell explain describe give mean means please work works working "
             "happen happens get gets many much long called known");
         QSet<QString> out;
-        for (QString w : list.split(QLatin1Char(' '), Qt::SkipEmptyParts))
+        for (const auto qLatin1Char = list.split(QLatin1Char(' '), Qt::SkipEmptyParts); QString w : qLatin1Char)
             out.insert(w.remove(QLatin1Char('\'')));  // matched after apostrophes are removed: don't -> dont
         return out;
     }();
@@ -155,7 +155,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
 
     std::optional<QString> exact;
     QStringList named;  // paths whose title the query names
-    for (const QString &candidate : titleCandidates(q)) {
+    for (const auto titles = titleCandidates(q); const QString &candidate : titles) {
         if ((exact = pathOfTitle(z, candidate))) {
             lists.append({{*exact}, TitleWeight});
             named << *exact;
@@ -163,13 +163,13 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
         }
     }
     int hits = 0;
-    for (const auto &[gram, weight] : ngramTitles(q)) {
+    for (const auto grams = ngramTitles(q); const auto &[gram, weight] : grams) {
         if (hits >= MaxNgramHits)
             break;
         QStringList variants{capitalize(gram)};  // "Boiling point"
         if (titleCase(gram) != variants.first())
             variants << titleCase(gram);  // "Albert Einstein"
-        for (const QString &v : variants) {
+        for (const QString &v : std::as_const(variants)) {
             if (const auto p = pathOfTitle(z, v)) {
                 lists.append({{*p}, weight});
                 named << *p;
@@ -239,7 +239,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
         if (const auto r = resolve(z, p, true))
             namedPaths.insert(r->path);
     QList<Found> out;
-    for (const QString &p : best)
+    for (const QString &p : std::as_const(best))
         out.append({libraryId, p, titles.value(p), scores.value(p), p == exactPath, namedPaths.contains(p)});
     return out;
 }
@@ -248,7 +248,7 @@ QList<ZimSearch::Found> libraryArticles(qint64 libraryId, const std::shared_ptr<
 QStringList ZimSearch::terms(const QString &query)
 {
     QStringList out;
-    for (const QString &w : words(query)) {
+    for (const auto queryWords = words(query); const QString &w : queryWords) {
         if (stopWords().contains(w) || out.contains(w) || (w.size() < 2 && !w.at(0).isDigit()))
             continue;
         out << w;
@@ -265,7 +265,7 @@ QStringList ZimSearch::titleCandidates(const QString &query)
     if (core.isEmpty())
         core = base;
     QStringList out;
-    for (const QString &c : QStringList{base, core, core.left(1).toUpper() + core.mid(1), titleCase(core)})
+    for (const auto forms = QStringList{base, core, core.left(1).toUpper() + core.mid(1), titleCase(core)}; const QString &c : forms)
         if (!c.isEmpty() && !out.contains(c))
             out << c;
     return out;
@@ -308,7 +308,7 @@ double ZimSearch::overlap(const QStringList &stems, const QString &text)
     if (stems.isEmpty())
         return 0.0;
     QSet<QString> have;
-    for (const QString &w : words(text))
+    for (const auto textWords = words(text); const QString &w : textWords)
         have.insert(stem(w));
     int n = 0;
     for (const QString &s : stems)
@@ -330,7 +330,7 @@ double aboutness(const QStringList &stems, const QString &title, const QString &
     if (stems.isEmpty())
         return 1.0;
     QSet<QString> have;
-    for (const QString &w : words(title + QLatin1Char(' ') + intro))
+    for (const auto qLatin1Char = words(title + QLatin1Char(' ') + intro); const QString &w : qLatin1Char)
         have.insert(ZimSearch::stem(w));
     int n = 0;
     for (const QString &s : stems) {
@@ -354,7 +354,7 @@ QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &
     for (qint64 id : libraryIds)
         found += libraryArticles(id, archives.value(id), query, limit);
     QStringList stems;
-    for (const QString &t : ZimSearch::terms(query))
+    for (const auto terms = ZimSearch::terms(query); const QString &t : terms)
         stems << ZimSearch::stem(t);
 
     QList<ZimSearch::Article> out;
@@ -393,7 +393,7 @@ QList<ZimSearch::Article> candidates(const QString &query, const QList<qint64> &
 QList<ZimSearch::Found> ZimSearch::findArticles(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
     QList<Found> out;
-    for (const Article &c : candidates(query, libraryIds, limit))
+    for (const auto found = candidates(query, libraryIds, limit); const Article &c : found)
         out.append(c.found);
     return out;
 }
@@ -406,10 +406,10 @@ QList<ZimSearch::Article> ZimSearch::readArticles(const QString &query, const QL
 QList<ZimSearch::Hit> ZimSearch::search(const QString &query, const QList<qint64> &libraryIds, int limit)
 {
     QStringList stems;
-    for (const QString &t : terms(query))
+    for (const auto queryTerms = terms(query); const QString &t : queryTerms)
         stems << stem(t);
     QList<Hit> out;
-    for (const Article &c : candidates(query, libraryIds, limit)) {
+    for (const auto found = candidates(query, libraryIds, limit); const Article &c : found) {
         // the passage among the first dozen that has most of the query's words; the earliest one on a tie
         int best = 0;
         double bestOverlap = -1;

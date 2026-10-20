@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import org.kde.coreaddons as KCoreAddons
 import KAthenaeum
 
 ColumnLayout {
@@ -66,8 +65,8 @@ ColumnLayout {
                     { value: "smallest", text: i18n("Smallest first") },
                     { value: "largest", text: i18n("Largest first") }
                 ]
-                currentIndex: Math.max(0, model.findIndex(m => m.value === view.catalog.sort))
-                onActivated: view.catalog.sort = currentValue
+                currentIndex: Math.max(0, model.findIndex(m => m.value === view.catalog.sortOrder))
+                onActivated: view.catalog.sortOrder = currentValue
             }
         }
     }

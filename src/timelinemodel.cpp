@@ -12,7 +12,7 @@
 #include <KLocalizedString>
 #include <QDate>
 #include <QFutureWatcher>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 namespace
 {
@@ -36,7 +36,7 @@ void TimelineModel::loadProject(qint64 projectId)
 {
     const auto p = Projects::byId(projectId);
     QList<ArticleRef> articles;
-    for (const ProjectItem &i : Projects::items(projectId, QStringLiteral("article")))
+    for (const auto qStringLiteral = Projects::items(projectId, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
         articles << i.article;
     std::reverse(articles.begin(), articles.end());  // as they were added
     load(p ? p->title : QString(), articles);
@@ -133,7 +133,7 @@ QList<Timeline::Event> TimelineModel::shown() const
 QVariantList TimelineModel::events() const
 {
     QVariantList out;
-    for (const Timeline::Event &e : shown())
+    for (const auto events = shown(); const Timeline::Event &e : events)
         out.append(QVariantMap{{QStringLiteral("period"), Timeline::period(e.date.value)},
                                {QStringLiteral("label"), e.date.label},
                                {QStringLiteral("approximate"), e.date.precision == 0},

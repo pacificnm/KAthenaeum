@@ -234,10 +234,10 @@ private Q_SLOTS:
             rows += QStringLiteral("<tr><th>Property %1</th><td>value number %1 with some units attached</td></tr>").arg(i);
         const auto a = Extract::extract(page(QStringLiteral("<table class='infobox'>%1</table><p>An introduction long enough to keep.</p>").arg(rows)));
         QVERIFY(a.passages.size() > 2);
-        for (const Passage &p : a.passages.mid(1)) {
+        for (const auto rest = a.passages.mid(1); const Passage &p : rest) {
             QCOMPARE(p.section, QStringLiteral("Key facts"));
             QVERIFY(p.text.size() <= Extract::MaxChars);
-            for (const QString &line : p.text.split(QLatin1Char('\n')))
+            for (const auto qLatin1Char = p.text.split(QLatin1Char('\n')); const QString &line : qLatin1Char)
                 QVERIFY2(line.startsWith(QLatin1String("Property ")), qPrintable(line));
         }
     }

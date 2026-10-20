@@ -55,7 +55,7 @@ class CatalogModel : public QAbstractListModel
     Q_PROPERTY(QString query READ query WRITE setQuery NOTIFY filterChanged)
     Q_PROPERTY(QString category READ category WRITE setCategory NOTIFY filterChanged)
     Q_PROPERTY(QString flavour READ flavour WRITE setFlavour NOTIFY filterChanged)
-    Q_PROPERTY(QString sort READ sort WRITE setSort NOTIFY filterChanged)
+    Q_PROPERTY(QString sortOrder READ sortOrder WRITE setSortOrder NOTIFY filterChanged)
     Q_PROPERTY(QVariantList categories READ categories NOTIFY countChanged)
 
 public:
@@ -83,8 +83,8 @@ public:
     void setCategory(const QString &c);
     QString flavour() const { return m_flavour; }
     void setFlavour(const QString &f);
-    QString sort() const { return m_sort; }
-    void setSort(const QString &s);
+    QString sortOrder() const { return m_sort; }
+    void setSortOrder(const QString &s);
     QVariantList categories() const;  // [{value, label, count}], most common first
 
 Q_SIGNALS:

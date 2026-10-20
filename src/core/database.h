@@ -26,6 +26,6 @@ void close();
 // result is checked). Wrap every string that may be empty in this before binding it.
 inline QString text(const QString &s)
 {
-    return s.isNull() ? QStringLiteral("") : s;
+    return s.isNull() ? QString(QLatin1String("")) : s;
 }
 }

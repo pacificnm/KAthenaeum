@@ -147,7 +147,7 @@ QString ClassroomController::levelLabel(const QString &level) const
 QVariantList ClassroomController::subjects() const
 {
     QVariantList out;
-    for (const Classroom::Subject &s : Classroom::subjects())
+    for (const auto allSubjects = Classroom::subjects(); const Classroom::Subject &s : allSubjects)
         out.append(QVariantMap{{QStringLiteral("key"), s.key}, {QStringLiteral("name"), s.name}, {QStringLiteral("icon"), s.icon}, {QStringLiteral("blurb"), s.blurb}});
     return out;
 }
@@ -161,7 +161,7 @@ QVariantMap ClassroomController::subject(const QString &key) const
 QVariantList ClassroomController::levels() const
 {
     QVariantList out;
-    for (const QString &k : Classroom::levels())
+    for (const auto allLevels = Classroom::levels(); const QString &k : allLevels)
         out.append(QVariantMap{{QStringLiteral("key"), k}, {QStringLiteral("label"), Classroom::levelLabel(k)}});
     return out;
 }
@@ -169,7 +169,7 @@ QVariantList ClassroomController::levels() const
 QVariantList ClassroomController::grades() const
 {
     QVariantList out;
-    for (const QString &k : Classroom::gradesCompleted())
+    for (const auto grades = Classroom::gradesCompleted(); const QString &k : grades)
         out.append(QVariantMap{{QStringLiteral("key"), k}, {QStringLiteral("label"), Classroom::gradeLabel(k)}});
     return out;
 }
@@ -197,7 +197,7 @@ QVariantMap ClassroomController::coverage(const QString &subject, const QString 
 QVariantList ClassroomController::courses() const
 {
     QVariantList out;
-    for (const Classroom::Course &c : Classroom::courses()) {
+    for (const auto allCourses = Classroom::courses(); const Classroom::Course &c : allCourses) {
         const Classroom::Subject s = Classroom::subject(c.subject);
         out.append(QVariantMap{{QStringLiteral("id"), c.id},
                                {QStringLiteral("title"), c.title},
@@ -224,7 +224,7 @@ bool ClassroomController::plan(qint64 courseId)
         return false;
     }
     QList<qint64> libraries, simple;
-    for (const LibraryRecord &l : Classroom::librariesFor(c->subject, Library::all())) {
+    for (const auto available = Classroom::librariesFor(c->subject, Library::all()); const LibraryRecord &l : available) {
         libraries << l.id;
         if (Classroom::isYoung(c->level) && Classroom::isSimpleEnglish(l))
             simple << l.id;
@@ -280,7 +280,7 @@ QVariantMap ClassroomController::course(qint64 courseId) const
     const Classroom::Subject s = Classroom::subject(c->subject);
     const auto project = c->projectId > 0 ? Projects::byId(c->projectId) : std::nullopt;
     QVariantList units;
-    for (const Classroom::Unit &u : Classroom::syllabus(courseId)) {
+    for (const auto syllabus = Classroom::syllabus(courseId); const Classroom::Unit &u : syllabus) {
         QVariantList lessons;
         for (const Classroom::Lesson &l : u.lessons)
             lessons.append(QVariantMap{{QStringLiteral("id"), l.id},
@@ -323,7 +323,7 @@ QVariantMap ClassroomController::lesson(qint64 lessonId) const
     // where it is in the course: its number, and the lessons before and after it
     QList<qint64> order;
     QString unitTitle;
-    for (const Classroom::Unit &u : Classroom::syllabus(l->courseId))
+    for (const auto units = Classroom::syllabus(l->courseId); const Classroom::Unit &u : units)
         for (const Classroom::Lesson &other : u.lessons) {
             order << other.id;
             if (other.id == lessonId)
@@ -491,7 +491,7 @@ QVariantMap ClassroomController::submitQuiz(qint64 quizId, const QVariantList &a
 QVariantList ClassroomController::missed(qint64 courseId) const
 {
     QVariantList out;
-    for (const Classroom::Missed &m : Classroom::missed(courseId)) {
+    for (const auto misses = Classroom::missed(courseId); const Classroom::Missed &m : misses) {
         QVariantMap g = graded(m.question, m.chosen);
         g.insert(QStringLiteral("quizKind"), m.quizKind);
         out << g;

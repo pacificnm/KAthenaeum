@@ -53,9 +53,9 @@ private Q_SLOTS:
         QVERIFY(a > 0);
         QCOMPARE(Projects::addArticle(p, water), a);  // same item, note kept
         QCOMPARE(Projects::items(p, QStringLiteral("article")).size(), 1);
-        QCOMPARE(Projects::items(p).first().note, QStringLiteral("the main one"));
+        QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("the main one"));
         QCOMPARE(Projects::addArticle(p, water, QStringLiteral("changed")), a);  // a new note replaces it
-        QCOMPARE(Projects::items(p).first().note, QStringLiteral("changed"));
+        QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("changed"));
         QCOMPARE(Projects::addArticle(p, {2, QStringLiteral("Water"), QStringLiteral("Water")}) != a, true);  // another library's Water
         QCOMPARE(Projects::containing(1, QStringLiteral("Water")), QList<qint64>{p});
         QCOMPARE(Projects::addArticle(p + 100, water), 0);  // no such project
@@ -68,14 +68,14 @@ private Q_SLOTS:
         const qint64 c = Projects::addClip(p, QStringLiteral("  Water is polar.  "), refs, QStringLiteral("Polarity"), QStringLiteral("key"));
         QVERIFY(c > 0);
         QCOMPARE(Projects::addClip(p, QStringLiteral("   "), refs), 0);
-        auto clip = Projects::items(p, QStringLiteral("clip")).first();
+        auto clip = Projects::items(p, QStringLiteral("clip")).constFirst();
         QCOMPARE(clip.text, QStringLiteral("Water is polar."));
         QCOMPARE(clip.refs.size(), 2);
         QCOMPARE(clip.refs[1].title, QStringLiteral("Ice"));
         QCOMPARE(clip.article.path, QStringLiteral("Water"));  // the first source, for lookups
         QVERIFY(clip.embedding.isEmpty());
         QVERIFY(Projects::setEmbedding(c, {0.5f, -1.25f, 3.0f}, QStringLiteral("nomic-embed-text:latest")));
-        clip = Projects::items(p, QStringLiteral("clip")).first();
+        clip = Projects::items(p, QStringLiteral("clip")).constFirst();
         QCOMPARE(clip.embedding, (Vector{0.5f, -1.25f, 3.0f}));
         QCOMPARE(clip.embedModel, QStringLiteral("nomic-embed-text"));
         // a saved answer with no single source
@@ -97,7 +97,7 @@ private Q_SLOTS:
         const qint64 a = Projects::addArticle(p, {1, QStringLiteral("Water"), QStringLiteral("Water")});
         QVERIFY(!Projects::setNote(other, a, QStringLiteral("x")));  // not that project's item
         QVERIFY(Projects::setNote(p, a, QStringLiteral(" a note ")));
-        QCOMPARE(Projects::items(p).first().note, QStringLiteral("a note"));
+        QCOMPARE(Projects::items(p).constFirst().note, QStringLiteral("a note"));
         QVERIFY(!Projects::removeItem(other, a));
         QVERIFY(Projects::removeItem(p, a));
         QVERIFY(Projects::items(p).isEmpty());
@@ -112,9 +112,9 @@ private Q_SLOTS:
         QVERIFY(item > 0);
         QCOMPARE(Projects::attachChat(p, general), item);  // once
         QCOMPARE(Projects::attachChat(p, 999), 0);         // no such chat
-        QCOMPARE(Projects::items(p, QStringLiteral("chat")).first().chatTitle, QStringLiteral("General"));
+        QCOMPARE(Projects::items(p, QStringLiteral("chat")).constFirst().chatTitle, QStringLiteral("General"));
         QCOMPARE(Chats::inProject(p).size(), 1);
-        QCOMPARE(Chats::inProject(p).first().id, own);
+        QCOMPARE(Chats::inProject(p).constFirst().id, own);
         QCOMPARE(Projects::byId(p)->chats, 2);
         // a chat started in the project is not attached to it as well (it was listed and counted twice; the review)
         QCOMPARE(Projects::attachChat(p, own), 0);

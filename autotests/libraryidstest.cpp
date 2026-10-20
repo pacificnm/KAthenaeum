@@ -62,7 +62,7 @@ private Q_SLOTS:
         // the same ZIM again, even from another place: its id, chats and excerpts come back
         QVERIFY(QFile::rename(ray, ray + QStringLiteral(".moved.zim")));
         QCOMPARE(*Library::add(ray + QStringLiteral(".moved.zim")), r);
-        QCOMPARE(Chats::aboutArticle(r, QStringLiteral("A")).first().id, chat);
+        QCOMPARE(Chats::aboutArticle(r, QStringLiteral("A")).constFirst().id, chat);
         QCOMPARE(Projects::highlightsFor(r, QStringLiteral("A")).size(), 1);
 
         // adding it twice keeps its id

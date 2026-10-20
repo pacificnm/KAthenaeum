@@ -13,12 +13,16 @@
 namespace
 {
 // Wikimedia's projects, as a ZIM's name starts ("wikipedia_en_all_maxi") and as they are named
-const QHash<QString, QString> Projects = {
-    {QStringLiteral("wikipedia"), QStringLiteral("Wikipedia")},   {QStringLiteral("wiktionary"), QStringLiteral("Wiktionary")},
-    {QStringLiteral("wikiversity"), QStringLiteral("Wikiversity")}, {QStringLiteral("wikibooks"), QStringLiteral("Wikibooks")},
-    {QStringLiteral("wikivoyage"), QStringLiteral("Wikivoyage")}, {QStringLiteral("wikinews"), QStringLiteral("Wikinews")},
-    {QStringLiteral("wikiquote"), QStringLiteral("Wikiquote")},   {QStringLiteral("wikisource"), QStringLiteral("Wikisource")},
-};
+const QHash<QString, QString> &wikimediaProjects()
+{
+    static const QHash<QString, QString> value = {
+        {QStringLiteral("wikipedia"), QStringLiteral("Wikipedia")},   {QStringLiteral("wiktionary"), QStringLiteral("Wiktionary")},
+        {QStringLiteral("wikiversity"), QStringLiteral("Wikiversity")}, {QStringLiteral("wikibooks"), QStringLiteral("Wikibooks")},
+        {QStringLiteral("wikivoyage"), QStringLiteral("Wikivoyage")}, {QStringLiteral("wikinews"), QStringLiteral("Wikinews")},
+        {QStringLiteral("wikiquote"), QStringLiteral("Wikiquote")},   {QStringLiteral("wikisource"), QStringLiteral("Wikisource")},
+    };
+    return value;
+}
 
 const char *const MlaMonths[] = {"Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."};
 const char *const Months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
@@ -65,7 +69,7 @@ QString withoutScheme(const QString &url)
     return u;
 }
 
-const QString Offline = QStringLiteral("Offline copy via Kiwix.");
+constexpr QLatin1StringView Offline("Offline copy via Kiwix.");
 
 QString build(Citations::Style style, const Citations::Source &s, const QDate &accessed, const std::function<QString(const QString &)> &it)
 {
@@ -182,8 +186,8 @@ Citations::Source Citations::source(const LibraryRecord &library, const QString 
     // "wikipedia_en_all_maxi", "wiktionary_en-simple_all": project, language, selection
     const QStringList name = library.name.split(QLatin1Char('_'));
     const QString project = name.value(0).toLower();
-    if (Projects.contains(project) && name.size() >= 2) {
-        s.site = Projects.value(project);
+    if (wikimediaProjects().contains(project) && name.size() >= 2) {
+        s.site = wikimediaProjects().value(project);
         s.publisher = QStringLiteral("Wikimedia Foundation");
         QString language = name.at(1).toLower();
         if (language.endsWith(QLatin1String("-simple")) || language == QLatin1String("simple"))
@@ -245,7 +249,7 @@ QList<Citations::Source> Citations::sortedSources(Style style, const QList<Sourc
 QStringList Citations::sorted(Style style, const QList<Source> &sources, const QDate &accessed, bool markdown)
 {
     QStringList out;
-    for (const Source &s : sortedSources(style, sources, accessed))
+    for (const auto ordered = sortedSources(style, sources, accessed); const Source &s : ordered)
         out << format(style, s, accessed, markdown);
     return out;
 }

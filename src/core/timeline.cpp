@@ -12,8 +12,8 @@
 
 namespace
 {
-const QString Months = QStringLiteral("(January|February|March|April|May|June|July|August|September|October|November|December)");
-const QString Era = QStringLiteral("(BC|BCE|AD|CE|B\\.C\\.|A\\.D\\.)");
+constexpr QLatin1StringView Months("(January|February|March|April|May|June|July|August|September|October|November|December)");
+constexpr QLatin1StringView Era("(BC|BCE|AD|CE|B\\.C\\.|A\\.D\\.)");
 
 int monthNumber(const QString &name)
 {
@@ -129,7 +129,7 @@ std::optional<Timeline::Date> Timeline::findDate(const QString &sentence, int no
     }
     for (auto it = plainYear.globalMatch(sentence); it.hasNext();) {
         const auto m = it.next();
-        const auto r = range.match(QStringView(sentence).mid(m.capturedEnd()));
+        const auto r = range.matchView(QStringView(sentence).mid(m.capturedEnd()));
         if (r.hasMatch() && std::abs(r.captured(1).toInt() - m.captured(1).toInt()) > 150)
             continue;
         add(m.capturedStart(), m.captured(1).toDouble(), m.captured(1), 1);
@@ -157,7 +157,7 @@ QList<Timeline::Event> Timeline::fromPassages(const QList<Passage> &passages, co
     for (const Passage &p : passages) {
         if (p.section == QLatin1String("Key facts"))  // the infobox: labels and values, not sentences
             continue;
-        for (const auto &[a, b] : Rag::splitSentences(p.text)) {
+        for (const auto splitSentences = Rag::splitSentences(p.text); const auto &[a, b] : splitSentences) {
             QString sentence = p.text.mid(a, b - a).simplified();
             if (sentence.size() < 25)
                 continue;

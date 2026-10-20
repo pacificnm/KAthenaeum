@@ -19,14 +19,14 @@
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QCoreApplication>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 #include <csignal>
 #include <sys/prctl.h>
 
 namespace
 {
-const QString Columns = QStringLiteral("id, url, filename, folder, title, total_bytes, done_bytes, status, error");
+constexpr QLatin1StringView Columns("id, url, filename, folder, title, total_bytes, done_bytes, status, error");
 
 DownloadRecord fromQuery(const QSqlQuery &q)
 {
@@ -85,7 +85,7 @@ std::optional<Aria2Progress> Aria2::parseLine(QStringView line)
     p.done = parseSize(m.capturedView(1));
     p.total = parseSize(m.capturedView(2));
     p.percent = m.capturedView(3).toInt();
-    for (const auto field : m.capturedView(4).split(QLatin1Char(' '), Qt::SkipEmptyParts)) {
+    for (const auto qLatin1Char = m.capturedView(4).split(QLatin1Char(' '), Qt::SkipEmptyParts); const auto field : qLatin1Char) {
         if (field.startsWith(QLatin1String("DL:")))
             p.speed = std::max<qint64>(0, parseSize(field.mid(3)));
         else if (field.startsWith(QLatin1String("ETA:")))
@@ -234,7 +234,7 @@ QString DownloadManager::start(const QUrl &url, const QString &filename, const Q
         return QStringLiteral("cannot create the folder %1").arg(folder);
 
     const QString path = QDir(folder).filePath(filename);
-    for (const LibraryRecord &r : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &r : rows)
         if (r.filename() == filename && r.fileExists())
             return QStringLiteral("%1 is already installed").arg(filename);
 
@@ -430,7 +430,7 @@ bool DownloadManager::remove(qint64 id)
     if (!r || r->isActive())
         return false;
     bool installed = false;  // never delete a file a library uses, whatever this row says
-    for (const LibraryRecord &lib : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &lib : rows)
         installed = installed || QFileInfo(lib.path) == QFileInfo(r->path());
     if (r->status != QLatin1String("complete") && !installed)
         removePartial(r->path());

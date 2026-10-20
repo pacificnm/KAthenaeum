@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     if (!Database::open(dir.filePath(QStringLiteral("bench.sqlite")), &error))
         qFatal("%s", qPrintable(error));
     QList<qint64> ids;
-    for (const QString &zim : p.positionalArguments()) {
+    for (const auto zims = p.positionalArguments(); const QString &zim : zims) {
         const auto id = Library::add(zim, &error);
         if (!id)
             qFatal("%s: %s", qPrintable(zim), qPrintable(error));
@@ -71,13 +71,13 @@ int main(int argc, char **argv)
         answerer.start({q, earlier, ids, p.value(QStringLiteral("answer")), p.value(QStringLiteral("embed")), article, {}});
         earlier << q;
     };
-    QObject::connect(&answerer, &Answerer::sourcesReady, [&](const QList<Rag::Source> &sources, bool degraded, const QString &note) {
+    QObject::connect(&answerer, &Answerer::sourcesReady, &answerer, [&](const QList<Rag::Source> &sources, bool degraded, const QString &note) {
         if (degraded)
             out << "  (ranked by words only: " << note << ")" << Qt::endl;
         for (const Rag::Source &s : sources)
             out << "  [" << s.n << "] " << s.title << (s.section.isEmpty() ? QString() : QStringLiteral(" - ") + s.section) << Qt::endl;
     });
-    QObject::connect(&answerer, &Answerer::finished, [&](const AnswerResult &r) {
+    QObject::connect(&answerer, &Answerer::finished, &answerer, [&](const AnswerResult &r) {
         const AnswerStats &s = r.stats;
         out << "  find " << s.findMs << " ms, embed " << s.embedMs << " ms (" << s.passages << " ranked), first word at " << s.firstTokenMs
             << " ms, cite " << s.citeMs << " ms, total " << s.totalMs << " ms, " << s.tokens << " tokens at " << QString::number(s.tokensPerSecond, 'f', 1)

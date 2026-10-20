@@ -11,13 +11,13 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QNetworkReply>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 #include <algorithm>
 
 QList<Classroom::Reading> Teaching::chooseReadings(const QList<Choice> &candidates, const QSet<QString> &usedBefore, int n)
 {
-    auto key = [](const Choice &c) {
+    auto key = [](const Choice &c) -> QString {
         return QString::number(c.found.libraryId) + QLatin1Char('/') + c.found.path;
     };
     QList<Choice> eligible;
@@ -193,7 +193,7 @@ void Teacher::findReadings()
             if (libs.isEmpty())
                 continue;
             for (const QString &query : queries)
-                for (const ZimSearch::Article &a : ZimSearch::readArticles(query, libs, Teaching::CandidateArticles))
+                for (const auto readArticles = ZimSearch::readArticles(query, libs, Teaching::CandidateArticles); const ZimSearch::Article &a : readArticles)
                     if (!titles.contains(a.found.title.toLower())) {
                         titles.insert(a.found.title.toLower());
                         out << a;
@@ -445,7 +445,7 @@ void Teacher::writeQuiz(const QString &kind, qint64 targetId, const Models &mode
     qint64 courseId = 0;
     if (kind == QLatin1String("unit")) {
         courseId = Classroom::unitCourse(targetId);
-        for (const Classroom::Unit &u : Classroom::syllabus(courseId))
+        for (const auto syllabus = Classroom::syllabus(courseId); const Classroom::Unit &u : syllabus)
             if (u.id == targetId)
                 m_quizLessons = u.lessons;
         for (const Classroom::Lesson &l : std::as_const(m_quizLessons))
@@ -522,7 +522,7 @@ void Teacher::rankQuizPassages()
     // passages with enough in them to ask about; not the infobox's facts ("the official language of Rome", asked in both
     // a quiz and its unit's test: trivia, 2026-10-20)
     QList<Rag::Candidate> pool;
-    for (const Rag::Candidate &c : Rag::pickPassages(Classroom::lessonQuery(m_course, lesson), articles))
+    for (const auto lessonQuery = Rag::pickPassages(Classroom::lessonQuery(m_course, lesson), articles); const Rag::Candidate &c : lessonQuery)
         if (c.text.size() >= 250 && c.section != QLatin1String("Key facts"))
             pool << c;
     QStringList input{Embedding::formatQuery(m_models.embedding, Classroom::lessonMeaning(m_course, lesson))};
@@ -542,7 +542,7 @@ void Teacher::rankQuizPassages()
         }
         // the best passages, a few more than the questions wanted (some questions are not kept)
         const int wanted = m_quizWanted.value(lesson.id);
-        for (const Rag::Candidate &c : Rag::rank(pool, question, wanted + 3))
+        for (const auto rank = Rag::rank(pool, question, wanted + 3); const Rag::Candidate &c : rank)
             m_quizQueue.append({lesson.id, lesson.title, c});
         ++m_quizRank;
         rankQuizPassages();

@@ -123,7 +123,7 @@ MapPlace fromRow(const QSqlQuery &q)
     return p;
 }
 
-const QString Columns = QStringLiteral(
+constexpr QLatin1StringView Columns(
     "p.osm, p.name, p.name_en, p.kind, p.lat, p.lon, p.west, p.south, p.east, p.north, p.area, p.wikipedia, p.wikipedia_en, p.wikidata, p.population, "
     "p.outline");
 }
@@ -236,7 +236,7 @@ QString articleTitle(const MapPlace &place, const QString &language)
     const QString w = place.wikipedia.trimmed();
     const qsizetype colon = w.indexOf(QLatin1Char(':'));
     // "en:Title"; a language code is 2 or 3 letters (or "simple", "zh-yue")
-    if (colon > 1 && colon <= 12 && !w.left(colon).contains(QLatin1Char(' ')))
+    if (colon > 1 && colon <= 12 && !QStringView(w).left(colon).contains(QLatin1Char(' ')))
         return w.left(colon) == language ? w.mid(colon + 1).trimmed() : QString();
     return {};
 }

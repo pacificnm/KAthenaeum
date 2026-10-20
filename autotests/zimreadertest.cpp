@@ -36,7 +36,7 @@ private Q_SLOTS:
             letters << QString(QLatin1Char(c));
         QSet<QString> seen;
         int total = 0;
-        for (const QString &letter : letters) {
+        for (const QString &letter : std::as_const(letters)) {
             int from = 0, pages = 0;
             while (from >= 0) {
                 const auto page = ZimReader::titles(m_id, letter, from, 7);
@@ -56,7 +56,7 @@ private Q_SLOTS:
         }
         // compare with a plain walk over every title
         int articles = 0;
-        for (const QString &letter : letters)
+        for (const QString &letter : std::as_const(letters))
             articles += int(ZimReader::titles(m_id, letter, 0, 1000000).entries.size());
         QCOMPARE(total, articles);
         QVERIFY(total > 0);

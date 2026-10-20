@@ -94,7 +94,7 @@ private Q_SLOTS:
         QVERIFY(Dictionary::candidates(QStringLiteral("making")).contains(QStringLiteral("make")));
         QVERIFY(Dictionary::candidates(QStringLiteral("molecules")).contains(QStringLiteral("molecule")));
         QVERIFY(Dictionary::candidates(QStringLiteral("hoped")).contains(QStringLiteral("hope")));
-        QCOMPARE(Dictionary::candidates(QStringLiteral("NASA")).first(), QStringLiteral("NASA"));  // capitals inside: as written
+        QCOMPARE(Dictionary::candidates(QStringLiteral("NASA")).constFirst(), QStringLiteral("NASA"));  // capitals inside: as written
         QCOMPARE(Dictionary::candidates(QStringLiteral("carbon dioxide")), (QStringList{QStringLiteral("carbon dioxide"), QStringLiteral("Carbon dioxide")}));
         QVERIFY(Dictionary::candidates(QStringLiteral("  ... ")).isEmpty());
         QVERIFY(!Dictionary::candidates(QStringLiteral("is")).contains(QStringLiteral("i")));  // never shorter than two letters

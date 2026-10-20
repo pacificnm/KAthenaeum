@@ -21,7 +21,7 @@
 #include <QSet>
 #include <QStandardPaths>
 #include <QTimeZone>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 // ---- the catalog ----
 
@@ -59,7 +59,7 @@ std::optional<QList<MapRegionInfo>> MapCatalog::parseIndex(const QByteArray &jso
         return std::nullopt;
     }
     QList<MapRegionInfo> out;
-    for (const QJsonValue &f : doc.object().value(QStringLiteral("features")).toArray()) {
+    for (const auto array = doc.object().value(QStringLiteral("features")).toArray(); const QJsonValue &f : array) {
         const QJsonObject props = f.toObject().value(QStringLiteral("properties")).toObject();
         MapRegionInfo r;
         r.id = props.value(QStringLiteral("id")).toString();
@@ -124,7 +124,7 @@ QByteArray MapCatalog::shapeToJson(const MapTiling::MultiPolygon &shape)
 QString MapCatalog::latestBuild(const QByteArray &json)
 {
     QString best;
-    for (const QJsonValue &v : QJsonDocument::fromJson(json).array()) {
+    for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array) {
         const QString key = v.toObject().value(QStringLiteral("key")).toString();
         // "20261019.pmtiles": the newest is the greatest
         static const QRegularExpression pattern(QStringLiteral("^\\d{8}\\.pmtiles$"));
@@ -152,7 +152,7 @@ bool MapRegionRecord::isActive() const
 
 namespace
 {
-const QString Columns = QStringLiteral("id, region, name, parent_name, max_zoom, west, south, east, north, status, error, file, size, build, places, "
+constexpr QLatin1StringView Columns("id, region, name, parent_name, max_zoom, west, south, east, north, status, error, file, size, build, places, "
                                        "updated_at, shape, pbf");
 
 MapRegionRecord fromRow(const QSqlQuery &q)
@@ -295,7 +295,7 @@ void MapRegions::reconcile()
 QList<MapRegionRecord> MapRegions::ready()
 {
     QList<MapRegionRecord> out;
-    for (const MapRegionRecord &r : all())
+    for (const auto rows = all(); const MapRegionRecord &r : rows)
         if (!r.file.isEmpty() && QFile::exists(r.file))  // a region being updated keeps showing its old map
             out.append(r);
     return out;
@@ -326,7 +326,7 @@ void MapDownloader::startNext()
     if (m_id)
         return;
     std::optional<MapRegionRecord> next;
-    for (const MapRegionRecord &r : MapRegions::all())
+    for (const auto rows = MapRegions::all(); const MapRegionRecord &r : rows)
         if (r.status == QLatin1String("queued") && (!next || r.updated < next->updated))
             next = r;
     if (!next)

@@ -15,7 +15,7 @@
 
 namespace
 {
-const QString Columns = QStringLiteral(
+constexpr QLatin1StringView Columns(
     "id, path, name, title, description, language, creator, publisher, zim_date, flavour, scraper, uuid, "
     "article_count, size_bytes, has_fulltext, added_at");
 
@@ -164,13 +164,13 @@ Library::ScanResult Library::scan(const QString &folder)
 {
     ScanResult result;
     QStringList known;
-    for (const LibraryRecord &r : all()) {
+    for (const auto rows = all(); const LibraryRecord &r : rows) {
         known << r.path;
         if (!r.fileExists())
             result.missing << r.filename();
     }
     const QDir dir(folder);
-    for (const QFileInfo &file : dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files)) {
+    for (const auto qStringLiteral = dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files); const QFileInfo &file : qStringLiteral) {
         if (QFileInfo::exists(file.filePath() + QStringLiteral(".aria2")))
             continue;  // aria2 writes to the final name while downloading
         if (known.contains(file.canonicalFilePath()))

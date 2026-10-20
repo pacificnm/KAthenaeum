@@ -16,15 +16,19 @@
 namespace
 {
 // The headings Wiktionary puts a part of speech under (in lower case)
-const QSet<QString> PartsOfSpeech = {
-    QStringLiteral("noun"), QStringLiteral("proper noun"), QStringLiteral("verb"), QStringLiteral("adjective"), QStringLiteral("adverb"),
-    QStringLiteral("pronoun"), QStringLiteral("preposition"), QStringLiteral("conjunction"), QStringLiteral("interjection"),
-    QStringLiteral("determiner"), QStringLiteral("article"), QStringLiteral("numeral"), QStringLiteral("number"),
-    QStringLiteral("cardinal number"), QStringLiteral("ordinal number"), QStringLiteral("phrase"), QStringLiteral("prepositional phrase"),
-    QStringLiteral("prefix"), QStringLiteral("suffix"), QStringLiteral("affix"), QStringLiteral("abbreviation"), QStringLiteral("contraction"),
-    QStringLiteral("particle"), QStringLiteral("idiom"), QStringLiteral("proverb"), QStringLiteral("symbol"), QStringLiteral("letter"),
-    QStringLiteral("initialism"), QStringLiteral("acronym"), QStringLiteral("participle"),
-};
+const QSet<QString> &partsOfSpeech()
+{
+    static const QSet<QString> value = {
+        QStringLiteral("noun"), QStringLiteral("proper noun"), QStringLiteral("verb"), QStringLiteral("adjective"), QStringLiteral("adverb"),
+        QStringLiteral("pronoun"), QStringLiteral("preposition"), QStringLiteral("conjunction"), QStringLiteral("interjection"),
+        QStringLiteral("determiner"), QStringLiteral("article"), QStringLiteral("numeral"), QStringLiteral("number"),
+        QStringLiteral("cardinal number"), QStringLiteral("ordinal number"), QStringLiteral("phrase"), QStringLiteral("prepositional phrase"),
+        QStringLiteral("prefix"), QStringLiteral("suffix"), QStringLiteral("affix"), QStringLiteral("abbreviation"), QStringLiteral("contraction"),
+        QStringLiteral("particle"), QStringLiteral("idiom"), QStringLiteral("proverb"), QStringLiteral("symbol"), QStringLiteral("letter"),
+        QStringLiteral("initialism"), QStringLiteral("acronym"), QStringLiteral("participle"),
+    };
+    return value;
+}
 
 QString nameOf(xmlNodePtr n)
 {
@@ -171,7 +175,7 @@ std::optional<Dictionary::Entry> Dictionary::parse(const QByteArray &html, const
         if (e.kind != Event::Heading || e.level != 2)
             continue;
         byLanguage = byLanguage || e.text.compare(language, Qt::CaseInsensitive) == 0;
-        partsOnTop = partsOnTop || PartsOfSpeech.contains(e.text.toLower());
+        partsOnTop = partsOnTop || partsOfSpeech().contains(e.text.toLower());
     }
     if (!byLanguage && !partsOnTop)
         return std::nullopt;
@@ -189,7 +193,7 @@ std::optional<Dictionary::Entry> Dictionary::parse(const QByteArray &html, const
             if (!active)
                 continue;
             current = nullptr;
-            if (PartsOfSpeech.contains(e.text.toLower()) && entry.parts.size() < maxParts) {
+            if (partsOfSpeech().contains(e.text.toLower()) && entry.parts.size() < maxParts) {
                 entry.parts.append({e.text, {}});
                 current = &entry.parts.last();
             }

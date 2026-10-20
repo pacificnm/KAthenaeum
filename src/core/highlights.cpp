@@ -10,7 +10,7 @@
 
 namespace
 {
-const QString Columns = QStringLiteral("id, library_id, path, title, text, color, note, created_at, updated_at");
+constexpr QLatin1StringView Columns("id, library_id, path, title, text, color, note, created_at, updated_at");
 
 QDateTime timestamp(const QVariant &v)
 {
@@ -27,7 +27,7 @@ HighlightRecord fromRow(const QSqlQuery &q)
 
 QString validColor(const QString &color)
 {
-    return Highlights::colors().contains(color) ? color : Highlights::colors().first();
+    return Highlights::colors().contains(color) ? color : Highlights::colors().constFirst();
 }
 
 // what two highlights of the same passage share: whitespace and case are not what makes them different
@@ -66,7 +66,7 @@ qint64 Highlights::add(qint64 libraryId, const QString &path, const QString &tit
     if (libraryId <= 0 || path.isEmpty() || tooShort(passage))
         return 0;
     const QString key = squeezed(passage);
-    for (const HighlightRecord &h : forArticle(libraryId, path)) {
+    for (const auto existing = forArticle(libraryId, path); const HighlightRecord &h : existing) {
         if (squeezed(h.text) != key)
             continue;
         if (!color.isEmpty())
@@ -161,7 +161,7 @@ int Highlights::count()
 QList<Highlight> Highlights::marksFor(qint64 libraryId, const QString &path)
 {
     QList<Highlight> out;
-    for (const HighlightRecord &h : forArticle(libraryId, path)) {
+    for (const auto existing = forArticle(libraryId, path); const HighlightRecord &h : existing) {
         Highlight m;
         m.text = h.text;
         m.label = h.note;
@@ -183,7 +183,7 @@ QString Highlights::markdown(const QList<HighlightRecord> &highlights)
             const QString title = h.title.isEmpty() ? QString(h.path).replace(QLatin1Char('_'), QLatin1Char(' ')) : h.title;
             out << QStringLiteral("## ") + Projects::articleLink({h.libraryId, h.path, title}) << QString();
         }
-        for (const QString &line : h.text.trimmed().split(QLatin1Char('\n')))
+        for (const auto qLatin1Char = h.text.trimmed().split(QLatin1Char('\n')); const QString &line : qLatin1Char)
             out << QStringLiteral("> ") + line;
         out << QString();
         if (!h.note.isEmpty())

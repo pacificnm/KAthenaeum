@@ -2,7 +2,7 @@
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 #include "core/database.h"
 #include "core/library.h"
@@ -131,7 +131,7 @@ private Q_SLOTS:
     void overlapMatchesPluralsAndIgnoresUnrelatedText()
     {
         QStringList stems;
-        for (const QString &t : ZimSearch::terms(QStringLiteral("kidneys diabetes")))
+        for (const auto qStringLiteral = ZimSearch::terms(QStringLiteral("kidneys diabetes")); const QString &t : qStringLiteral)
             stems << ZimSearch::stem(t);
         QCOMPARE(ZimSearch::overlap(stems, QStringLiteral("The kidney filters blood. Diabetic patients...")), 1.0);
         QCOMPARE(ZimSearch::overlap(stems, QStringLiteral("Volcanoes erupt.")), 0.0);
@@ -149,7 +149,7 @@ private Q_SLOTS:
     void wordRunsOfAQuestionAreTriedAsTitles()
     {
         QHash<QString, double> grams;
-        for (const auto &[g, w] : ZimSearch::ngramTitles(QStringLiteral("what is the boiling point of ethanol")))
+        for (const auto qStringLiteral = ZimSearch::ngramTitles(QStringLiteral("what is the boiling point of ethanol")); const auto &[g, w] : qStringLiteral)
             grams.insert(g, w);
         QCOMPARE(grams.value(QStringLiteral("boiling point")), 1.0);
         QCOMPARE(grams.value(QStringLiteral("ethanol")), 0.8);
@@ -172,7 +172,7 @@ private Q_SLOTS:
         const auto res = ZimSearch::search(QStringLiteral("Photosynthesis"), {m_id}, 10);
         QCOMPARE(res.first().path, QStringLiteral("Photosynthesis"));
         QVERIFY(res.first().titleMatch);
-        QVERIFY(!ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).first().titleMatch);  // a text match is not a title match
+        QVERIFY(!ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).constFirst().titleMatch);  // a text match is not a title match
         // an alias redirects to the real article and is not listed twice
         const QStringList p = paths(ZimSearch::findArticles(QStringLiteral("Plants and sunlight"), {m_id}, 10));
         QCOMPARE(p.first(), QStringLiteral("Photosynthesis"));
@@ -187,10 +187,10 @@ private Q_SLOTS:
 
     void aQuestionFindsTheArticleByItsTitleHoweverItIsCased()
     {
-        QCOMPARE(ZimSearch::findArticles(QStringLiteral("what is a glacier?"), {m_id}, 10).first().path, QStringLiteral("Glacier"));
-        QCOMPARE(ZimSearch::findArticles(QStringLiteral("volcano"), {m_id}, 10).first().path, QStringLiteral("Volcano"));
+        QCOMPARE(ZimSearch::findArticles(QStringLiteral("what is a glacier?"), {m_id}, 10).constFirst().path, QStringLiteral("Glacier"));
+        QCOMPARE(ZimSearch::findArticles(QStringLiteral("volcano"), {m_id}, 10).constFirst().path, QStringLiteral("Volcano"));
         QVERIFY((QStringList{QStringLiteral("Photosynthetic_bacteria"), QStringLiteral("Photosynthesis")})
-                    .contains(ZimSearch::findArticles(QStringLiteral("photosynthetic"), {m_id}, 10).first().path));
+                    .contains(ZimSearch::findArticles(QStringLiteral("photosynthetic"), {m_id}, 10).constFirst().path));
     }
 
     void aNaturalQuestionIsWidenedInsteadOfMatchingNothing()
@@ -209,7 +209,7 @@ private Q_SLOTS:
 
     void resultsShowTheMatchingPassage()
     {
-        const auto top = ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).first();
+        const auto top = ZimSearch::search(QStringLiteral("chlorophyll pigment"), {m_id}, 10).constFirst();
         QCOMPARE(top.path, QStringLiteral("Photosynthesis"));
         QCOMPARE(top.libraryId, m_id);
         QVERIFY(top.snippet.contains(QLatin1String("pigment")));
@@ -254,7 +254,7 @@ private Q_SLOTS:
         QCOMPARE(c->fragment, QStringLiteral("Eruptions"));
         QVERIFY(c->data.contains("molten rock"));
         // A to Z lists the article under its own title, not the forwarding page
-        for (const ZimEntry &e : ZimReader::titles(m_id, QStringLiteral("E"), 0, 100).entries)
+        for (const auto qStringLiteral = ZimReader::titles(m_id, QStringLiteral("E"), 0, 100).entries; const ZimEntry &e : qStringLiteral)
             QVERIFY(e.path != QLatin1String("Eruption_(volcano)"));
         // and search lists the article, not the forwarding page
         const auto found = ZimSearch::findArticles(QStringLiteral("Eruption (volcano)"), {m_id}, 10);

@@ -176,7 +176,7 @@ void LibraryBrowser::setCitationStyle(const QString &style)
 QVariantList LibraryBrowser::citationStyles() const
 {
     QVariantList out;
-    for (const QString &name : Citations::styleNames())
+    for (const auto styles = Citations::styleNames(); const QString &name : styles)
         out.append(QVariantMap{{QStringLiteral("style"), name}, {QStringLiteral("label"), Citations::label(Citations::style(name))}});
     return out;
 }
@@ -225,7 +225,7 @@ QVariantMap LibraryBrowser::define(const QString &word) const
     QVariantMap out{{QStringLiteral("found"), false}, {QStringLiteral("word"), candidates.value(0, word.simplified())}};
     // the biggest dictionary first: the full Wiktionary knows more words than the Simple English one
     QList<LibraryRecord> dictionaries;
-    for (const LibraryRecord &l : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &l : rows)
         if (Dictionary::isDictionary(l) && l.fileExists())
             dictionaries << l;
     std::sort(dictionaries.begin(), dictionaries.end(), [](const LibraryRecord &a, const LibraryRecord &b) {
@@ -256,7 +256,7 @@ QVariantMap LibraryBrowser::define(const QString &word) const
                 }
             }
             QVariantList parts;
-            for (const Dictionary::PartOfSpeech &p : entry->parts) {
+            for (const Dictionary::PartOfSpeech &p : std::as_const(entry->parts)) {
                 QVariantList senses;
                 for (const Dictionary::Sense &sense : p.senses)
                     senses.append(QVariantMap{{QStringLiteral("definition"), sense.definition}, {QStringLiteral("example"), sense.example}});

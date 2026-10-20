@@ -189,7 +189,7 @@ bool MapManager::available() const
 QVariantList MapManager::regions() const
 {
     QVariantList out;
-    for (const MapRegionRecord &r : MapRegions::all()) {
+    for (const auto rows = MapRegions::all(); const MapRegionRecord &r : rows) {
         const bool running = r.id == m_downloader->running();
         out.append(QVariantMap{
             {QStringLiteral("id"), r.id},
@@ -247,7 +247,7 @@ QString MapManager::styleUrl(bool dark)
             layers.append(l);
     // the world first, then each region over it: inside a region its detailed land, water and labels cover the world's
     // coarse ones (MapLibre draws layers in order, and places the labels of later layers first)
-    for (const MapRegionRecord &r : MapRegions::ready()) {
+    for (const auto regions = MapRegions::ready(); const MapRegionRecord &r : regions) {
         const QString source = QStringLiteral("r%1").arg(r.id);
         sources.insert(source, QJsonObject{
                                    {QStringLiteral("type"), QStringLiteral("vector")},
@@ -275,7 +275,7 @@ QString MapManager::styleUrl(bool dark)
     const QString name = QStringLiteral("map-style-%1-%2.json").arg(flavour).arg(m_revision);
     QDir dir(QFileInfo(cachePath(name)).absolutePath());
     dir.mkpath(QStringLiteral("."));
-    for (const QString &old : dir.entryList({QStringLiteral("map-style-%1-*.json").arg(flavour)}, QDir::Files))
+    for (const auto oldStyles = dir.entryList({QStringLiteral("map-style-%1-*.json").arg(flavour)}, QDir::Files); const QString &old : oldStyles)
         if (old != name)
             dir.remove(old);
     QSaveFile out(cachePath(name));
@@ -460,7 +460,7 @@ QVariantMap MapManager::regionShape(const QString &id) const
     QVariantList paths;
     for (const QList<QPointF> &ring : std::as_const(rings)) {
         QVariantList points;
-        for (const QPointF &p : MapPlaces::simplify(ring, size / 300))  // a silhouette: a few hundred points at most
+        for (const auto simplified = MapPlaces::simplify(ring, size / 300); const QPointF &p : simplified)  // a silhouette: a few hundred points at most
             points.append(QPointF((p.x() - minX) / w, (p.y() - minY) / h));
         if (points.size() >= 3)
             paths.append(QVariant(points));
@@ -598,11 +598,11 @@ QVariantMap MapManager::articleFor(const QString &name, const QString &nameEn, c
 {
     // the region it is in, for titles like "Salem, Oregon"
     QStringList regionNames;
-    for (const MapRegionRecord &r : MapRegions::ready())
+    for (const auto regions = MapRegions::ready(); const MapRegionRecord &r : regions)
         if (r.region != QLatin1String("world") && MapTiling::contains(r.shape, lon, lat))
             regionNames.append(r.name);
 
-    for (const LibraryRecord &lib : Library::all()) {
+    for (const auto rows = Library::all(); const LibraryRecord &lib : rows) {
         if (!lib.fileExists())
             continue;
         const QString language = twoLetter(lib.language);
@@ -683,7 +683,7 @@ QVariantMap MapManager::placeAt(double lat, double lon, double zoom, double radi
 QVariantList MapManager::aroundList(double lat, double lon, const MapPlace *place, const QString &name) const
 {
     QVariantList inside;
-    for (const MapPlace &p : MapPlaces::around(lat, lon, 6)) {
+    for (const auto nearby = MapPlaces::around(lat, lon, 6); const MapPlace &p : nearby) {
         if (place && (p.osm == place->osm || (!p.wikipedia.isEmpty() && p.wikipedia == place->wikipedia)))
             continue;
         if (p.name == name)
@@ -739,7 +739,7 @@ QVariantMap MapManager::locate(qint64 libraryId, const QString &title, bool hasC
 QVariantList MapManager::searchPlaces(const QString &text) const
 {
     QVariantList out;
-    for (const MapPlace &p : MapPlaces::search(text, 20)) {
+    for (const auto matches = MapPlaces::search(text, 20); const MapPlace &p : matches) {
         // zoom to fit an area, close in on a point
         const double span = std::max(p.east - p.west, p.north - p.south);
         const double zoom = span > 0 ? std::clamp(std::log2(360.0 / span) - 0.5, 4.0, 16.0) : 15.0;
@@ -770,7 +770,7 @@ QVariantMap MapManager::startView() const
             return {{QStringLiteral("lat"), lat}, {QStringLiteral("lon"), lon}, {QStringLiteral("zoom"), zoom}};
     }
     std::optional<MapRegionRecord> latest;
-    for (const MapRegionRecord &r : MapRegions::ready())
+    for (const auto regions = MapRegions::ready(); const MapRegionRecord &r : regions)
         if (r.region != QLatin1String("world") && (!latest || r.updated > latest->updated))
             latest = r;
     if (!latest)

@@ -25,10 +25,17 @@ struct RenderedArticle {
 
 // A passage to mark in the article (a saved excerpt or a highlight), with the tooltip to show on it
 struct Highlight {
+    Highlight(const QString &text = {}, const QString &label = {}, const QString &cssClass = QStringLiteral("excerpt-hl"), const QString &anchor = {})
+        : text(text)
+        , label(label)
+        , cssClass(cssClass)
+        , anchor(anchor)
+    {
+    }
     QString text;
     QString label;
-    QString cssClass = QStringLiteral("excerpt-hl");  // the mark's class
-    QString anchor;  // an id for its first mark, to jump to it ("hl-12"); none if empty
+    QString cssClass;  // the mark's class
+    QString anchor;    // an id for its first mark, to jump to it ("hl-12"); none if empty
 };
 
 // Turns a mwoffliner article page into safe, self-contained HTML (a port of Athenaeum's render.py, same parser family:

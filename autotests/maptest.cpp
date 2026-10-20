@@ -640,8 +640,8 @@ private Q_SLOTS:
         QCOMPARE(around.size(), 2);
         QCOMPARE(around[0].name, QStringLiteral("Forest Park"));
         QCOMPARE(around[1].name, QStringLiteral("Multnomah County"));
-        QCOMPARE(MapPlaces::search(QStringLiteral("port")).first().name, QStringLiteral("Portland"));
-        QCOMPARE(MapPlaces::search(QStringLiteral("park")).first().name, QStringLiteral("Forest Park"));
+        QCOMPARE(MapPlaces::search(QStringLiteral("port")).constFirst().name, QStringLiteral("Portland"));
+        QCOMPARE(MapPlaces::search(QStringLiteral("park")).constFirst().name, QStringLiteral("Forest Park"));
         QVERIFY(MapPlaces::search(QStringLiteral("100%_")).isEmpty());  // LIKE's wildcards are only letters
         // "Show on Map": the place an article is about, from the tag OpenStreetMap gives it
         QCOMPARE(MapPlaces::byArticle(QStringLiteral("en"), QStringLiteral("Forest Park (Portland, Oregon)"))->osm, QStringLiteral("w3"));

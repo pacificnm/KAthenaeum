@@ -55,7 +55,7 @@ QByteArray refsJson(const QList<ArticleRef> &refs)
 QList<ArticleRef> refsFrom(const QByteArray &json)
 {
     QList<ArticleRef> out;
-    for (const QJsonValue &v : QJsonDocument::fromJson(json).array()) {
+    for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array) {
         const QJsonObject o = v.toObject();
         out.append({qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(),
                     o.value(QLatin1String("title")).toString()});
@@ -325,7 +325,7 @@ QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
     }
     QList<Highlight> out;
     for (const QString &k : std::as_const(order))
-        out.append({texts.value(k), lines.value(k).join(QLatin1Char('\n'))});
+        out.append(Highlight(texts.value(k), lines.value(k).join(QLatin1Char('\n'))));
     return out;
 }
 
@@ -416,7 +416,7 @@ QString Projects::articleLink(const ArticleRef &a)
 QString Projects::quote(const ProjectItem &clip)
 {
     QStringList lines;
-    for (const QString &l : clip.text.trimmed().split(QLatin1Char('\n')))
+    for (const auto clipLines = clip.text.trimmed().split(QLatin1Char('\n')); const QString &l : clipLines)
         lines << QStringLiteral("> ") + l;
     QStringList from;
     for (const ArticleRef &r : clip.refs)
@@ -481,7 +481,7 @@ QString Projects::sourceList(const QString &markdown, Citations::Style style, co
 QList<Citations::Source> Projects::articleSources(qint64 projectId)
 {
     QList<Citations::Source> sources;
-    for (const ProjectItem &a : items(projectId, QStringLiteral("article")))
+    for (const auto articles = items(projectId, QStringLiteral("article")); const ProjectItem &a : articles)
         sources << citationFor(a.article.libraryId, a.article.path, a.article.title);
     return sources;
 }
@@ -501,7 +501,7 @@ QString Projects::exportMarkdown(const QString &markdown, Citations::Style style
         out += markdown.mid(last, m.capturedStart() - last) + m.captured(1);
         last = m.capturedEnd();
     }
-    out += markdown.mid(last);
+    out += QStringView(markdown).mid(last);
     // the articles it links to, cited in the chosen style; a list the document already has (the user's own, or one
     // inserted with "Insert Works Cited") is kept instead
     if (hasSourceList(markdown))
@@ -540,13 +540,13 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
     auto it = zimLink().globalMatch(markdown);
     while (it.hasNext()) {
         const auto m = it.next();
-        linked += markdown.mid(last, m.capturedEnd() - last);
+        linked += QStringView(markdown).mid(last, m.capturedEnd() - last);
         last = m.capturedEnd();
         const QString note = articleNotes.value(m.captured(2) + QLatin1Char('/') + QUrl::fromPercentEncoding(m.captured(3).toUtf8()));
         if (!note.isEmpty() && !markdown.contains(note))  // a summary draft already writes the note out
             linked += QStringLiteral(" *(note: %1)*").arg(note.simplified());
     }
-    linked += markdown.mid(last);
+    linked += QStringView(markdown).mid(last);
 
     // quotations of saved excerpts: the note under the quotation
     const QStringList lines = linked.split(QLatin1Char('\n'));

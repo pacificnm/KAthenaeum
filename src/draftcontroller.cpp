@@ -73,7 +73,7 @@ void DraftController::writeReport(qint64 projectId, const QString &title, const 
     request.words = full ? 300 : 180;
     request.alsoLibrary = alsoLibrary;
     QList<qint64> libraries;
-    for (const LibraryRecord &l : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &l : rows)
         if (l.fileExists())
             libraries << l.id;
     ModelSettings *m = ModelSettings::instance();

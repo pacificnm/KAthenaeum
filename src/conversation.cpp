@@ -51,7 +51,7 @@ QList<Rag::Citation> fromVariant(const QVariantList &list)
         Rag::Citation c;
         c.start = m.value(QStringLiteral("start")).toInt();
         c.end = m.value(QStringLiteral("end")).toInt();
-        for (const QVariant &n : m.value(QStringLiteral("sources")).toList())
+        for (const auto values = m.value(QStringLiteral("sources")).toList(); const QVariant &n : values)
             c.sources << n.toInt();
         c.score = m.value(QStringLiteral("score")).toDouble();
         c.reason = m.value(QStringLiteral("reason")).toString();
@@ -381,7 +381,7 @@ void Conversation::load()
                 Q_EMIT lessonChanged();
             }
         }
-        for (const MessageRecord &r : Chats::messages(m_chatId)) {
+        for (const auto saved = Chats::messages(m_chatId); const MessageRecord &r : saved) {
             Message m;
             m.id = r.id;
             m.role = r.role;
@@ -412,7 +412,7 @@ void Conversation::ask(const QString &question)
         return;
 
     QList<qint64> libraries;
-    for (const LibraryRecord &r : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &r : rows)
         if (r.fileExists() && (!m_article.isSet() || r.id == m_article.libraryId))
             libraries << r.id;
     if (libraries.isEmpty() && !m_article.isSet()) {
@@ -498,11 +498,11 @@ void Conversation::ask(const QString &question)
         project.title = p->title;
         project.goal = p->description;
         project.alsoLibrary = m_alsoLibrary;
-        for (const ProjectItem &i : Projects::items(m_projectId, QStringLiteral("article")))
+        for (const auto qStringLiteral = Projects::items(m_projectId, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
             if (libraries.contains(i.article.libraryId))
                 project.articles << ArticleScope{i.article.libraryId, i.article.path, i.article.title};
         const QString model = Embedding::normalizeName(models->embeddingModel());
-        for (const ProjectItem &i : Projects::items(m_projectId, QStringLiteral("clip"))) {
+        for (const auto qStringLiteral = Projects::items(m_projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral) {
             Rag::Clip c;
             c.id = i.id;
             c.title = i.refs.value(0).title;

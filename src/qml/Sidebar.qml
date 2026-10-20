@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import KAthenaeum
 
 // The app's sidebar: who it is, a search box, and the places grouped, the current one marked. Beside the pages on a
 // wide window, over them (opened from the header) on a narrow one.

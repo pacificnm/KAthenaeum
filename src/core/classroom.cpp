@@ -48,7 +48,7 @@ QByteArray readingsJson(const QList<Classroom::Reading> &readings)
 QList<Classroom::Reading> readingsFrom(const QByteArray &json)
 {
     QList<Classroom::Reading> out;
-    for (const QJsonValue &v : QJsonDocument::fromJson(json).array()) {
+    for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array) {
         const QJsonObject o = v.toObject();
         Classroom::Reading r;
         r.article = {qint64(o.value(QLatin1String("libraryId")).toDouble()), o.value(QLatin1String("path")).toString(),
@@ -59,7 +59,7 @@ QList<Classroom::Reading> readingsFrom(const QByteArray &json)
     return out;
 }
 
-const QString LessonColumns = QStringLiteral("id, course_id, unit_id, position, title, objective, readings, intro, completed_at");
+constexpr QLatin1StringView LessonColumns("id, course_id, unit_id, position, title, objective, readings, intro, completed_at");
 
 Classroom::Lesson lessonFrom(const QSqlQuery &q)
 {
@@ -76,7 +76,7 @@ Classroom::Lesson lessonFrom(const QSqlQuery &q)
     return l;
 }
 
-const QString CourseColumns = QStringLiteral(
+constexpr QLatin1StringView CourseColumns(
     "c.id, c.subject, c.title, c.level, c.focus, c.length, c.status, c.error, c.updated_at, coalesce(c.project_id, 0), "
     "(SELECT count(*) FROM course_lessons l WHERE l.course_id = c.id), "
     "(SELECT count(*) FROM course_lessons l WHERE l.course_id = c.id AND l.completed_at IS NOT NULL)");
@@ -126,7 +126,7 @@ QString cleanTemplate(QString part)
         return {};  // the template itself
     part.remove(QLatin1Char('<')).remove(QLatin1Char('>'));
     // quotes or brackets round an article's title: "Plate tectonics", [Plate tectonics]
-    while (part.size() > 1 && QStringLiteral("\"'[(\x{201C}").contains(part.front()) && QStringLiteral("\"')]\x{201D}").contains(part.back()))
+    while (part.size() > 1 && QStringLiteral("\"'[(\u201C").contains(part.front()) && QStringLiteral("\"')]\u201D").contains(part.back()))
         part = part.mid(1, part.size() - 2).trimmed();
     const QString lower = part.toLower();
     if (lower == QLatin1String("lesson title") || lower == QLatin1String("unit title") || lower == QLatin1String("article title"))
@@ -281,7 +281,7 @@ QList<Classroom::Subject> Classroom::subjects()
 
 Classroom::Subject Classroom::subject(const QString &key)
 {
-    for (const Subject &s : subjects())
+    for (const auto all = subjects(); const Subject &s : all)
         if (s.key == key)
             return s;
     return {QStringLiteral("other"), QStringLiteral("Other"), QStringLiteral("applications-education"), QStringLiteral("Anything you want to learn"), {},
@@ -523,7 +523,7 @@ QString Classroom::lessonLabel(qint64 lessonId)
     if (!l)
         return {};
     int n = 0;
-    for (const Unit &u : syllabus(l->courseId))
+    for (const auto units = syllabus(l->courseId); const Unit &u : units)
         for (const Lesson &other : u.lessons) {
             ++n;
             if (other.id == lessonId)
@@ -575,7 +575,7 @@ void Classroom::syncCourse(qint64 courseId)
 {
     // the last lesson first: a project lists its newest sources first, so the course reads from lesson 1 down
     QList<qint64> lessons;
-    for (const Unit &u : syllabus(courseId))
+    for (const auto units = syllabus(courseId); const Unit &u : units)
         for (const Lesson &l : u.lessons)
             lessons.prepend(l.id);
     for (qint64 id : std::as_const(lessons))
@@ -615,7 +615,7 @@ qint64 Classroom::keepHighlight(qint64 lessonId, const QString &text, const Arti
         return 0;
     // the same passage highlighted again (another colour, a note added) is one excerpt
     const QString squeezed = text.simplified().toLower();
-    for (const ProjectItem &i : Projects::items(c->projectId, QStringLiteral("clip")))
+    for (const auto qStringLiteral = Projects::items(c->projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral)
         if (i.text.simplified().toLower() == squeezed) {
             if (!note.trimmed().isEmpty() && i.note.isEmpty())
                 Projects::setNote(c->projectId, i.id, note);
@@ -685,7 +685,7 @@ QList<Classroom::Unit> Classroom::parseSyllabus(const QString &text, const QStri
     static const QRegularExpression lessonWord(QStringLiteral("^lesson\\s*\\d*\\s*[:.\\x{2014}\\x{2013}-]\\s*"), QRegularExpression::CaseInsensitiveOption);
     QList<Unit> units;
     QSet<QString> seen;  // a lesson the model repeats
-    for (const QString &raw : text.split(QLatin1Char('\n'))) {
+    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); const QString &raw : qLatin1Char) {
         const QString line = unmarked(raw);
         if (line.isEmpty())
             continue;
@@ -792,7 +792,7 @@ QByteArray intsJson(const QList<int> &values)
 QList<int> intsFrom(const QByteArray &json)
 {
     QList<int> out;
-    for (const QJsonValue &v : QJsonDocument::fromJson(json).array())
+    for (const auto array = QJsonDocument::fromJson(json).array(); const QJsonValue &v : array)
         out << v.toInt(-1);
     return out;
 }
@@ -867,7 +867,7 @@ std::optional<Classroom::Quiz> Classroom::quiz(qint64 id)
             Question question;
             question.id = questions.value(0).toLongLong();
             question.text = questions.value(1).toString();
-            for (const QJsonValue &v : QJsonDocument::fromJson(questions.value(2).toByteArray()).array())
+            for (const auto array = QJsonDocument::fromJson(questions.value(2).toByteArray()).array(); const QJsonValue &v : array)
                 question.options << v.toString();
             question.answer = questions.value(3).toInt();
             question.explanation = questions.value(4).toString();
@@ -977,7 +977,7 @@ std::optional<Classroom::Question> Classroom::parseQuestion(const QString &text)
     Question out;
     QString options[4];
     QString answerLetter;
-    for (QString line : text.split(QLatin1Char('\n'))) {
+    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); QString line : qLatin1Char) {
         line = line.trimmed();
         line.remove(QStringLiteral("**"));
         line = line.trimmed();
@@ -1034,7 +1034,7 @@ bool Classroom::answerInPassage(const Question &question, const QString &passage
     }
     auto share = [&passage](const QString &option) {
         QStringList stems;
-        for (const QString &t : ZimSearch::terms(option))
+        for (const auto terms = ZimSearch::terms(option); const QString &t : terms)
             stems << ZimSearch::stem(t);
         return stems.isEmpty() ? (passage.contains(option, Qt::CaseInsensitive) ? 1.0 : 0.0) : ZimSearch::overlap(stems, passage);
     };

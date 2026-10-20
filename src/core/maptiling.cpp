@@ -188,7 +188,7 @@ MultiPolygon fromGeoJson(const QVariantMap &geometry)
 {
     auto ring = [](const QVariant &v) {
         Ring r;
-        for (const QVariant &p : v.toList()) {
+        for (const auto values = v.toList(); const QVariant &p : values) {
             const QVariantList xy = p.toList();
             if (xy.size() >= 2)
                 r.append({xy[0].toDouble(), xy[1].toDouble()});
@@ -199,7 +199,7 @@ MultiPolygon fromGeoJson(const QVariantMap &geometry)
     };
     auto polygon = [&ring](const QVariant &v) {
         Polygon p;
-        for (const QVariant &r : v.toList())
+        for (const auto values = v.toList(); const QVariant &r : values)
             p.append(ring(r));
         return p;
     };
@@ -208,7 +208,7 @@ MultiPolygon fromGeoJson(const QVariantMap &geometry)
     if (type == QLatin1String("Polygon"))
         shape.append(polygon(geometry.value(QStringLiteral("coordinates"))));
     else if (type == QLatin1String("MultiPolygon"))
-        for (const QVariant &p : geometry.value(QStringLiteral("coordinates")).toList())
+        for (const auto values = geometry.value(QStringLiteral("coordinates")).toList(); const QVariant &p : values)
             shape.append(polygon(p));
     return shape;
 }

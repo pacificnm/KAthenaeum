@@ -9,7 +9,7 @@
 #include <QFutureWatcher>
 #include <QHash>
 #include <QQmlEngine>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 namespace
 {
@@ -17,7 +17,7 @@ namespace
 QHash<qint64, QString> searchable(qint64 only)
 {
     QHash<qint64, QString> out;
-    for (const LibraryRecord &r : Library::all())
+    for (const auto rows = Library::all(); const LibraryRecord &r : rows)
         if (r.fileExists() && (only < 0 || r.id == only))
             out.insert(r.id, r.title);
     return out;
@@ -42,7 +42,7 @@ QVariantList SearchController::suggest(const QString &text, qint64 libraryId) co
     const auto libraries = searchable(libraryId);
     const int each = libraries.size() > 1 ? 4 : 8;
     for (auto it = libraries.cbegin(); it != libraries.cend(); ++it)
-        for (const ZimEntry &e : ZimReader::suggest(it.key(), text, each))
+        for (const auto suggestions = ZimReader::suggest(it.key(), text, each); const ZimEntry &e : suggestions)
             out.append(QVariantMap{{QStringLiteral("libraryId"), it.key()},
                                    {QStringLiteral("libraryTitle"), it.value()},
                                    {QStringLiteral("path"), e.path},
@@ -75,7 +75,7 @@ void SearchController::search(const QString &query, qint64 libraryId)
         if (generation != m_generation)
             return;  // someone searched again meanwhile
         m_results.clear();
-        for (const ZimSearch::Hit &h : watcher->result())
+        for (const auto hits = watcher->result(); const ZimSearch::Hit &h : hits)
             m_results.append(QVariantMap{{QStringLiteral("libraryId"), h.libraryId},
                                          {QStringLiteral("libraryTitle"), libraries.value(h.libraryId)},
                                          {QStringLiteral("path"), h.path},

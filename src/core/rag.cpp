@@ -17,7 +17,7 @@ QString key(qint64 libraryId, const QString &path)
 QStringList stems(const QString &query)
 {
     QStringList out;
-    for (const QString &t : ZimSearch::terms(query))
+    for (const auto terms = ZimSearch::terms(query); const QString &t : terms)
         out << ZimSearch::stem(t);
     return out;
 }
@@ -283,7 +283,7 @@ QString Rag::userMessage(const Context &context, const QString &question, const 
     QString earlier;
     if (!earlierQuestions.isEmpty()) {
         QStringList quoted;
-        for (const QString &q : earlierQuestions.mid(qMax<qsizetype>(0, earlierQuestions.size() - MaxEarlierQuestions)))
+        for (const auto size = earlierQuestions.mid(qMax<qsizetype>(0, earlierQuestions.size() - MaxEarlierQuestions)); const QString &q : size)
             quoted << QStringLiteral("\"%1\"").arg(q.simplified().left(300));  // enough to know what "it" is
         earlier = QStringLiteral("Earlier in this conversation the user asked: %1\n").arg(quoted.join(QStringLiteral(", then ")));
     }

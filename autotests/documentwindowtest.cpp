@@ -69,13 +69,13 @@ private Q_SLOTS:
         auto *view = w.findChild<KTextEditor::View *>();
         view->setCursorPosition({0, int(view->document()->line(0).size())});
         QMenu *cite = nullptr;
-        for (auto *b : w.findChildren<QToolButton *>())
+        for (const auto buttons = w.findChildren<QToolButton *>(); auto *b : buttons)
             if (b->menu())
                 cite = b->menu();
         QVERIFY(cite);
         Q_EMIT cite->aboutToShow();
         QList<QAction *> actions;
-        for (QAction *a : cite->actions())
+        for (const auto citeActions = cite->actions(); QAction *a : citeActions)
             if (!a->isSeparator())
                 actions << a;
         QCOMPARE(actions.size(), 3);
@@ -90,7 +90,7 @@ private Q_SLOTS:
                  qPrintable(view->document()->text()));
         // now it links to an article: the list can be inserted, in the chosen style
         Q_EMIT cite->aboutToShow();
-        QAction *list = cite->actions().first();
+        QAction *list = cite->actions().constFirst();
         QVERIFY(list->isEnabled());
         list->trigger();
         QVERIFY2(view->document()->text().contains(QStringLiteral("## Works Cited\n\n“Acid.”")), qPrintable(view->document()->text()));
@@ -122,7 +122,7 @@ private Q_SLOTS:
         DocumentWindows::instance()->open(m_doc);
         DocumentWindows::instance()->open(m_doc);
         int open = 0;
-        for (QWidget *top : QApplication::topLevelWidgets())
+        for (const auto windows = QApplication::topLevelWidgets(); QWidget *top : windows)
             if (qobject_cast<DocumentWindow *>(top) && top->isVisible())
                 ++open;
         QCOMPARE(open, 1);

@@ -13,7 +13,7 @@
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSet>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 // ---- pure parts ----
 
@@ -169,7 +169,7 @@ QList<Drafts::PlannedSection> Drafts::parsePlan(const QString &text, int maxSect
     static const QRegularExpression split(QStringLiteral("\\s*(:|\\s[\\x{2014}\\x{2013}-]\\s)\\s*"));
     QList<PlannedSection> out;
     QSet<QString> seen;
-    for (QString line : text.split(QLatin1Char('\n'))) {
+    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); QString line : qLatin1Char) {
         line = line.trimmed();
         for (int i = 0; i < 3; ++i)  // "1. **Heading**" has two marks
             line.remove(marks);
@@ -314,7 +314,7 @@ QString Drafts::reportMarkdown(const ReportRequest &request, const QList<std::pa
               .arg(today.toString(Qt::ISODate))
        << QString();
     QStringList quoted;
-    for (const QString &l : request.instructions.trimmed().split(QLatin1Char('\n')))
+    for (const auto qLatin1Char = request.instructions.trimmed().split(QLatin1Char('\n')); const QString &l : qLatin1Char)
         quoted << QStringLiteral("> ") + l;
     md << QStringLiteral("> **Instructions:**") << QStringLiteral(">") << quoted << QString();
     for (const auto &[heading, body] : sections)
@@ -401,7 +401,7 @@ void Drafter::summarizeProject(qint64 projectId, const Models &models)
 
     QList<qint64> libraries;
     QList<ArticleRef> refs;
-    for (const ProjectItem &a : m_articles.mid(0, Drafts::MaxArticles)) {
+    for (const auto mid = m_articles.mid(0, Drafts::MaxArticles); const ProjectItem &a : mid) {
         refs << a.article;
         if (!libraries.contains(a.article.libraryId))
             libraries << a.article.libraryId;
@@ -431,7 +431,7 @@ void Drafter::summarizeProject(qint64 projectId, const Models &models)
                 if (!content)
                     continue;
                 QStringList texts;
-                for (const Passage &p : Extract::extract(content->data).passages)
+                for (const auto extract = Extract::extract(content->data).passages; const Passage &p : extract)
                     texts << p.text;
                 const QString text = texts.join(QStringLiteral("\n\n")).left(Drafts::ArticleChars);
                 if (!text.trimmed().isEmpty())
@@ -479,7 +479,7 @@ void Drafter::writeOverview()
     for (const Drafts::SourceSummary &s : std::as_const(m_summaries))
         digest << s.article.title + QStringLiteral(": ") + s.summary;
     QStringList quotes;
-    for (const ProjectItem &c : m_clips.mid(0, 6))
+    for (const auto mid = m_clips.mid(0, 6); const ProjectItem &c : mid)
         quotes << QStringLiteral("Saved excerpt (%1): %2").arg(c.refs.value(0).title.isEmpty() ? QStringLiteral("note") : c.refs.value(0).title,
                                                               c.text.trimmed().left(600));
     const QString material = QString(digest.join(QStringLiteral("\n\n")) + QStringLiteral("\n\n") + quotes.join(QStringLiteral("\n\n"))).trimmed().left(5800);
@@ -544,7 +544,7 @@ void Drafter::summarizeChat(qint64 chatId, const Models &models)
     QList<std::pair<QString, QString>> pairs;
     QList<ArticleRef> sources;
     QString question;
-    for (const MessageRecord &m : Chats::messages(chatId)) {
+    for (const auto messages = Chats::messages(chatId); const MessageRecord &m : messages) {
         if (m.role == QLatin1String("user")) {
             question = m.content;
             continue;
@@ -553,7 +553,7 @@ void Drafter::summarizeChat(qint64 chatId, const Models &models)
             continue;
         pairs.append({question, m.content});
         question.clear();
-        for (const QJsonValue &v : QJsonDocument::fromJson(m.sources).array()) {
+        for (const auto array = QJsonDocument::fromJson(m.sources).array(); const QJsonValue &v : array) {
             const QJsonObject s = v.toObject();
             if (s.value(QLatin1String("kind")).toString() != QLatin1String("clip"))
                 sources << ArticleRef{qint64(s.value(QLatin1String("libraryId")).toDouble()), s.value(QLatin1String("path")).toString(),
@@ -621,7 +621,7 @@ void Drafter::writeReport(qint64 projectId, const Drafts::ReportRequest &request
     std::reverse(m_articles.begin(), m_articles.end());
     m_articles = m_articles.mid(0, Drafts::MaxReportArticles);
     const QString model = Embedding::normalizeName(models.embedding);
-    for (const ProjectItem &i : Projects::items(projectId, QStringLiteral("clip"))) {
+    for (const auto qStringLiteral = Projects::items(projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral) {
         Rag::Clip c;
         c.id = i.id;
         c.title = i.refs.value(0).title;
@@ -733,7 +733,7 @@ void Drafter::writeSection()
     });
     watcher->setFuture(QtConcurrent::run([query, libraries = m_libraries, mine] {
         QList<ZimSearch::Article> outside;
-        for (const ZimSearch::Article &a : ZimSearch::readArticles(query, libraries, Drafts::ReportLibraryArticles))
+        for (const auto readArticles = ZimSearch::readArticles(query, libraries, Drafts::ReportLibraryArticles); const ZimSearch::Article &a : readArticles)
             if (!mine.contains(QString::number(a.found.libraryId) + QLatin1Char('/') + a.found.path))
                 outside << a;
         return Rag::pickPassages(query, outside).mid(0, Rag::MaxEmbed / 2);

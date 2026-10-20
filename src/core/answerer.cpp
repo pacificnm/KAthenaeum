@@ -8,7 +8,7 @@
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QSet>
-#include <QtConcurrent>
+#include <QtConcurrentRun>
 
 Answerer::Answerer(OllamaClient *client, QObject *parent)
     : QObject(parent)
@@ -104,7 +104,7 @@ void Answerer::start(const AnswerRequest &request)
             Pools pools{Rag::pickPassages(query, Rag::chooseArticles(query, own)), {}};
             if (project.alsoLibrary) {
                 QList<ZimSearch::Article> outside;
-                for (const ZimSearch::Article &a : ZimSearch::readArticles(query, libraries, Rag::Articles))
+                for (const auto readArticles = ZimSearch::readArticles(query, libraries, Rag::Articles); const ZimSearch::Article &a : readArticles)
                     if (!mine.contains(QString::number(a.found.libraryId) + QLatin1Char('/') + a.found.path))
                         outside << a;
                 pools.library = Rag::pickPassages(query, outside).mid(0, Rag::MaxEmbed / 2);

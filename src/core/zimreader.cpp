@@ -7,6 +7,7 @@
 
 #include <QCoreApplication>
 #include <QHash>
+#include <QGlobalStatic>
 #include <QMutex>
 #include <QRegularExpression>
 #include <QThread>
@@ -20,14 +21,15 @@
 
 namespace
 {
-QMutex archivesLock;
-QHash<qint64, std::shared_ptr<zim::Archive>> archives;
+using Archives = QHash<qint64, std::shared_ptr<zim::Archive>>;
+Q_GLOBAL_STATIC(QMutex, archivesLock)
+Q_GLOBAL_STATIC(Archives, archives)
 }
 
 std::shared_ptr<zim::Archive> ZimArchives::opened(qint64 libraryId)
 {
-    QMutexLocker lock(&archivesLock);
-    return archives.value(libraryId);
+    QMutexLocker lock(archivesLock());
+    return archives->value(libraryId);
 }
 
 std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
@@ -43,8 +45,8 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
         return nullptr;
     try {
         auto a = std::make_shared<zim::Archive>(lib->path.toStdString());
-        QMutexLocker lock(&archivesLock);
-        archives.insert(libraryId, a);
+        QMutexLocker lock(archivesLock());
+        archives->insert(libraryId, a);
         return a;
     } catch (const std::exception &) {
         return nullptr;
@@ -53,8 +55,8 @@ std::shared_ptr<zim::Archive> ZimArchives::get(qint64 libraryId)
 
 void ZimArchives::close(qint64 libraryId)
 {
-    QMutexLocker lock(&archivesLock);
-    archives.remove(libraryId);  // a search takes its own references when it starts (ZimSearch candidates) and keeps them
+    QMutexLocker lock(archivesLock());
+    archives->remove(libraryId);  // a search takes its own references when it starts (ZimSearch candidates) and keeps them
 }
 
 namespace

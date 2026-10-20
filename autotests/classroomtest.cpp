@@ -217,7 +217,7 @@ private Q_SLOTS:
         b.readings = {{{2, QStringLiteral("Seismic_wave"), QStringLiteral("Seismic wave")}, 0.8},
                       {{2, QStringLiteral("Lithosphere"), QStringLiteral("Lithosphere")}, 0.75}};  // shared with lesson 1
         QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Plates"), {a, b}}}));
-        const auto lessons = Classroom::syllabus(course).first().lessons;
+        const auto lessons = Classroom::syllabus(course).constFirst().lessons;
         QCOMPARE(Classroom::lessonLabel(lessons[1].id), QStringLiteral("Lesson 2: Seismic Waves"));
 
         QVERIFY(!Classroom::syncLesson(lessons[0].id));  // no project yet
@@ -338,7 +338,7 @@ private Q_SLOTS:
         l.title = QStringLiteral("The Republic");
         l.readings = {{{2, QStringLiteral("Roman_Republic"), QStringLiteral("Roman Republic")}, 0.9}};
         QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Rise"), {l}}}));
-        const auto unit = Classroom::syllabus(course).first();
+        const auto unit = Classroom::syllabus(course).constFirst();
         const qint64 lesson = unit.lessons.first().id;
         QVERIFY(!Classroom::latestQuiz(QStringLiteral("lesson"), lesson));
         QCOMPARE(Classroom::saveQuiz({0, course, lesson, 0, QStringLiteral("lesson"), {}}), 0);  // no questions, no quiz
@@ -400,7 +400,7 @@ private Q_SLOTS:
         // its chats keep their lesson
         const qint64 course = Classroom::createCourse(QStringLiteral("history"), QStringLiteral("Rome"), QStringLiteral("7"), {}, {});
         QVERIFY(Classroom::saveSyllabus(course, {{0, 0, QStringLiteral("Rise"), {l}}}));
-        const qint64 lesson = Classroom::syllabus(course).first().lessons.first().id;
+        const qint64 lesson = Classroom::syllabus(course).constFirst().lessons.first().id;
         const qint64 chat = Chats::create(QStringLiteral("Why?"), 0, {}, {}, 0, lesson);
         QVERIFY(chat > 0);
         QCOMPARE(Chats::byId(chat)->lessonId, lesson);

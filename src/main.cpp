@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     if (engine.rootObjects().isEmpty())
         return 1;
     // a second launch asks this one to come forward
-    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first())) {
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
         QObject::connect(&service, &KDBusService::activateRequested, window, [window] {
             KWindowSystem::updateStartupId(window);
             KWindowSystem::activateWindow(window);

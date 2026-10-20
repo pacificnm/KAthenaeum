@@ -177,7 +177,7 @@ void CatalogModel::setFlavour(const QString &f)
     apply();
 }
 
-void CatalogModel::setSort(const QString &s)
+void CatalogModel::setSortOrder(const QString &s)
 {
     if (s == m_sort)
         return;

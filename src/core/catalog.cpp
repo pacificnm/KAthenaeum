@@ -15,8 +15,8 @@
 namespace
 {
 constexpr qint64 MaxFeedBytes = 32 << 20;  // the English catalog is about 1.5 MB
-const QString Acquisition = QStringLiteral("http://opds-spec.org/acquisition/open-access");
-const QString Thumbnail = QStringLiteral("http://opds-spec.org/image/thumbnail");
+constexpr QLatin1StringView Acquisition("http://opds-spec.org/acquisition/open-access");
+constexpr QLatin1StringView Thumbnail("http://opds-spec.org/image/thumbnail");
 
 // QXmlStreamReader never fetches external entities and limits entity expansion, so a hostile feed cannot blow up memory.
 CatalogEntry readEntry(QXmlStreamReader &xml, const QUrl &feedUrl)
