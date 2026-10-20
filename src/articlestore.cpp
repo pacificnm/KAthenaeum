@@ -9,6 +9,8 @@
 #include "core/projects.h"
 #include "core/settings.h"
 
+#include <KLocalizedString>
+
 #include <QCache>
 #include <QSet>
 #include <QColor>
@@ -173,11 +175,12 @@ QByteArray ArticleStore::notFoundPage(qint64 libraryId, const QString &path, con
 {
     const auto library = Library::byId(libraryId);
     if (!library || !library->fileExists())  // a saved chat or project can outlive its library
-        return document(QStringLiteral("Library not installed"),
-                        QStringLiteral("<p>The library this article came from is no longer installed. Add it again in the Library Manager "
-                                       "to read <code>%1</code>; its chats and saved passages come back with it.</p>")
-                            .arg(path.toHtmlEscaped()),
+        return document(i18n("Library not installed"),
+                        QStringLiteral("<p>%1</p>")
+                            .arg(i18n("The library this article came from is no longer installed. Add it again in the Library Manager "
+                                      "to read “%1”; its chats and saved passages come back with it.",
+                                      path)
+                                     .toHtmlEscaped()),
                         palette);
-    return document(QStringLiteral("Not found"),
-                    QStringLiteral("<p>This library has no article at <code>%1</code>.</p>").arg(path.toHtmlEscaped()), palette);
+    return document(i18n("Not found"), QStringLiteral("<p>%1</p>").arg(i18n("This library has no article at “%1”.", path).toHtmlEscaped()), palette);
 }

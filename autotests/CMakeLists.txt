@@ -19,6 +19,7 @@ ecm_add_tests(
     draftstest.cpp
     highlightstest.cpp
     librarytest.cpp
+    networktest.cpp
     ollamatest.cpp
     projectstest.cpp
     ragtest.cpp

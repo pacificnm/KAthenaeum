@@ -6,6 +6,8 @@
 #include "projects.h"
 #include "zimarchive.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -86,7 +88,7 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     const QString path = QFileInfo(rawPath).canonicalFilePath();
     if (path.isEmpty()) {
         if (error)
-            *error = QStringLiteral("the file does not exist");
+            *error = i18n("the file does not exist");
         return std::nullopt;
     }
     const auto info = ZimArchive::readInfo(path, error);
@@ -118,7 +120,7 @@ std::optional<qint64> Library::add(const QString &rawPath, QString *error)
     }
     if (id == 0) {
         if (error)
-            *error = QStringLiteral("could not choose an id");
+            *error = i18n("could not choose an id");
         return std::nullopt;
     }
 
@@ -180,7 +182,7 @@ Library::ScanResult Library::scan(const QString &folder)
         if (add(file.filePath(), &error))
             result.added << file.fileName();
         else
-            result.errors << QStringLiteral("%1: %2").arg(file.fileName(), error);
+            result.errors << i18nc("@info %1 is a file name, %2 why it could not be added", "%1: %2", file.fileName(), error);
     }
     return result;
 }
@@ -190,7 +192,7 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
     const auto record = byId(id);
     if (!record) {
         if (error)
-            *error = QStringLiteral("no such library");
+            *error = i18n("no such library");
         return false;
     }
     // forgotten, remembered as removed, and taken out of projects together, or none of it; the file only once that has
@@ -231,6 +233,6 @@ bool Library::remove(qint64 id, bool deleteFile, QString *error)
         return false;
     }
     if (deleteFile && record->fileExists() && !QFile::remove(record->path) && error)
-        *error = QStringLiteral("could not delete %1").arg(record->path);  // removed all the same: see the header
+        *error = i18n("could not delete %1", record->path);  // removed all the same: see the header
     return true;
 }

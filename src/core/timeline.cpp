@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "timeline.h"
 
+#include "extract.h"
 #include "rag.h"
+
+#include <KLocalizedString>
 
 #include <QHash>
 #include <QRegularExpression>
@@ -42,11 +45,61 @@ QRegularExpression re(const QString &pattern)
     return QRegularExpression(pattern, QRegularExpression::CaseInsensitiveOption);
 }
 
-QString ordinal(int n)
+// English ordinals differ by the number's last digits ("1st", "2nd", "3rd", "11th"), so each kind of period has one whole
+// string per English suffix: translators get complete phrases and may translate all four alike
+enum class Ordinal { St, Nd, Rd, Th };
+
+Ordinal ordinal(int n)
 {
     const int lastTwo = n % 100, last = n % 10;
-    const char *suffix = (lastTwo >= 11 && lastTwo <= 13) ? "th" : last == 1 ? "st" : last == 2 ? "nd" : last == 3 ? "rd" : "th";
-    return QString::number(n) + QLatin1String(suffix);
+    if (lastTwo >= 11 && lastTwo <= 13)
+        return Ordinal::Th;
+    return last == 1 ? Ordinal::St : last == 2 ? Ordinal::Nd : last == 3 ? Ordinal::Rd : Ordinal::Th;
+}
+
+QString millenniumBC(int n)
+{
+    switch (ordinal(n)) {
+    case Ordinal::St:
+        return i18nc("@label timeline period, %1 is a millennium number ending in 1", "%1st millennium BC", n);
+    case Ordinal::Nd:
+        return i18nc("@label timeline period, %1 is a millennium number ending in 2", "%1nd millennium BC", n);
+    case Ordinal::Rd:
+        return i18nc("@label timeline period, %1 is a millennium number ending in 3", "%1rd millennium BC", n);
+    case Ordinal::Th:
+        break;
+    }
+    return i18nc("@label timeline period, %1 is a millennium number", "%1th millennium BC", n);
+}
+
+QString centuryBC(int n)
+{
+    switch (ordinal(n)) {
+    case Ordinal::St:
+        return i18nc("@label timeline period, %1 is a century number ending in 1", "%1st century BC", n);
+    case Ordinal::Nd:
+        return i18nc("@label timeline period, %1 is a century number ending in 2", "%1nd century BC", n);
+    case Ordinal::Rd:
+        return i18nc("@label timeline period, %1 is a century number ending in 3", "%1rd century BC", n);
+    case Ordinal::Th:
+        break;
+    }
+    return i18nc("@label timeline period, %1 is a century number", "%1th century BC", n);
+}
+
+QString centuryAD(int n)
+{
+    switch (ordinal(n)) {
+    case Ordinal::St:
+        return i18nc("@label timeline period, %1 is a century number ending in 1", "%1st century", n);
+    case Ordinal::Nd:
+        return i18nc("@label timeline period, %1 is a century number ending in 2", "%1nd century", n);
+    case Ordinal::Rd:
+        return i18nc("@label timeline period, %1 is a century number ending in 3", "%1rd century", n);
+    case Ordinal::Th:
+        break;
+    }
+    return i18nc("@label timeline period, %1 is a century number", "%1th century", n);
 }
 }
 
@@ -156,7 +209,7 @@ QList<Timeline::Event> Timeline::fromPassages(const QList<Passage> &passages, co
 {
     QList<Event> out;
     for (const Passage &p : passages) {
-        if (p.section == QLatin1String("Key facts"))  // the infobox: labels and values, not sentences
+        if (p.section == Extract::keyFactsSection())  // the infobox: labels and values, not sentences
             continue;
         for (const auto splitSentences = Rag::splitSentences(p.text); const auto &[a, b] : splitSentences) {
             QString sentence = p.text.mid(a, b - a).simplified();
@@ -199,24 +252,25 @@ QList<Timeline::Event> Timeline::sorted(const QList<Event> &events)
 QString Timeline::period(double value)
 {
     if (value < -1e9)
-        return QStringLiteral("Billions of years ago");
+        return i18nc("@label timeline period", "Billions of years ago");
     if (value < -1e6)
-        return QStringLiteral("Millions of years ago");
+        return i18nc("@label timeline period", "Millions of years ago");
     if (value < -10000)
-        return QStringLiteral("Over 10,000 years ago");
+        return i18nc("@label timeline period", "Over 10,000 years ago");
     if (value < -1000)
-        return QStringLiteral("%1 millennium BC").arg(ordinal(int(std::ceil(-value / 1000.0))));
+        return millenniumBC(int(std::ceil(-value / 1000.0)));
     // there is no year 0: 100 BC to 1 BC is the 1st century BC, AD 1 to 100 the 1st century
     if (value < 0)
-        return QStringLiteral("%1 century BC").arg(ordinal(std::max(1, int(std::ceil(-value / 100.0)))));
+        return centuryBC(std::max(1, int(std::ceil(-value / 100.0))));
     if (value < 1000)
-        return QStringLiteral("%1 century").arg(ordinal(std::max(1, int(std::ceil(value / 100.0)))));
-    return QStringLiteral("%1s").arg(int(std::floor(value / 100.0)) * 100);
+        return centuryAD(std::max(1, int(std::ceil(value / 100.0))));
+    // the year as digits, without the locale's thousands separator ("1800s", not "1,800s")
+    return i18nc("@label timeline period, %1 is the year a century starts, such as 1800", "%1s", QString::number(int(std::floor(value / 100.0)) * 100));
 }
 
 QString Timeline::markdown(const QString &title, const QList<Event> &events)
 {
-    QStringList out{QStringLiteral("# Timeline: ") + title, QString()};
+    QStringList out{QStringLiteral("# ") + i18nc("@title document heading, %1 is an article or project title", "Timeline: %1", title), QString()};
     QString current;
     for (const Event &e : events) {
         const QString p = period(e.date.value);

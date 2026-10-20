@@ -16,11 +16,6 @@ Kirigami.ShadowedRectangle {
     signal goTo()
     signal addToProject()
 
-    // the highlighter's colours, as the article shows them
-    function swatch(name) {
-        return { yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", pink: "#f472b6" }[name] ?? "#facc15";
-    }
-
     implicitHeight: layout.implicitHeight + Kirigami.Units.largeSpacing * 2
     radius: Kirigami.Units.cornerRadius * 1.5
     color: Kirigami.Theme.backgroundColor
@@ -34,7 +29,7 @@ Kirigami.ShadowedRectangle {
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom; margins: 1 }
         width: 4
         radius: 2
-        color: card.swatch(card.highlight.color)
+        color: Notes.swatch(card.highlight.color)
     }
 
     ColumnLayout {
@@ -52,7 +47,7 @@ Kirigami.ShadowedRectangle {
             elide: Text.ElideRight
             font.family: "Noto Serif"
             background: Rectangle {
-                color: Qt.alpha(card.swatch(card.highlight.color), 0.22)
+                color: Qt.alpha(Notes.swatch(card.highlight.color), 0.22)
                 radius: 3
                 anchors.margins: -2
             }
@@ -86,15 +81,15 @@ Kirigami.ShadowedRectangle {
                     implicitWidth: Kirigami.Units.iconSizes.small + 4
                     implicitHeight: implicitWidth
                     hoverEnabled: true
-                    Accessible.name: modelData
-                    QQC2.ToolTip.text: { return { yellow: i18n("Yellow"), green: i18n("Green"), blue: i18n("Blue"), pink: i18n("Pink") }[modelData]; }
+                    Accessible.name: Notes.colorName(modelData)
+                    QQC2.ToolTip.text: Notes.colorName(modelData)
                     QQC2.ToolTip.visible: hovered
                     QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: Notes.setColor(card.highlight.id, modelData)
                     contentItem: Item {}
                     background: Rectangle {
                         radius: width / 2
-                        color: card.swatch(modelData)
+                        color: Notes.swatch(modelData)
                         border.width: card.highlight.color === modelData ? 2 : (parent.hovered ? 1 : 0)
                         border.color: Kirigami.Theme.textColor
                     }

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "extract.h"
 
+#include <KLocalizedString>
+
 #include <QRegularExpression>
 #include <QSet>
 
@@ -242,6 +244,11 @@ QList<Passage> mergeSmall(const QList<Passage> &chunks)
 }
 }
 
+QString Extract::keyFactsSection()
+{
+    return i18nc("@label section of an article holding its infobox", "Key facts");
+}
+
 QStringList Extract::splitLong(const QString &text)
 {
     static const QRegularExpression sentenceEnd(QStringLiteral("(?<=[.!?])\\s+"));
@@ -358,7 +365,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         // after the introduction, which stays first (it defines the topic, and Ask always keeps passage 0)
         qsizetype at = !out.passages.isEmpty() && out.passages.first().section.isEmpty() ? 1 : 0;
         for (const QString &piece : facts)
-            out.passages.insert(at++, {QStringLiteral("Key facts"), piece});
+            out.passages.insert(at++, {Extract::keyFactsSection(), piece});
     }
     return out;
 }

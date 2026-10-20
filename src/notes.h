@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <QColor>
 #include <QObject>
 #include <QUrl>
 #include <QVariantList>
@@ -25,6 +26,10 @@ public:
 
     int count() const;
     QStringList colors() const;
+
+    // A highlight colour as the interface draws it (the article's own marks are see-through tints of it), and its name
+    Q_INVOKABLE QColor swatch(const QString &color) const;
+    Q_INVOKABLE QString colorName(const QString &color) const;
 
     // The highlight's id, or 0 (with a message: the passage is too short to find again in the page)
     Q_INVOKABLE qint64 add(qint64 libraryId, const QString &path, const QString &title, const QString &text, const QString &color = {},

@@ -5,6 +5,8 @@
 #include "mapregions.h"
 #include "network.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
@@ -72,13 +74,13 @@ void HttpRangeReader::send(const std::shared_ptr<Request> &r)
         if (reply->error() != QNetworkReply::NoError) {
             error = reply->errorString();
         } else if (status != 206) {
-            error = tr("The map server did not send part of the file (HTTP %1)").arg(status);
+            error = i18n("The map server did not send part of the file (HTTP %1)", status);
         } else {
             data = reply->readAll();
             const QByteArray range = reply->rawHeader("Content-Range");  // "bytes 0-16383/138993773823"
             const QByteArray expected = QByteArray("bytes ") + QByteArray::number(r->offset) + '-';
             if (!range.startsWith(expected) || quint64(data.size()) != r->length)
-                error = tr("The map server sent the wrong part of the file");
+                error = i18n("The map server sent the wrong part of the file");
         }
         const bool retry = !error.isEmpty() && r->attempt < 3 && status != 404 && status != 416;
         if (retry) {
@@ -172,12 +174,12 @@ void MapExtract::gotRoot(const QByteArray &data)
 {
     const auto header = PMTiles::parseHeader(data);
     if (!header)
-        return fail(tr("The map file is not in the PMTiles format"));
+        return fail(i18n("The map file is not in the PMTiles format"));
     m_header = *header;
     if (m_header.rootOffset + m_header.rootLength > quint64(data.size()))
-        return fail(tr("The map file's directory is not where it should be"));
+        return fail(i18n("The map file's directory is not where it should be"));
     if (m_header.internalCompression != PMTiles::Gzip && m_header.internalCompression != PMTiles::NoCompression)
-        return fail(tr("The map file is compressed in a way KAthenaeum cannot read"));
+        return fail(i18n("The map file is compressed in a way KAthenaeum cannot read"));
     m_maxZoom = std::min<int>(m_maxZoom, m_header.maxZoom);
 
     const QByteArray root = data.mid(qsizetype(m_header.rootOffset), qsizetype(m_header.rootLength));
@@ -191,7 +193,7 @@ void MapExtract::gotRoot(const QByteArray &data)
         const auto decoded = PMTiles::decompress(root, m_header.internalCompression, PMTiles::DirectoryLimit);
         const auto entries = decoded ? PMTiles::parseDirectory(*decoded) : std::nullopt;
         if (!entries)
-            return fail(tr("The map file's directory could not be read"));
+            return fail(i18n("The map file's directory could not be read"));
         walk(*entries, UINT64_MAX, 0);
         fetchLeaves();
     });
@@ -209,7 +211,7 @@ bool MapExtract::wanted(quint64 from, quint64 to) const
 void MapExtract::walk(const QList<PMTiles::Entry> &entries, quint64 end, int depth)
 {
     if (depth >= MaxLeafDepth)
-        return fail(tr("The map file's directories are nested too deeply"));
+        return fail(i18n("The map file's directories are nested too deeply"));
     for (qsizetype i = 0; i < entries.size(); ++i) {
         const PMTiles::Entry &e = entries[i];
         if (e.runLength == 0) {
@@ -256,7 +258,7 @@ void MapExtract::fetchLeaves()
                                                          PMTiles::DirectoryLimit);
                 const auto entries = decoded ? PMTiles::parseDirectory(*decoded) : std::nullopt;
                 if (!entries)
-                    return fail(tr("A directory of the map file could not be read"));
+                    return fail(i18n("A directory of the map file could not be read"));
                 walk(*entries, leaf.end, leaf.depth);  // a leaf may point to further leaves
                 if (m_failed)
                     return;
@@ -287,7 +289,7 @@ void MapExtract::fetchTiles()
     m_totalBytes = qint64(at);
     m_tileCount = m_found.size();
     if (m_found.isEmpty())
-        return fail(tr("The map has no tiles for this region"));
+        return fail(i18n("The map has no tiles for this region"));
     if (m_estimateOnly) {
         Q_EMIT finished({});
         return;
@@ -295,7 +297,7 @@ void MapExtract::fetchTiles()
 
     m_data.setFileName(m_outPath + QStringLiteral(".data"));
     if (!m_data.open(QIODevice::ReadWrite | QIODevice::Truncate))
-        return fail(tr("Could not write %1: %2").arg(m_data.fileName(), m_data.errorString()));
+        return fail(i18n("Could not write %1: %2", m_data.fileName(), m_data.errorString()));
 
     Q_EMIT phaseChanged(Tiles);
     Q_EMIT progress(0, m_totalBytes);
@@ -318,7 +320,7 @@ void MapExtract::fetchTiles()
             for (const auto &[offset, length] : group) {
                 m_data.seek(qint64(m_newOffset.value(offset)));
                 if (m_data.write(data.constData() + (offset - from), length) != qint64(length))
-                    return fail(tr("Could not write %1: %2").arg(m_data.fileName(), m_data.errorString()));
+                    return fail(i18n("Could not write %1: %2", m_data.fileName(), m_data.errorString()));
                 m_doneBytes += length;
             }
             Q_EMIT progress(m_doneBytes, m_totalBytes);
@@ -383,7 +385,7 @@ void MapExtract::writeFile()
 
     QSaveFile out(m_outPath);
     if (!out.open(QIODevice::WriteOnly))
-        return fail(tr("Could not write %1: %2").arg(m_outPath, out.errorString()));
+        return fail(i18n("Could not write %1: %2", m_outPath, out.errorString()));
     out.write(PMTiles::serializeHeader(h));
     out.write(dirs.root);
     out.write(m_metadata);
@@ -393,7 +395,7 @@ void MapExtract::writeFile()
     while (!(chunk = m_data.read(8 << 20)).isEmpty())
         out.write(chunk);
     if (!out.commit())
-        return fail(tr("Could not write %1: %2").arg(m_outPath, out.errorString()));
+        return fail(i18n("Could not write %1: %2", m_outPath, out.errorString()));
     m_data.close();
     m_data.remove();
     Q_EMIT finished({});

@@ -4,6 +4,8 @@
 
 #include "network.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -102,7 +104,7 @@ QList<CatalogEntry> Catalog::parse(const QByteArray &data, const QUrl &feedUrl, 
                 entries.append(std::move(e));
         }
     } else if (!xml.hasError()) {
-        xml.raiseError(QStringLiteral("not an OPDS feed"));
+        xml.raiseError(i18n("not an OPDS feed"));
     }
     if (xml.hasError()) {
         if (error)
@@ -146,14 +148,14 @@ bool Catalog::isKiwixUrl(const QUrl &url)
 QString Catalog::checkDownloadUrl(const QUrl &url, const QString &filename)
 {
     if (!isKiwixUrl(url))
-        return QStringLiteral("only https downloads from kiwix.org are allowed");
+        return i18n("only https downloads from kiwix.org are allowed");
     if (!isValidFilename(filename))
-        return QStringLiteral("not a valid ZIM file name: %1").arg(filename);
+        return i18n("not a valid ZIM file name: %1", filename);
     QString last = url.fileName();
     if (last.endsWith(QLatin1String(".meta4")))
         last.chop(6);
     if (last != filename)
-        return QStringLiteral("the link does not point at %1").arg(filename);
+        return i18n("the link does not point at %1", filename);
     return {};
 }
 
@@ -229,7 +231,7 @@ void CatalogFeed::finished()
     QString parseError;
     auto entries = Catalog::parse(data, m_feedUrl, &parseError);
     if (entries.isEmpty()) {
-        m_error = parseError.isEmpty() ? QStringLiteral("the catalog was empty") : parseError;
+        m_error = parseError.isEmpty() ? i18n("the catalog was empty") : parseError;
         Q_EMIT changed();
         return;
     }

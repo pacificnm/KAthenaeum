@@ -195,6 +195,7 @@ QVariantList ProjectModel::bibliography() const
         }
         out.append(QVariantMap{{QStringLiteral("style"), name},
                                {QStringLiteral("label"), Citations::label(style)},
+                               {QStringLiteral("shortLabel"), Citations::shortLabel(style)},
                                {QStringLiteral("text"), text.join(QStringLiteral("\n\n"))},
                                {QStringLiteral("html"), html.join(QString())}});
     }

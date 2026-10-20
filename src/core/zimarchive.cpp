@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "zimarchive.h"
 
+#include <KLocalizedString>
+
 #include <QCryptographicHash>
 #include <QFile>
 
@@ -58,26 +60,26 @@ QString ZimArchive::verify(const QString &path, qint64 expectedSize, const std::
 {
     const QFileInfo file(path);
     if (!file.isFile())
-        return QStringLiteral("the file is missing");
+        return i18nc("@info why a downloaded library failed its check", "the file is missing");
     if (QFileInfo::exists(path + QStringLiteral(".aria2")))
-        return QStringLiteral("the download did not finish (aria2 left its control file behind)");
+        return i18nc("@info why a downloaded library failed its check", "the download did not finish (aria2 left its control file behind)");
     // The catalog rounds sizes up to the next KiB, so a complete file is up to 1023 bytes smaller than its figure
     if (expectedSize > 0 && !(file.size() > expectedSize - 1024 && file.size() <= expectedSize))
-        return QStringLiteral("the file is %1 bytes but the catalog says %2").arg(file.size()).arg(expectedSize);
+        return i18nc("@info why a downloaded library failed its check", "the file is %1 bytes but the catalog says %2", file.size(), expectedSize);
     QString stored;
     try {
         const zim::Archive zim(path.toStdString());
         stored = QString::fromStdString(zim.getChecksum());
     } catch (const std::exception &e) {
-        return QStringLiteral("it is not a valid ZIM file (%1)").arg(QString::fromUtf8(e.what()));
+        return i18nc("@info why a downloaded library failed its check", "it is not a valid ZIM file (%1)", QString::fromUtf8(e.what()));
     }
     if (stored.isEmpty())
-        return QStringLiteral("the ZIM has no checksum to check it against");
+        return i18nc("@info why a downloaded library failed its check", "the ZIM has no checksum to check it against");
     // What libzim's check() does: the MD5 of everything but the last 16 bytes, which hold it. Read here in pieces so it
     // can be stopped.
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly) || f.size() < 16)
-        return QStringLiteral("the file cannot be read");
+        return i18nc("@info why a downloaded library failed its check", "the file cannot be read");
     QCryptographicHash md5(QCryptographicHash::Md5);
     qint64 left = f.size() - 16;
     QByteArray chunk(4 << 20, Qt::Uninitialized);
@@ -86,12 +88,12 @@ QString ZimArchive::verify(const QString &path, qint64 expectedSize, const std::
             return Stopped;
         const qint64 n = f.read(chunk.data(), qMin<qint64>(chunk.size(), left));
         if (n <= 0)
-            return QStringLiteral("the file could not be read to the end");
+            return i18nc("@info why a downloaded library failed its check", "the file could not be read to the end");
         md5.addData(QByteArrayView(chunk.constData(), n));
         left -= n;
     }
     if (QString::fromLatin1(md5.result().toHex()) != stored.toLower())
-        return QStringLiteral("the checksum stored in the ZIM does not match its contents");
+        return i18nc("@info why a downloaded library failed its check", "the checksum stored in the ZIM does not match its contents");
     return {};
 }
 

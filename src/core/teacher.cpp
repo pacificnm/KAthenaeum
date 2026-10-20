@@ -8,6 +8,8 @@
 #include "ollama.h"
 #include "zimreader.h"
 
+#include <KLocalizedString>
+
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -126,18 +128,18 @@ void Teacher::planCourse(qint64 courseId, const QList<qint64> &libraries, const 
     m_next = 0;
     const auto course = Classroom::course(courseId);
     if (!course) {
-        finish(QStringLiteral("error"), QStringLiteral("This course no longer exists."));
+        finish(QStringLiteral("error"), i18n("This course no longer exists."));
         return;
     }
     if (libraries.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("No installed library covers this course."));
+        finish(QStringLiteral("error"), i18n("No installed library covers this course."));
         return;
     }
     m_course = *course;
     m_profile = Classroom::profile();
     Classroom::setStatus(courseId, QStringLiteral("planning"));
     ZimSearch::prepare(libraries);  // archives opened here: opening reads the database
-    Q_EMIT progress(0, 1, QStringLiteral("Planning the syllabus"));
+    Q_EMIT progress(0, 1, i18nc("@info:progress", "Planning the syllabus"));
     withCapabilities([this] {
         const auto [units, lessons] = Classroom::shape(m_course.length);
         complete(Classroom::syllabusPrompt(m_course, m_profile, units, lessons), 900, [this, units, lessons](const QString &text, const QString &error) {
@@ -149,7 +151,7 @@ void Teacher::planCourse(qint64 courseId, const QList<qint64> &libraries, const 
             m_units = Classroom::parseSyllabus(Rag::tidyAnswer(text), m_course.title, std::min(units + 1, Classroom::MaxUnits),
                                                std::min(lessons + 1, Classroom::MaxLessonsPerUnit));
             if (m_units.isEmpty()) {
-                finish(QStringLiteral("error"), QStringLiteral("The teacher could not plan this course. Try again, or say more about what it should cover."));
+                finish(QStringLiteral("error"), i18n("The teacher could not plan this course. Try again, or say more about what it should cover."));
                 return;
             }
             for (int u = 0; u < m_units.size(); ++u)
@@ -168,7 +170,7 @@ void Teacher::findReadings()
     }
     const auto [u, l] = m_order.at(m_next);
     const Classroom::Lesson &lesson = m_units.at(u).lessons.at(l);
-    Q_EMIT progress(m_next + 1, int(m_order.size()) + 1, QStringLiteral("Finding readings for “%1”").arg(lesson.title));
+    Q_EMIT progress(m_next + 1, int(m_order.size()) + 1, i18nc("@info:progress %1 is a lesson title", "Finding readings for “%1”", lesson.title));
     // the article the teacher named (not always a real title: "The plate tectonics model"), and the lesson's own title
     // ("The formation of volcanoes" finds "Volcano")
     QStringList queries{Classroom::lessonQuery(m_course, lesson)};
@@ -268,12 +270,12 @@ void Teacher::finishPlan()
         return u.lessons.isEmpty();
     });
     if (units.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("Your libraries have no articles for this course's lessons. Install a library for the subject, "
-                                                       "or describe the course differently."));
+        finish(QStringLiteral("error"), i18n("Your libraries have no articles for this course's lessons. Install a library for the subject, "
+                                             "or describe the course differently."));
         return;
     }
     if (!Classroom::saveSyllabus(m_course.id, units)) {
-        finish(QStringLiteral("error"), QStringLiteral("The syllabus could not be saved."));
+        finish(QStringLiteral("error"), i18n("The syllabus could not be saved."));
         return;
     }
     finish(QStringLiteral("done"));
@@ -292,7 +294,7 @@ void Teacher::writeIntro(qint64 lessonId, const Models &models)
     const auto lesson = Classroom::lesson(lessonId);
     const auto course = lesson ? Classroom::course(lesson->courseId) : std::nullopt;
     if (!lesson || !course) {
-        finish(QStringLiteral("error"), QStringLiteral("This lesson no longer exists."));
+        finish(QStringLiteral("error"), i18n("This lesson no longer exists."));
         return;
     }
     m_lesson = *lesson;
@@ -303,7 +305,7 @@ void Teacher::writeIntro(qint64 lessonId, const Models &models)
         if (!open.contains(r.article.libraryId))
             open << r.article.libraryId;
     ZimSearch::prepare(open);
-    Q_EMIT progress(0, 2, QStringLiteral("Reading the lesson"));
+    Q_EMIT progress(0, 2, i18nc("@info:progress", "Reading the lesson"));
     const quint64 generation = m_generation;
     withCapabilities([this, generation] {
         auto *watcher = new QFutureWatcher<QList<ZimSearch::Article>>(this);
@@ -335,7 +337,7 @@ void Teacher::writeIntro(qint64 lessonId, const Models &models)
 void Teacher::introSources(const QList<ZimSearch::Article> &articles)
 {
     if (articles.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("The lesson's readings could not be opened. Is their library still installed?"));
+        finish(QStringLiteral("error"), i18n("The lesson's readings could not be opened. Is their library still installed?"));
         return;
     }
     const QString query = Classroom::lessonQuery(m_course, m_lesson);
@@ -355,7 +357,7 @@ void Teacher::introSources(const QList<ZimSearch::Article> &articles)
                 pool[i].vector = vectors.at(i + 1);
         }
         m_context = Rag::buildContext(Rag::rank(pool, question));
-        Q_EMIT progress(1, 2, QStringLiteral("Writing the introduction"));
+        Q_EMIT progress(1, 2, i18nc("@info:progress", "Writing the introduction"));
         complete(Classroom::introPrompt(m_course, m_profile, m_lesson, m_context.text), 800,
                  [this](const QString &text, const QString &error) {
                      if (!error.isEmpty()) {
@@ -400,7 +402,7 @@ void Teacher::introWritten(const QString &raw)
                 c.sources.clear();
         }
         if (!Classroom::setIntro(m_lesson.id, Drafts::citeSection(text, kept, numbers)))
-            finish(QStringLiteral("error"), QStringLiteral("The introduction could not be saved."));
+            finish(QStringLiteral("error"), i18n("The introduction could not be saved."));
         else
             finish(QStringLiteral("done"));
     };
@@ -458,7 +460,7 @@ void Teacher::writeQuiz(const QString &kind, qint64 targetId, const Models &mode
     }
     const auto course = Classroom::course(courseId);
     if (!course || m_quizLessons.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("This lesson or unit no longer exists."));
+        finish(QStringLiteral("error"), i18n("This lesson or unit no longer exists."));
         return;
     }
     m_course = *course;
@@ -468,7 +470,7 @@ void Teacher::writeQuiz(const QString &kind, qint64 targetId, const Models &mode
             if (!open.contains(r.article.libraryId))
                 open << r.article.libraryId;
     ZimSearch::prepare(open);
-    Q_EMIT progress(0, 1, QStringLiteral("Reading the lessons"));
+    Q_EMIT progress(0, 1, i18nc("@info:progress", "Reading the lessons"));
     const quint64 generation = m_generation;
     withCapabilities([this, generation] {
         using Read = QList<std::pair<qint64, QList<ZimSearch::Article>>>;
@@ -524,12 +526,12 @@ void Teacher::rankQuizPassages()
     // a quiz and its unit's test: trivia, 2026-10-20)
     QList<Rag::Candidate> pool;
     for (const auto lessonQuery = Rag::pickPassages(Classroom::lessonQuery(m_course, lesson), articles); const Rag::Candidate &c : lessonQuery)
-        if (c.text.size() >= 250 && c.section != QLatin1String("Key facts"))
+        if (c.text.size() >= 250 && c.section != Extract::keyFactsSection())
             pool << c;
     QStringList input{Embedding::formatQuery(m_models.embedding, Classroom::lessonMeaning(m_course, lesson))};
     for (const Rag::Candidate &c : std::as_const(pool))
         input << Embedding::formatDocument(m_models.embedding, c.text.left(3000));
-    Q_EMIT progress(0, 1, QStringLiteral("Choosing what to ask about “%1”").arg(lesson.title));
+    Q_EMIT progress(0, 1, i18nc("@info:progress %1 is a lesson title", "Choosing what to ask about “%1”", lesson.title));
     const quint64 generation = m_generation;
     m_reply = m_client->embed(m_models.embedding, input, this, [this, generation, pool, lesson](const QList<Vector> &vectors, const QString &error) mutable {
         if (generation != m_generation)
@@ -573,7 +575,7 @@ void Teacher::nextQuestion()
     }
     if (pick < 0) {
         if (m_questions.isEmpty()) {
-            finish(QStringLiteral("error"), QStringLiteral("The teacher could not write questions from this lesson's readings. Try again."));
+            finish(QStringLiteral("error"), i18n("The teacher could not write questions from this lesson's readings. Try again."));
             return;
         }
         Classroom::Quiz quiz;
@@ -582,7 +584,7 @@ void Teacher::nextQuestion()
         (m_quizKind == QLatin1String("unit") ? quiz.unitId : quiz.lessonId) = m_subjectId;
         quiz.questions = m_questions;
         if (Classroom::saveQuiz(quiz) <= 0)
-            finish(QStringLiteral("error"), QStringLiteral("The quiz could not be saved."));
+            finish(QStringLiteral("error"), i18n("The quiz could not be saved."));
         else
             finish(QStringLiteral("done"));
         return;
@@ -590,7 +592,7 @@ void Teacher::nextQuestion()
     const QuizPassage item = m_quizQueue.takeAt(pick);
     ++m_quizTried;
     const int total = int(m_questions.size()) + wantedTotal;
-    Q_EMIT progress(int(m_questions.size()) + 1, total + 1, QStringLiteral("Writing question %1 of %2").arg(m_questions.size() + 1).arg(total));
+    Q_EMIT progress(int(m_questions.size()) + 1, total + 1, i18nc("@info:progress", "Writing question %1 of %2", m_questions.size() + 1, total));
     complete(Classroom::questionPrompt(m_course, item.lessonTitle, item.passage.text), 400, [this, item](const QString &text, const QString &error) {
         if (!error.isEmpty()) {
             finish(QStringLiteral("error"), error);
@@ -633,7 +635,7 @@ void Teacher::finish(const QString &status, const QString &error)
     ++m_generation;  // whatever is still on its way for this job is ignored (as Answerer and Drafter do)
     if (m_job == QLatin1String("plan") && status != QLatin1String("done"))
         Classroom::setStatus(m_subjectId, QStringLiteral("failed"),
-                             status == QLatin1String("stopped") ? QStringLiteral("Planning was stopped. Press Plan Again.") : error);
+                             status == QLatin1String("stopped") ? i18n("Planning was stopped. Press Plan Again.") : error);
     else if (m_job == QLatin1String("plan"))
         Classroom::setStatus(m_subjectId, QStringLiteral("ready"));
     Q_EMIT finished(status, error);

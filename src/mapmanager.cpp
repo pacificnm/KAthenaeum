@@ -144,8 +144,15 @@ MapManager::MapManager(QObject *parent)
     , m_network(new QNetworkAccessManager(this))
     , m_downloader(new MapDownloader(m_network, this))
 {
-    connect(m_downloader, &MapDownloader::changed, this, [this] {
+    // progress comes with every chunk received: the list is read again and redrawn at most four times a second
+    m_progressTimer.setSingleShot(true);
+    m_progressTimer.setInterval(250);
+    connect(&m_progressTimer, &QTimer::timeout, this, [this] {
         regionsUpdated(false);
+    });
+    connect(m_downloader, &MapDownloader::changed, this, [this] {
+        if (!m_progressTimer.isActive())
+            m_progressTimer.start();
     });
     connect(m_downloader, &MapDownloader::finished, this, [this](qint64 id, const QString &error) {
         const auto r = MapRegions::byId(id);
@@ -154,6 +161,7 @@ MapManager::MapManager(QObject *parent)
             Q_EMIT message(i18n("The map of %1 is ready", name), false);
         else if (r && r->status == QLatin1String("failed"))
             Q_EMIT message(i18n("The map of %1 could not be downloaded: %2", name, error), true);
+        m_progressTimer.stop();
         regionsUpdated(true);
     });
 }

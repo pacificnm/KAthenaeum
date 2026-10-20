@@ -6,6 +6,8 @@
 #include "database.h"
 #include "library.h"
 
+#include <KLocalizedString>
+
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -320,8 +322,8 @@ QList<Highlight> Projects::highlightsFor(qint64 libraryId, const QString &path)
                 texts.insert(key, text);
             }
             const QString note = q.value(2).toString();
-            lines[key] << (note.isEmpty() ? QStringLiteral("Saved in “%1”").arg(q.value(1).toString())
-                                          : QStringLiteral("Saved in “%1”: %2").arg(q.value(1).toString(), note));
+            lines[key] << (note.isEmpty() ? i18nc("@info:tooltip %1 is a project's title", "Saved in “%1”", q.value(1).toString())
+                                          : i18nc("@info:tooltip %1 is a project's title, %2 the user's note", "Saved in “%1”: %2", q.value(1).toString(), note));
         }
     }
     QList<Highlight> out;
@@ -347,7 +349,7 @@ qint64 Projects::createDocument(qint64 projectId, const QString &title, const QS
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO project_documents (project_id, title, content) VALUES (?, ?, ?)"));
     q.addBindValue(projectId);
-    q.addBindValue(title.simplified().isEmpty() ? QStringLiteral("Untitled") : title.simplified().left(200));
+    q.addBindValue(title.simplified().isEmpty() ? i18nc("@title a document with no title", "Untitled") : title.simplified().left(200));
     q.addBindValue(Database::text(content));
     if (!q.exec())
         return 0;
@@ -371,7 +373,7 @@ bool Projects::saveDocument(qint64 id, const QString &title, const QString &cont
     QSqlQuery q;
     q.prepare(QStringLiteral("UPDATE project_documents SET title = ?, content = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
                              "WHERE id = ? RETURNING project_id"));
-    q.addBindValue(title.simplified().isEmpty() ? QStringLiteral("Untitled") : title.simplified().left(200));
+    q.addBindValue(title.simplified().isEmpty() ? i18nc("@title a document with no title", "Untitled") : title.simplified().left(200));
     q.addBindValue(Database::text(content));
     q.addBindValue(id);
     if (!q.exec() || !q.next())
@@ -449,7 +451,15 @@ bool hasSourceList(const QString &markdown)
 {
     static const QRegularExpression heading(QStringLiteral("^#{1,3}\\s*(Works Cited|References|Bibliography)\\s*$"),
                                             QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
-    return heading.match(markdown).hasMatch();
+    if (heading.match(markdown).hasMatch())
+        return true;
+    // the headings as the app writes them in the user's language
+    QStringList translated;
+    for (const auto style : {Citations::Style::Mla, Citations::Style::Apa, Citations::Style::Chicago})
+        translated << QRegularExpression::escape(Citations::listHeading(style));
+    const QRegularExpression local(QStringLiteral("^#{1,3}\\s*(%1)\\s*$").arg(translated.join(QLatin1Char('|'))),
+                                   QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    return local.match(markdown).hasMatch();
 }
 }
 
@@ -545,7 +555,7 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
         last = m.capturedEnd();
         const QString note = articleNotes.value(m.captured(2) + QLatin1Char('/') + QUrl::fromPercentEncoding(m.captured(3).toUtf8()));
         if (!note.isEmpty() && !markdown.contains(note))  // a summary draft already writes the note out
-            linked += QStringLiteral(" *(note: %1)*").arg(note.simplified());
+            linked += QLatin1Char(' ') + i18nc("@info a note shown after a link in a document preview; keep the asterisks (Markdown italics)", "*(note: %1)*", note.simplified());
     }
     linked += QStringView(markdown).mid(last);
 
@@ -568,7 +578,7 @@ QString Projects::previewMarkdown(const QString &markdown, const QList<ProjectIt
         for (const auto &[text, note] : std::as_const(clipNotes)) {
             const bool same = q == text || (q.size() >= 30 && (text.contains(q) || q.contains(text)));
             if (same && !markdown.contains(note)) {
-                out << QString() << QStringLiteral("*Your note: %1*").arg(note.simplified());
+                out << QString() << i18nc("@info keep the asterisks (Markdown italics)", "*Your note: %1*", note.simplified());
                 break;
             }
         }
@@ -589,23 +599,23 @@ QString Projects::exportProject(qint64 projectId, Citations::Style style, const 
         out << QStringLiteral("---") << QString() << QStringLiteral("## ") + it->title << QString() << exportMarkdown(it->content, style, accessed).trimmed() << QString();
     const auto articles = items(projectId, QStringLiteral("article"));
     if (!articles.isEmpty()) {
-        out << QStringLiteral("---") << QString() << QStringLiteral("## Sources") << QString();
+        out << QStringLiteral("---") << QString() << QStringLiteral("## ") + i18nc("@title heading in an exported project", "Sources") << QString();
         for (const ProjectItem &a : articles) {
             // each one cited as the chosen style has it, with the note under it
             QString line = QStringLiteral("- ") + Citations::format(style, citationFor(a.article.libraryId, a.article.path, a.article.title), accessed, true);
             if (!a.note.isEmpty())
-                line += QStringLiteral("\n  Note: ") + a.note;
+                line += QStringLiteral("\n  ") + i18nc("@info the user's note on a source in an exported project", "Note: %1", a.note);
             out << line;
         }
         out << QString();
     }
     const auto clips = items(projectId, QStringLiteral("clip"));
     if (!clips.isEmpty()) {
-        out << QStringLiteral("## Saved excerpts") << QString();
+        out << QStringLiteral("## ") + i18nc("@title heading in an exported project", "Saved excerpts") << QString();
         for (const ProjectItem &c : clips) {
             out << quote(c);
             if (!c.note.isEmpty())
-                out << QString() << QStringLiteral("Note: ") + c.note;
+                out << QString() << i18nc("@info the user's note on a saved excerpt in an exported project", "Note: %1", c.note);
             out << QString();
         }
     }

@@ -68,6 +68,28 @@ QStringList Notes::colors() const
     return Highlights::colors();
 }
 
+QColor Notes::swatch(const QString &color) const
+{
+    if (color == QLatin1String("green"))
+        return QColor(0x4a, 0xde, 0x80);
+    if (color == QLatin1String("blue"))
+        return QColor(0x60, 0xa5, 0xfa);
+    if (color == QLatin1String("pink"))
+        return QColor(0xf4, 0x72, 0xb6);
+    return QColor(0xfa, 0xcc, 0x15);  // yellow, the default
+}
+
+QString Notes::colorName(const QString &color) const
+{
+    if (color == QLatin1String("green"))
+        return i18nc("@item highlight colour", "Green");
+    if (color == QLatin1String("blue"))
+        return i18nc("@item highlight colour", "Blue");
+    if (color == QLatin1String("pink"))
+        return i18nc("@item highlight colour", "Pink");
+    return i18nc("@item highlight colour", "Yellow");
+}
+
 void Notes::touched()
 {
     ArticleStore::clear();  // the article shows its highlights as they now are

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rag.h"
 
+#include <KLocalizedString>
+
 #include <QHash>
 #include <QRegularExpression>
 
@@ -146,7 +148,7 @@ Rag::Context Rag::buildContext(const QList<Candidate> &ranked, bool bySection, c
     const int perSource = ContextChars / int(count);
     QStringList blocks;
 
-    // Saved excerpts first, numbered like any other source
+    // Saved excerpts first, numbered like any other source. The block labels are part of the model prompt: they stay English.
     if (!clips.isEmpty() && !libraryOrder.isEmpty())
         blocks << QStringLiteral("Saved excerpts and project sources:");
     for (const Clip &c : clips) {
@@ -155,13 +157,16 @@ Rag::Context Rag::buildContext(const QList<Candidate> &ranked, bool bySection, c
         s.kind = QStringLiteral("clip");
         s.libraryId = c.libraryId;
         s.path = c.path;
-        s.title = c.title.isEmpty() ? QStringLiteral("Saved excerpt") : QStringLiteral("Saved excerpt: ") + c.title;
+        // the prompt names it in English (the project prompt refers to "Saved excerpt"); the user sees it translated
+        const QString promptTitle = c.title.isEmpty() ? QStringLiteral("Saved excerpt") : QStringLiteral("Saved excerpt: ") + c.title;
+        s.title = c.title.isEmpty() ? i18nc("@label source of an answer", "Saved excerpt")
+                                    : i18nc("@label source of an answer, %1 is the article's title", "Saved excerpt: %1", c.title);
         s.section = c.section;
         s.evidence = c.text.trimmed().left(qMin(ClipChars, perSource));
         s.snippet = s.evidence.left(240);
         if (!c.vector.isEmpty())
             s.vectors << c.vector;
-        blocks << QStringLiteral("[%1] %2\n%3").arg(s.n).arg(s.title, s.evidence);
+        blocks << QStringLiteral("[%1] %2\n%3").arg(s.n).arg(promptTitle, s.evidence);
         out.sources.append(s);
     }
 
@@ -243,6 +248,7 @@ QList<ZimSearch::Article> Rag::chooseArticles(const QString &query, const QList<
     return out;
 }
 
+// model prompts: stay English (the model is asked in English and its reply is parsed)
 QString Rag::systemPrompt()
 {
     return QStringLiteral(

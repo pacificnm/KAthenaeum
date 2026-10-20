@@ -6,6 +6,9 @@
 #include "library.h"
 #include "zimsearch.h"
 
+#include <KLocalizedString>
+
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -192,27 +195,28 @@ QStringList Classroom::gradesCompleted()
 QString Classroom::levelLabel(const QString &key)
 {
     if (key == QLatin1String("k"))
-        return QStringLiteral("Kindergarten");
+        return i18nc("@item school level", "Kindergarten");
     if (key == QLatin1String("college"))
-        return QStringLiteral("College");
+        return i18nc("@item school level", "College");
     if (key == QLatin1String("adult"))
-        return QStringLiteral("Adult learner");
+        return i18nc("@item school level", "Adult learner");
     bool ok = false;
     const int g = key.toInt(&ok);
-    return ok ? QStringLiteral("Grade %1").arg(g) : key;
+    return ok ? i18nc("@item school level, %1 is a grade from 1 to 12", "Grade %1", g) : key;
 }
 
 QString Classroom::gradeLabel(const QString &key)
 {
     if (key == QLatin1String("none") || key.isEmpty())
-        return QStringLiteral("None yet");
+        return i18nc("@item highest grade completed", "None yet");
     if (key == QLatin1String("college"))
-        return QStringLiteral("Some college");
+        return i18nc("@item highest grade completed", "Some college");
     if (key == QLatin1String("degree"))
-        return QStringLiteral("College degree");
+        return i18nc("@item highest grade completed", "College degree");
     return levelLabel(key);
 }
 
+// model prompt: stays English (the model is asked in English and its reply is parsed)
 QString Classroom::levelForPrompt(const QString &key)
 {
     if (key == QLatin1String("k"))
@@ -252,31 +256,32 @@ bool Classroom::isYoung(const QString &level)
 
 QList<Classroom::Subject> Classroom::subjects()
 {
+    // `suggestion` and `libraries` are Kiwix catalog titles and names: they match the catalog, so they stay English
     const QString best = QStringLiteral("Best of Wikipedia");
     return {
-        {QStringLiteral("math"), QStringLiteral("Mathematics"), QStringLiteral("applications-education-mathematics"),
-         QStringLiteral("Numbers, algebra, geometry, statistics"), {QStringLiteral("wikipedia_en_mathematics")}, QStringLiteral("Mathematics by Wikipedia")},
-        {QStringLiteral("science"), QStringLiteral("Science"), QStringLiteral("applications-education-science"),
-         QStringLiteral("Physics, chemistry, biology, Earth and space"),
+        {QStringLiteral("math"), i18nc("@item school subject", "Mathematics"), QStringLiteral("applications-education-mathematics"),
+         i18nc("@info what a school subject covers", "Numbers, algebra, geometry, statistics"), {QStringLiteral("wikipedia_en_mathematics")}, QStringLiteral("Mathematics by Wikipedia")},
+        {QStringLiteral("science"), i18nc("@item school subject", "Science"), QStringLiteral("applications-education-science"),
+         i18nc("@info what a school subject covers", "Physics, chemistry, biology, Earth and space"),
          {QStringLiteral("wikipedia_en_physics"), QStringLiteral("wikipedia_en_chemistry"), QStringLiteral("wikipedia_en_molcell"),
           QStringLiteral("wikipedia_en_astronomy"), QStringLiteral("wikipedia_en_climate-change")},
          best},
-        {QStringLiteral("english"), QStringLiteral("English and Literature"), QStringLiteral("applications-education-language"),
-         QStringLiteral("Reading, writing, grammar, great books"), {}, best},
-        {QStringLiteral("history"), QStringLiteral("History"), QStringLiteral("view-calendar-timeline"),
-         QStringLiteral("People, events and civilisations"), {QStringLiteral("wikipedia_en_history")}, QStringLiteral("History by Wikipedia")},
-        {QStringLiteral("geography"), QStringLiteral("Geography"), QStringLiteral("globe"),
-         QStringLiteral("Places, landforms, climates, peoples"), {QStringLiteral("wikipedia_en_geography")}, QStringLiteral("Geography by Wikipedia")},
-        {QStringLiteral("civics"), QStringLiteral("Civics and Government"), QStringLiteral("system-users"),
-         QStringLiteral("How governments work, rights, citizenship"), {}, best},
-        {QStringLiteral("health"), QStringLiteral("Health"), QStringLiteral("love"),
-         QStringLiteral("The body, nutrition, staying well"), {QStringLiteral("wikipedia_en_medicine")}, QStringLiteral("WikiMed Medical Encyclopedia")},
-        {QStringLiteral("art"), QStringLiteral("Art"), QStringLiteral("draw-brush"),
-         QStringLiteral("Artists, movements, techniques"), {}, best},
-        {QStringLiteral("music"), QStringLiteral("Music"), QStringLiteral("audio-x-generic"),
-         QStringLiteral("Composers, instruments, styles, theory"), {}, best},
-        {QStringLiteral("computing"), QStringLiteral("Computing"), QStringLiteral("computer"),
-         QStringLiteral("How computers work, programming, the Internet"), {QStringLiteral("wikipedia_en_computer")}, QStringLiteral("Computer by Wikipedia")},
+        {QStringLiteral("english"), i18nc("@item school subject", "English and Literature"), QStringLiteral("applications-education-language"),
+         i18nc("@info what a school subject covers", "Reading, writing, grammar, great books"), {}, best},
+        {QStringLiteral("history"), i18nc("@item school subject", "History"), QStringLiteral("view-calendar-timeline"),
+         i18nc("@info what a school subject covers", "People, events and civilisations"), {QStringLiteral("wikipedia_en_history")}, QStringLiteral("History by Wikipedia")},
+        {QStringLiteral("geography"), i18nc("@item school subject", "Geography"), QStringLiteral("globe"),
+         i18nc("@info what a school subject covers", "Places, landforms, climates, peoples"), {QStringLiteral("wikipedia_en_geography")}, QStringLiteral("Geography by Wikipedia")},
+        {QStringLiteral("civics"), i18nc("@item school subject", "Civics and Government"), QStringLiteral("system-users"),
+         i18nc("@info what a school subject covers", "How governments work, rights, citizenship"), {}, best},
+        {QStringLiteral("health"), i18nc("@item school subject", "Health"), QStringLiteral("love"),
+         i18nc("@info what a school subject covers", "The body, nutrition, staying well"), {QStringLiteral("wikipedia_en_medicine")}, QStringLiteral("WikiMed Medical Encyclopedia")},
+        {QStringLiteral("art"), i18nc("@item school subject", "Art"), QStringLiteral("draw-brush"),
+         i18nc("@info what a school subject covers", "Artists, movements, techniques"), {}, best},
+        {QStringLiteral("music"), i18nc("@item school subject", "Music"), QStringLiteral("audio-x-generic"),
+         i18nc("@info what a school subject covers", "Composers, instruments, styles, theory"), {}, best},
+        {QStringLiteral("computing"), i18nc("@item school subject", "Computing"), QStringLiteral("computer"),
+         i18nc("@info what a school subject covers", "How computers work, programming, the Internet"), {QStringLiteral("wikipedia_en_computer")}, QStringLiteral("Computer by Wikipedia")},
     };
 }
 
@@ -285,8 +290,8 @@ Classroom::Subject Classroom::subject(const QString &key)
     for (const auto all = subjects(); const Subject &s : all)
         if (s.key == key)
             return s;
-    return {QStringLiteral("other"), QStringLiteral("Other"), QStringLiteral("applications-education"), QStringLiteral("Anything you want to learn"), {},
-            QStringLiteral("Best of Wikipedia")};
+    return {QStringLiteral("other"), i18nc("@item school subject", "Other"), QStringLiteral("applications-education"),
+            i18nc("@info what a school subject covers", "Anything you want to learn"), {}, QStringLiteral("Best of Wikipedia")};
 }
 
 bool Classroom::isGeneral(const LibraryRecord &library)
@@ -528,7 +533,7 @@ QString Classroom::lessonLabel(qint64 lessonId)
         for (const Lesson &other : u.lessons) {
             ++n;
             if (other.id == lessonId)
-                return QStringLiteral("Lesson %1: %2").arg(n).arg(l->title);
+                return i18nc("@label %1 is the lesson's number in its course, %2 its title", "Lesson %1: %2", n, l->title);
         }
     return l->title;
 }
@@ -537,11 +542,11 @@ QString Classroom::lessonDocument(const Lesson &lesson)
 {
     QStringList out{lesson.intro.trimmed()};
     if (!lesson.readings.isEmpty()) {
-        out << QString() << QStringLiteral("## Readings") << QString();
+        out << QString() << QStringLiteral("## ") + i18nc("@title heading in a lesson's document", "Readings") << QString();
         for (int i = 0; i < lesson.readings.size(); ++i)
             out << QStringLiteral("%1. ").arg(i + 1) + Projects::articleLink(lesson.readings.at(i).article);
     }
-    out << QString() << QStringLiteral("## My answers") << QString();
+    out << QString() << QStringLiteral("## ") + i18nc("@title heading in a lesson's document", "My answers") << QString();
     return out.join(QLatin1Char('\n')).trimmed() + QStringLiteral("\n\n");
 }
 
@@ -629,16 +634,50 @@ qint64 Classroom::keepHighlight(qint64 lessonId, const QString &text, const Arti
 }
 
 // ---- prompts ----
+// model prompts in this section: stay English (the model is asked in English and its reply is parsed), so they use the
+// English names below rather than the translated labels the interface shows
 
 namespace
 {
+QString englishGrade(const QString &key)
+{
+    if (key == QLatin1String("k"))
+        return QStringLiteral("Kindergarten");
+    if (key == QLatin1String("college"))
+        return QStringLiteral("Some college");
+    if (key == QLatin1String("degree"))
+        return QStringLiteral("College degree");
+    if (key == QLatin1String("adult"))
+        return QStringLiteral("Adult learner");
+    bool ok = false;
+    const int g = key.toInt(&ok);
+    return ok ? QStringLiteral("Grade %1").arg(g) : key;
+}
+
+QString englishSubject(const QString &key)
+{
+    static const QHash<QString, QString> names = {
+        {QStringLiteral("math"), QStringLiteral("Mathematics")},
+        {QStringLiteral("science"), QStringLiteral("Science")},
+        {QStringLiteral("english"), QStringLiteral("English and Literature")},
+        {QStringLiteral("history"), QStringLiteral("History")},
+        {QStringLiteral("geography"), QStringLiteral("Geography")},
+        {QStringLiteral("civics"), QStringLiteral("Civics and Government")},
+        {QStringLiteral("health"), QStringLiteral("Health")},
+        {QStringLiteral("art"), QStringLiteral("Art")},
+        {QStringLiteral("music"), QStringLiteral("Music")},
+        {QStringLiteral("computing"), QStringLiteral("Computing")},
+    };
+    return names.value(key, QStringLiteral("Other"));
+}
+
 QString learnerLines(const Classroom::Profile &p)
 {
     QString out;
     if (!p.name.trimmed().isEmpty())
         out += QStringLiteral("The student's name: ") + p.name.trimmed() + QLatin1Char('\n');
     if (!p.grade.isEmpty() && p.grade != QLatin1String("none"))
-        out += QStringLiteral("Highest grade completed: ") + Classroom::gradeLabel(p.grade) + QLatin1Char('\n');
+        out += QStringLiteral("Highest grade completed: ") + englishGrade(p.grade) + QLatin1Char('\n');
     if (!p.interests.trimmed().isEmpty())
         out += QStringLiteral("Their interests: ") + p.interests.trimmed().left(400) + QLatin1Char('\n');
     if (!p.goals.trimmed().isEmpty())
@@ -657,14 +696,14 @@ QString Classroom::syllabusPrompt(const Course &course, const Profile &profile, 
     QString prompt = QStringLiteral("You are a teacher planning a course for one student.\n\n");
     prompt += QStringLiteral("Course: ") + course.title + QLatin1Char('\n');
     if (core)
-        prompt += QStringLiteral("Subject: ") + s.name + QLatin1Char('\n');
+        prompt += QStringLiteral("Subject: ") + englishSubject(s.key) + QLatin1Char('\n');
     prompt += QStringLiteral("Level: ") + levelForPrompt(course.level) + QLatin1Char('\n');
     if (!course.focus.trimmed().isEmpty())
         prompt += QStringLiteral("What the student wants this course to cover: ") + course.focus.trimmed() + QLatin1Char('\n');
     else if (core)
-        prompt += QStringLiteral("Cover the main %1 topics usually taught at this level.\n").arg(s.name.toLower());
+        prompt += QStringLiteral("Cover the main %1 topics usually taught at this level.\n").arg(englishSubject(s.key).toLower());
     if (core)
-        prompt += QStringLiteral("Every lesson must be a %1 topic.\n").arg(s.name.toLower());
+        prompt += QStringLiteral("Every lesson must be a %1 topic.\n").arg(englishSubject(s.key).toLower());
     prompt += QStringLiteral("\nWrite the syllabus: exactly %1 units, and exactly %2 lessons in each unit, in the order they should be learned, the basics first. "
                              "Each lesson is one topic for this level (not one learned in earlier grades) that Wikipedia has an article about: "
                              "give that article's exact "
@@ -756,6 +795,7 @@ QString Classroom::lessonMeaning(const Course &course, const Lesson &lesson)
     return out + QStringLiteral(" (") + course.title + QLatin1Char(')');
 }
 
+// model prompt: stays English (the model is asked in English and its reply is parsed)
 QString Classroom::introPrompt(const Course &course, const Profile &profile, const Lesson &lesson, const QString &sources)
 {
     const QString name = profile.name.trimmed().isEmpty() ? QStringLiteral("the student") : profile.name.trimmed().section(QLatin1Char(' '), 0, 0);
@@ -956,6 +996,7 @@ QList<Classroom::Missed> Classroom::missed(qint64 courseId)
     return out;
 }
 
+// model prompt: stays English (the model is asked in English and its reply is parsed)
 QString Classroom::questionPrompt(const Course &course, const QString &lessonTitle, const QString &passage)
 {
     return QStringLiteral("You are a teacher writing a quiz for the lesson \"%1\" of the course \"%2\", for a student at the level of %3.\n\n"
@@ -1071,6 +1112,7 @@ Classroom::Question Classroom::shuffled(Question question, quint32 seed)
     return question;
 }
 
+// model prompt: stays English (the model is asked in English and its reply is parsed)
 QString Classroom::tutorPrompt(const Course &course, const Profile &profile, const Lesson &lesson)
 {
     const QString name = profile.name.trimmed().isEmpty() ? QStringLiteral("the student") : profile.name.trimmed().section(QLatin1Char(' '), 0, 0);

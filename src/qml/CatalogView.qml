@@ -221,7 +221,7 @@ ColumnLayout {
         opacity: 0.7
         font: Kirigami.Theme.smallFont
         visible: view.catalog.totalCount > 0
-        text: i18n("%1 of %2 libraries · catalog from %3", list.count, view.catalog.totalCount,
-                   LibraryManager.catalogFetchedAt.toLocaleString(Qt.locale(), Locale.ShortFormat))
+        text: i18np("%2 of %1 library · catalog from %3", "%2 of %1 libraries · catalog from %3", view.catalog.totalCount, list.count,
+                    LibraryManager.catalogFetchedAt.toLocaleString(Qt.locale(), Locale.ShortFormat))
     }
 }

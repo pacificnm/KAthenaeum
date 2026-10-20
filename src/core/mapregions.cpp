@@ -8,6 +8,8 @@
 #include "mapextract.h"
 #include "mapplaces.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFile>
 #include <QFutureWatcher>
@@ -99,7 +101,7 @@ std::optional<QList<MapRegionInfo>> MapCatalog::parseIndex(const QByteArray &jso
             r.parent.clear();
     if (out.isEmpty()) {
         if (error)
-            *error = QObject::tr("The list of regions is empty");
+            *error = i18n("The list of regions is empty");
         return std::nullopt;
     }
     return out;
@@ -139,7 +141,7 @@ MapRegionInfo MapCatalog::world()
 {
     MapRegionInfo w;
     w.id = QStringLiteral("world");
-    w.name = QObject::tr("World overview");
+    w.name = i18n("World overview");
     w.shape = {{{{-180, -85.06}, {180, -85.06}, {180, 85.06}, {-180, 85.06}, {-180, -85.06}}}};
     return w;
 }
@@ -289,8 +291,9 @@ bool MapRegions::remove(qint64 id, QString *error)
 void MapRegions::reconcile()
 {
     QSqlQuery q;
-    q.exec(QStringLiteral("UPDATE map_regions SET status = 'failed', error = 'Stopped when KAthenaeum closed' "
-                          "WHERE status IN ('downloading', 'indexing')"));
+    q.prepare(QStringLiteral("UPDATE map_regions SET status = 'failed', error = ? WHERE status IN ('downloading', 'indexing')"));
+    q.addBindValue(i18n("Stopped when KAthenaeum closed"));
+    q.exec();
 }
 
 QList<MapRegionRecord> MapRegions::ready()
@@ -345,7 +348,7 @@ void MapDownloader::startNext()
     MapRegions::setStatus(m_id, QStringLiteral("downloading"));
     Q_EMIT changed(m_id);
     if (m_info.shape.isEmpty())
-        return finish(tr("The region has no shape"));
+        return finish(i18n("The region has no shape"));
 
     // the newest planet build
     QNetworkReply *reply = m_network->get(Network::guarded(QNetworkRequest(MapCatalog::buildsUrl())));
@@ -356,10 +359,10 @@ void MapDownloader::startNext()
         if (id != m_id)
             return;
         if (reply->error() != QNetworkReply::NoError)
-            return finish(tr("Could not reach Protomaps for the map: %1").arg(reply->errorString()));
+            return finish(i18n("Could not reach Protomaps for the map: %1", reply->errorString()));
         const QString build = MapCatalog::latestBuild(reply->readAll());
         if (build.isEmpty())
-            return finish(tr("Protomaps lists no map to download"));
+            return finish(i18n("Protomaps lists no map to download"));
         gotBuild(build);
     });
 }
@@ -369,7 +372,7 @@ void MapDownloader::gotBuild(const QString &build)
     m_build = build;
     const auto record = MapRegions::byId(m_id);
     if (!record)
-        return finish(tr("The region was removed"));
+        return finish(i18n("The region was removed"));
     QDir().mkpath(MapRegions::folder());
     QString safe = m_info.id;
     safe.replace(QLatin1Char('/'), QLatin1Char('-'));
@@ -385,7 +388,7 @@ void MapDownloader::gotBuild(const QString &build)
     connect(m_extract, &MapExtract::finished, this, [this](const QString &error) {
         m_extract->deleteLater();
         if (!error.isEmpty())
-            return finish(tr("The map could not be downloaded: %1").arg(error));
+            return finish(i18n("The map could not be downloaded: %1", error));
         if (m_info.pbf.isEmpty())
             return finish({});  // the world overview has no places of its own
         fetchPlaces();
@@ -399,11 +402,11 @@ void MapDownloader::fetchPlaces()
     m_done = m_total = 0;
     Q_EMIT changed(m_id);
     if (!MapCatalog::isAllowedUrl(m_info.pbf))
-        return finish(tr("The region's OpenStreetMap data is not on Geofabrik"));
+        return finish(i18n("The region's OpenStreetMap data is not on Geofabrik"));
     QDir().mkpath(QFileInfo(pbfPath()).absolutePath());
     m_pbf = std::make_unique<QFile>(pbfPath());
     if (!m_pbf->open(QIODevice::WriteOnly | QIODevice::Truncate))
-        return finish(tr("Could not write %1: %2").arg(pbfPath(), m_pbf->errorString()));
+        return finish(i18n("Could not write %1: %2", pbfPath(), m_pbf->errorString()));
     QNetworkRequest request = Network::guarded(QNetworkRequest(m_info.pbf));
     request.setTransferTimeout(120000);
     QNetworkReply *reply = m_network->get(request);
@@ -426,7 +429,7 @@ void MapDownloader::fetchPlaces()
         m_pbf->close();
         if (reply->error() != QNetworkReply::NoError) {
             QFile::remove(pbfPath());
-            return finish(tr("Could not download the region's OpenStreetMap data: %1").arg(reply->errorString()));
+            return finish(i18n("Could not download the region's OpenStreetMap data: %1", reply->errorString()));
         }
         indexPlaces();
     });
@@ -447,10 +450,10 @@ void MapDownloader::indexPlaces()
             return;
         const Result result = watcher->result();
         if (!result.first)
-            return finish(result.second.isEmpty() ? tr("Stopped") : tr("The region's OpenStreetMap data could not be read: %1").arg(result.second));
+            return finish(result.second.isEmpty() ? i18nc("@info map region download status", "Stopped") : i18n("The region's OpenStreetMap data could not be read: %1", result.second));
         QString error;
         if (!MapPlaces::store(m_id, *result.first, &error))
-            return finish(tr("Could not save the region's places: %1").arg(error));
+            return finish(i18n("Could not save the region's places: %1", error));
         finish({});
     });
     watcher->setFuture(QtConcurrent::run([path = pbfPath(), stop = m_stop] {
@@ -492,7 +495,7 @@ bool MapDownloader::cancel(qint64 id)
         if (m_reply)
             m_reply->abort();
         QFile::remove(pbfPath());
-        finish(tr("Cancelled"));
+        finish(i18nc("@info map region download status", "Cancelled"));
     } else {
         Q_EMIT changed(id);
     }

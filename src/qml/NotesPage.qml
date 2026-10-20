@@ -65,8 +65,8 @@ Kirigami.ScrollablePage {
             SegmentedTabs {
                 id: colorTabs
                 Layout.fillWidth: true
-                readonly property var values: ["", "yellow", "green", "blue", "pink"]
-                tabs: [{ text: i18n("All") }, { text: i18n("Yellow") }, { text: i18n("Green") }, { text: i18n("Blue") }, { text: i18n("Pink") }]
+                readonly property var values: [""].concat(Notes.colors)
+                tabs: [{ text: i18nc("@option:radio every highlight colour", "All") }].concat(Notes.colors.map(c => ({ text: Notes.colorName(c) })))
                 onCurrentIndexChanged: {
                     page.color = values[currentIndex];
                     page.refresh();

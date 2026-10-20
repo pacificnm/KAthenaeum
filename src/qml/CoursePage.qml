@@ -108,7 +108,7 @@ Kirigami.ScrollablePage {
                 QQC2.Label {
                     textFormat: Text.PlainText
                     text: (page.course.subjectName ?? "") + " · " + (page.course.levelLabel ?? "")
-                          + (page.course.status === "ready" ? " · " + i18n("%1 of %2 lessons done", page.course.completed, page.course.lessons) : "")
+                          + (page.course.status === "ready" ? " · " + i18np("%2 of %1 lesson done", "%2 of %1 lessons done", page.course.lessons, page.course.completed) : "")
                     opacity: 0.7
                 }
                 QQC2.Label {
@@ -327,7 +327,7 @@ Kirigami.ScrollablePage {
                                     source: "checkmark"
                                     width: parent.width * 0.7
                                     height: width
-                                    color: "white"
+                                    color: Kirigami.Theme.highlightedTextColor  // on the positive colour, like text on a selection
                                     isMask: true
                                 }
                             }

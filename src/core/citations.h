@@ -20,6 +20,7 @@ QStringList styleNames();  // "mla", "apa", "chicago": the order they are offere
 Style style(const QString &name);  // an unknown name is MLA
 QString name(Style style);
 QString label(Style style);  // "MLA (9th edition)"
+QString shortLabel(Style style);  // "MLA": the style's own name, the same in every language
 QString listHeading(Style style);  // what the list is called: Works Cited, References, Bibliography
 
 // What a citation is made from

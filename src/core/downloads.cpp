@@ -7,6 +7,8 @@
 #include "library.h"
 #include "zimarchive.h"
 
+#include <KLocalizedString>
+
 #include <algorithm>
 
 #include <QDir>
@@ -113,16 +115,16 @@ QStringList Aria2::arguments(const QString &folder, const QUrl &url)
 QString Aria2::explainExitCode(int code)
 {
     switch (code) {
-    case 3: return QStringLiteral("the file was not found on the server");
-    case 6: return QStringLiteral("a network problem stopped the download");
-    case 9: return QStringLiteral("there is not enough free disk space");
-    case 13: return QStringLiteral("a file with that name already exists");
+    case 3: return i18nc("@info reason a download failed", "the file was not found on the server");
+    case 6: return i18nc("@info reason a download failed", "a network problem stopped the download");
+    case 9: return i18nc("@info reason a download failed", "there is not enough free disk space");
+    case 13: return i18nc("@info reason a download failed", "a file with that name already exists");
     case 15:
-    case 16: return QStringLiteral("the file could not be written");
-    case 19: return QStringLiteral("the server name could not be resolved (are you online?)");
-    case 24: return QStringLiteral("the server refused the request");
-    case 32: return QStringLiteral("the downloaded data did not match its checksum");
-    default: return QStringLiteral("aria2c stopped with error %1").arg(code);
+    case 16: return i18nc("@info reason a download failed", "the file could not be written");
+    case 19: return i18nc("@info reason a download failed", "the server name could not be resolved (are you online?)");
+    case 24: return i18nc("@info reason a download failed", "the server refused the request");
+    case 32: return i18nc("@info reason a download failed", "the downloaded data did not match its checksum");
+    default: return i18nc("@info reason a download failed, %1 is an exit code", "aria2c stopped with error %1", code);
     }
 }
 
@@ -183,7 +185,7 @@ void DownloadManager::reconcile()
         verifying << v.value(0).toLongLong();
     QSqlQuery q;
     q.prepare(QStringLiteral("UPDATE downloads SET status = 'failed', error = ? WHERE status IN ('queued', 'downloading')"));
-    q.addBindValue(QStringLiteral("Interrupted when KAthenaeum closed. Press Resume to continue."));
+    q.addBindValue(i18n("Interrupted when KAthenaeum closed. Press Resume to continue."));
     q.exec();
     for (qint64 id : std::as_const(verifying))
         startVerifying(id);
@@ -230,21 +232,20 @@ QString DownloadManager::start(const QUrl &url, const QString &filename, const Q
     if (const QString problem = Catalog::checkDownloadUrl(url, filename); !problem.isEmpty())
         return problem;
     if (aria2Program().isEmpty())
-        return QStringLiteral("aria2c is not installed (sudo apt install aria2)");
+        return i18n("aria2c is not installed (sudo apt install aria2)");
     if (!QDir().mkpath(folder))
-        return QStringLiteral("cannot create the folder %1").arg(folder);
+        return i18n("cannot create the folder %1", folder);
 
     const QString path = QDir(folder).filePath(filename);
     for (const auto rows = Library::all(); const LibraryRecord &r : rows)
         if (r.filename() == filename && r.fileExists())
-            return QStringLiteral("%1 is already installed").arg(filename);
+            return i18n("%1 is already installed", filename);
 
     // Room for what is still to come; a partial file from an earlier attempt already holds the rest
     const qint64 have = QFileInfo::exists(path + QStringLiteral(".aria2")) ? QFileInfo(path).size() : 0;
     const qint64 free = QStorageInfo(folder).bytesAvailable();
     if (size > 0 && free >= 0 && free < size - have + (64 << 20))
-        return QStringLiteral("not enough free space in %1: this needs %2 MB, %3 MB are free")
-            .arg(folder, QString::number((size - have) >> 20), QString::number(free >> 20));
+        return i18n("not enough free space in %1: this needs %2 MB, %3 MB are free", folder, qint64((size - have) >> 20), qint64(free >> 20));
 
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO downloads (url, filename, folder, title, total_bytes, done_bytes) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"));
@@ -256,8 +257,8 @@ QString DownloadManager::start(const QUrl &url, const QString &filename, const Q
     q.addBindValue(have);
     if (!q.exec() || !q.next()) {
         if (q.lastError().nativeErrorCode() == QLatin1String("2067"))  // SQLITE_CONSTRAINT_UNIQUE: the index on active downloads
-            return QStringLiteral("%1 is already downloading").arg(filename);
-        return QStringLiteral("could not record the download: %1").arg(q.lastError().text());
+            return i18n("%1 is already downloading", filename);
+        return i18n("could not record the download: %1", q.lastError().text());
     }
     const qint64 id = q.value(0).toLongLong();
     Q_EMIT listChanged();
@@ -268,14 +269,14 @@ QString DownloadManager::resume(qint64 id)
 {
     const auto r = byId(id);
     if (!r)
-        return QStringLiteral("no such download");
+        return i18n("no such download");
     if (r->isActive())
         return {};
     QSqlQuery q;
     q.prepare(QStringLiteral("UPDATE downloads SET status = 'queued', error = '', finished_at = NULL WHERE id = ?"));
     q.addBindValue(id);
     if (!q.exec())
-        return QStringLiteral("%1 is already downloading").arg(r->filename);
+        return i18n("%1 is already downloading", r->filename);
     Q_EMIT changed(id);
     return launch(id);
 }
@@ -284,7 +285,7 @@ QString DownloadManager::launch(qint64 id)
 {
     const auto r = byId(id);
     if (!r)
-        return QStringLiteral("The download no longer exists");
+        return i18n("The download no longer exists");
     auto *proc = new QProcess(this);
     proc->setProgram(aria2Program());
     proc->setArguments(Aria2::arguments(r->folder, r->url));
@@ -358,10 +359,10 @@ void DownloadManager::processFinished(qint64 id, int exitCode)
         return;
     }
     if (exitCode != 0) {
-        const QString why = exitCode == -2 ? QStringLiteral("aria2c could not be started")
-                          : exitCode == -1 ? QStringLiteral("aria2c crashed")
+        const QString why = exitCode == -2 ? i18nc("@info reason a download failed", "aria2c could not be started")
+                          : exitCode == -1 ? i18nc("@info reason a download failed", "aria2c crashed")
                                            : Aria2::explainExitCode(exitCode);
-        const QString message = tail.isEmpty() ? why : QStringLiteral("%1: %2").arg(why, tail.right(300));
+        const QString message = tail.isEmpty() ? why : i18nc("@info %1 is why a download failed, %2 is aria2c's own message", "%1: %2", why, tail.right(300));
         setStatus(id, QStringLiteral("failed"), message);
         Q_EMIT failed(id, message);
         return;
@@ -394,7 +395,7 @@ void DownloadManager::verified(qint64 id, const QString &problem)
         return;
     if (!problem.isEmpty()) {
         removePartial(r->path());  // a corrupt file must not be registered, and resuming it would not fix it
-        const QString message = QStringLiteral("The download finished but did not check out: %1. The file was removed; start it again.").arg(problem);
+        const QString message = i18n("The download finished but did not check out: %1. The file was removed; start it again.", problem);
         setStatus(id, QStringLiteral("failed"), message);
         Q_EMIT failed(id, message);
         return;
@@ -402,7 +403,7 @@ void DownloadManager::verified(qint64 id, const QString &problem)
     QString error;
     const auto libraryId = Library::add(r->path(), &error);
     if (!libraryId) {
-        const QString message = QStringLiteral("Downloaded and verified, but it could not be added: %1").arg(error);
+        const QString message = i18n("Downloaded and verified, but it could not be added: %1", error);
         setStatus(id, QStringLiteral("failed"), message);
         Q_EMIT failed(id, message);
         return;

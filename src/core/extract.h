@@ -30,6 +30,9 @@ ExtractedArticle extract(const QByteArray &raw);
 
 // Breaks an over-long block on sentence boundaries (hard-cut as a last resort)
 QStringList splitLong(const QString &text);
+
+// The section name given to an article's infobox passage ("Key facts"), shown to the user as a source's section
+QString keyFactsSection();
 }
 
 // libxml2 must be initialised once, on one thread, before threads use it. Every core entry point that parses HTML calls

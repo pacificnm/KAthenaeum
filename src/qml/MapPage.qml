@@ -114,7 +114,7 @@ Kirigami.Page {
         height: width
         radius: width / 2
         color: Kirigami.Theme.highlightColor
-        border.color: "white"
+        border.color: Kirigami.Theme.highlightedTextColor  // a ring that stands out on any map colour
         border.width: 2
     }
 

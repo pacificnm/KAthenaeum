@@ -78,7 +78,7 @@ QString citeSection(const QString &text, const QList<Rag::Citation> &citations, 
 QString renumberCitations(const QString &markdown, QList<int> *order);
 struct ReportSource {
     ArticleRef article;  // libraryId 0: a saved excerpt that came from no article (a saved answer)
-    QString label;
+    QString label;       // the whole entry when set (a saved excerpt); otherwise the entry is a link to the article
 };
 QString reportMarkdown(const ReportRequest &request, const QList<std::pair<QString, QString>> &sections, const QList<ReportSource> &references,
                        const QDate &today);

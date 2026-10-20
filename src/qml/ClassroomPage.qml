@@ -25,25 +25,6 @@ Kirigami.ScrollablePage {
         }
     ]
 
-    // a card, as the libraries are shown
-    component Card: Kirigami.ShadowedRectangle {
-        id: card
-        signal clicked()
-        property alias hovered: hover.hovered
-        radius: Kirigami.Units.cornerRadius * 2
-        color: Kirigami.Theme.backgroundColor
-        border.width: 1
-        border.color: hover.hovered ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.15)
-        shadow.size: hover.hovered ? Kirigami.Units.largeSpacing * 1.5 : Kirigami.Units.smallSpacing
-        shadow.color: Qt.rgba(0, 0, 0, hover.hovered ? 0.18 : 0.08)
-        shadow.yOffset: hover.hovered ? 2 : 1
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        Kirigami.Theme.inherit: false
-        Accessible.role: Accessible.Button
-        HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: card.clicked() }
-    }
-
     component SubjectIcon: Rectangle {
         property alias source: icon.source
         implicitWidth: Kirigami.Units.iconSizes.large + Kirigami.Units.largeSpacing * 2
@@ -64,11 +45,12 @@ Kirigami.ScrollablePage {
         spacing: Kirigami.Units.largeSpacing
 
         // no profile yet: what the classroom is, and the first step
-        Card {
+        CardButton {
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.smallSpacing
             visible: !Classroom.hasProfile
             implicitHeight: welcome.implicitHeight + Kirigami.Units.gridUnit * 2
+            Accessible.name: i18n("Set Up Your Profile")
             onClicked: profileDialog.open()
             RowLayout {
                 id: welcome
@@ -132,7 +114,7 @@ Kirigami.ScrollablePage {
             visible: Classroom.courses.length > 0
             Repeater {
                 model: Classroom.courses
-                delegate: Card {
+                delegate: CardButton {
                     id: courseCard
                     required property var modelData
                     readonly property bool planning: Classroom.job === "plan" && Classroom.jobSubject === modelData.id
@@ -184,8 +166,8 @@ Kirigami.ScrollablePage {
                                     : courseCard.modelData.status === "failed" ? i18n("Not planned: open it to try again")
                                     : courseCard.modelData.status === "ready"
                                         ? (courseCard.modelData.completed >= courseCard.modelData.lessons
-                                           ? i18n("All %1 lessons done", courseCard.modelData.lessons)
-                                           : i18n("%1 of %2 lessons done", courseCard.modelData.completed, courseCard.modelData.lessons))
+                                           ? i18np("The lesson is done", "All %1 lessons done", courseCard.modelData.lessons)
+                                           : i18np("%2 of %1 lesson done", "%2 of %1 lessons done", courseCard.modelData.lessons, courseCard.modelData.completed))
                                     : i18n("Waiting to be planned")
                             }
                         }
@@ -209,7 +191,7 @@ Kirigami.ScrollablePage {
             rowSpacing: Kirigami.Units.largeSpacing
             Repeater {
                 model: Classroom.subjects.concat([{ key: "other", name: i18n("Your Own Course…"), icon: "list-add", blurb: i18n("Anything you want to learn about") }])
-                delegate: Card {
+                delegate: CardButton {
                     id: subjectCard
                     required property var modelData
                     Layout.fillWidth: true

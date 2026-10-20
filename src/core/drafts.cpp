@@ -9,6 +9,8 @@
 #include "zimreader.h"
 #include "zimsearch.h"
 
+#include <KLocalizedString>
+
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -18,6 +20,8 @@
 
 // ---- pure parts ----
 
+// model prompts (articlePrompt, overviewPrompt, notesPrompt, transcript, planPrompt, sectionPrompt): stay English (the model
+// is asked in English and its reply is parsed)
 QString Drafts::articlePrompt(const QString &title, const QString &text)
 {
     return QStringLiteral("Article: %1\n\n%2\n\nSummarize the key facts of this article in 3 to 4 plain sentences. "
@@ -83,35 +87,40 @@ QString Drafts::summaryMarkdown(const QString &projectTitle, const QString &over
 {
     Q_UNUSED(projectTitle)
     QStringList md;
-    const QString articles = sources.size() == 1 ? QStringLiteral("1 article") : QStringLiteral("%1 articles").arg(sources.size());
-    const QString excerpts = clips.size() == 1 ? QStringLiteral("1 saved excerpt") : QStringLiteral("%1 saved excerpts").arg(clips.size());
-    md << QStringLiteral("*Generated %1 from %2 and %3. Written by a small AI: check it against the sources.*")
-              .arg(today.toString(Qt::ISODate), articles, excerpts)
+    // two counts in one sentence: each is a plural phrase of its own, put into the sentence
+    const QString articles = i18ncp("@info used as %2 in \"Generated %1 from %2 and %3\"", "%1 article", "%1 articles", sources.size());
+    const QString excerpts = i18ncp("@info used as %3 in \"Generated %1 from %2 and %3\"", "%1 saved excerpt", "%1 saved excerpts", clips.size());
+    md << i18nc("@info keep the asterisks (Markdown italics); %1 is a date, %2 a number of articles, %3 a number of saved excerpts",
+                "*Generated %1 from %2 and %3. Written by a small AI: check it against the sources.*", today.toString(Qt::ISODate), articles,
+                excerpts)
        << QString();
     if (articlesInProject > MaxArticles)
-        md << QStringLiteral("> Only the first %1 of %2 articles were summarized.").arg(MaxArticles).arg(articlesInProject) << QString();
+        md << QStringLiteral("> ")
+                + i18ncp("@info %2 is how many articles were summarized", "Only the first %2 of %1 article was summarized.",
+                         "Only the first %2 of %1 articles were summarized.", articlesInProject, MaxArticles)
+           << QString();
     if (!overview.trimmed().isEmpty())
-        md << QStringLiteral("## Overview") << QString() << overview.trimmed() << QString();
+        md << QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "Overview") << QString() << overview.trimmed() << QString();
     if (!sources.isEmpty()) {
-        md << QStringLiteral("## Sources") << QString();
+        md << QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "Sources") << QString();
         for (int i = 0; i < sources.size(); ++i) {
             const SourceSummary &s = sources.at(i);
             md << QStringLiteral("### %1. %2").arg(i + 1).arg(Projects::articleLink(s.article)) << QString() << s.summary.trimmed() << QString();
             if (!s.note.isEmpty())
-                md << QStringLiteral("> **Your note:** ") + s.note << QString();
+                md << QStringLiteral("> ") + i18nc("@info keep the asterisks (Markdown bold)", "**Your note:** %1", s.note) << QString();
         }
     }
     if (!clips.isEmpty()) {
-        md << QStringLiteral("## Saved excerpts") << QString();
+        md << QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "Saved excerpts") << QString();
         for (auto it = clips.crbegin(); it != clips.crend(); ++it) {  // oldest first
             md << Projects::quote(*it);
             if (!it->note.isEmpty())
-                md << QString() << QStringLiteral("**Note:** ") + it->note;
+                md << QString() << i18nc("@info keep the asterisks (Markdown bold)", "**Note:** %1", it->note);
             md << QString();
         }
     }
     if (!sources.isEmpty()) {
-        md << QStringLiteral("## References") << QString();
+        md << QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "References") << QString();
         for (int i = 0; i < sources.size(); ++i)
             md << QStringLiteral("%1. %2").arg(i + 1).arg(Projects::articleLink(sources.at(i).article));
         md << QString();
@@ -143,7 +152,7 @@ QString Drafts::sourcesDiscussed(const QList<ArticleRef> &sources)
         seen.insert(key);
         lines << QStringLiteral("- ") + Projects::articleLink(r);
     }
-    return lines.isEmpty() ? QString() : QStringLiteral("## Sources discussed\n\n") + lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
+    return lines.isEmpty() ? QString() : QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "Sources discussed") + QStringLiteral("\n\n") + lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
 }
 
 // ---- a report written to the user's instructions ----
@@ -310,21 +319,22 @@ QString Drafts::reportMarkdown(const ReportRequest &request, const QList<std::pa
                                const QList<ReportSource> &references, const QDate &today)
 {
     QStringList md;
-    md << QStringLiteral("*Written by a small AI on %1, following the instructions below. Check it against the sources: [n] names the source "
-                         "a sentence matches, and [?] marks one that no source clearly backs, or a figure none of them contains.*")
-              .arg(today.toString(Qt::ISODate))
+    md << i18nc("@info keep the asterisks (Markdown italics) and [n], [?] as they are; %1 is a date",
+                "*Written by a small AI on %1, following the instructions below. Check it against the sources: [n] names the source "
+                "a sentence matches, and [?] marks one that no source clearly backs, or a figure none of them contains.*",
+                today.toString(Qt::ISODate))
        << QString();
     QStringList quoted;
     for (const auto qLatin1Char = request.instructions.trimmed().split(QLatin1Char('\n')); const QString &l : qLatin1Char)
         quoted << QStringLiteral("> ") + l;
-    md << QStringLiteral("> **Instructions:**") << QStringLiteral(">") << quoted << QString();
+    md << QStringLiteral("> ") + i18nc("@title keep the asterisks (Markdown bold)", "**Instructions:**") << QStringLiteral(">") << quoted << QString();
     for (const auto &[heading, body] : sections)
         md << QStringLiteral("## ") + heading << QString() << body.trimmed() << QString();
     if (!references.isEmpty()) {
-        md << QStringLiteral("## References") << QString();
+        md << QStringLiteral("## ") + i18nc("@title heading in a document the app writes", "References") << QString();
         for (int i = 0; i < references.size(); ++i) {
             const ReportSource &r = references.at(i);
-            md << QStringLiteral("%1. %2").arg(i + 1).arg(r.article.libraryId > 0 ? Projects::articleLink(r.article) + r.label : r.label);
+            md << QStringLiteral("%1. %2").arg(i + 1).arg(!r.label.isEmpty() ? r.label : r.article.libraryId > 0 ? Projects::articleLink(r.article) : QString());
         }
         md << QString();
     }
@@ -385,7 +395,7 @@ void Drafter::summarizeProject(qint64 projectId, const Models &models)
     m_next = 0;
     const auto project = Projects::byId(projectId);
     if (!project) {
-        finish(QStringLiteral("error"), QStringLiteral("This project no longer exists."));
+        finish(QStringLiteral("error"), i18n("This project no longer exists."));
         return;
     }
     m_project = *project;
@@ -393,12 +403,12 @@ void Drafter::summarizeProject(qint64 projectId, const Models &models)
     std::reverse(m_articles.begin(), m_articles.end());  // in the order they were added
     m_clips = Projects::items(projectId, QStringLiteral("clip"));
     if (m_articles.isEmpty() && m_clips.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("Add some articles or excerpts to this project first."));
+        finish(QStringLiteral("error"), i18n("Add some articles or excerpts to this project first."));
         return;
     }
-    m_title = QStringLiteral("Summary: ") + m_project.title;
+    m_title = i18nc("@title document title, %1 is a project title", "Summary: %1", m_project.title);
     const int total = int(qMin<qsizetype>(m_articles.size(), Drafts::MaxArticles)) + 1;
-    Q_EMIT progress(0, total, QStringLiteral("Reading the articles"));
+    Q_EMIT progress(0, total, i18nc("@info:progress", "Reading the articles"));
 
     QList<qint64> libraries;
     QList<ArticleRef> refs;
@@ -451,7 +461,7 @@ void Drafter::summarizeNext()
         return;
     }
     const auto [article, text] = m_texts.at(m_next);
-    Q_EMIT progress(m_next + 1, total, QStringLiteral("Summarizing “%1”").arg(article.title));
+    Q_EMIT progress(m_next + 1, total, i18nc("@info:progress", "Summarizing “%1”", article.title));
     complete(Drafts::articlePrompt(article.title, text), 200, [this, article](const QString &summary, const QString &error) {
         if (!error.isEmpty()) {
             finish(QStringLiteral("error"), error);
@@ -472,14 +482,14 @@ void Drafter::writeOverview()
     const int total = int(qMin<qsizetype>(m_articles.size(), Drafts::MaxArticles)) + 1;
     const QDate today = QDate::currentDate();
     if (m_summaries.isEmpty() && m_clips.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("None of the project's articles could be read."));
+        finish(QStringLiteral("error"), i18n("None of the project's articles could be read."));
         return;
     }
-    Q_EMIT progress(total, total, QStringLiteral("Writing the overview"));
+    Q_EMIT progress(total, total, i18nc("@info:progress", "Writing the overview"));
     QStringList digest;
     for (const Drafts::SourceSummary &s : std::as_const(m_summaries))
         digest << s.article.title + QStringLiteral(": ") + s.summary;
-    QStringList quotes;
+    QStringList quotes;  // model prompt material: stays English
     for (const auto mid = m_clips.mid(0, 6); const ProjectItem &c : mid)
         quotes << QStringLiteral("Saved excerpt (%1): %2").arg(c.refs.value(0).title.isEmpty() ? QStringLiteral("note") : c.refs.value(0).title,
                                                               c.text.trimmed().left(600));
@@ -539,7 +549,7 @@ void Drafter::summarizeChat(qint64 chatId, const Models &models)
     m_running = true;
     const auto chat = Chats::byId(chatId);
     if (!chat) {
-        finish(QStringLiteral("error"), QStringLiteral("This chat no longer exists."));
+        finish(QStringLiteral("error"), i18n("This chat no longer exists."));
         return;
     }
     QList<std::pair<QString, QString>> pairs;
@@ -562,11 +572,11 @@ void Drafter::summarizeChat(qint64 chatId, const Models &models)
         }
     }
     if (pairs.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("That chat has no answers to summarize yet."));
+        finish(QStringLiteral("error"), i18n("That chat has no answers to summarize yet."));
         return;
     }
-    m_title = QStringLiteral("Chat summary: ") + chat->title;
-    Q_EMIT progress(1, 1, QStringLiteral("Writing notes on the chat"));
+    m_title = i18nc("@title document title, %1 is a chat title", "Chat summary: %1", chat->title);
+    Q_EMIT progress(1, 1, i18nc("@info:progress", "Writing notes on the chat"));
     m_client->capabilities(models.answer, this, [this, generation, pairs, sources](const QStringList &capabilities, const QString &error) {
         if (generation != m_generation)
             return;
@@ -610,11 +620,11 @@ void Drafter::writeReport(qint64 projectId, const Drafts::ReportRequest &request
     m_title = request.title.trimmed();
     const auto project = Projects::byId(projectId);
     if (!project) {
-        finish(QStringLiteral("error"), QStringLiteral("This project no longer exists."));
+        finish(QStringLiteral("error"), i18n("This project no longer exists."));
         return;
     }
     if (m_title.isEmpty() || request.instructions.trimmed().isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("Give the report a title and say what it should cover."));
+        finish(QStringLiteral("error"), i18n("Give the report a title and say what it should cover."));
         return;
     }
     m_project = *project;
@@ -637,10 +647,10 @@ void Drafter::writeReport(qint64 projectId, const Drafts::ReportRequest &request
     if (m_articles.isEmpty() && m_reportClips.isEmpty())
         m_request.alsoLibrary = true;  // nothing in the project yet: the library is all there is
     if (m_request.alsoLibrary && m_libraries.isEmpty() && m_articles.isEmpty() && m_reportClips.isEmpty()) {
-        finish(QStringLiteral("error"), QStringLiteral("There is nothing to write from: add articles to the project, or install a library."));
+        finish(QStringLiteral("error"), i18n("There is nothing to write from: add articles to the project, or install a library."));
         return;
     }
-    Q_EMIT progress(0, m_request.sections + 1, QStringLiteral("Reading the project's articles"));
+    Q_EMIT progress(0, m_request.sections + 1, i18nc("@info:progress", "Reading the project's articles"));
 
     QList<qint64> open = m_request.alsoLibrary ? m_libraries : QList<qint64>();
     QList<ArticleRef> refs;
@@ -687,7 +697,7 @@ void Drafter::writeReport(qint64 projectId, const Drafts::ReportRequest &request
 
 void Drafter::planReport()
 {
-    Q_EMIT progress(0, m_request.sections + 1, QStringLiteral("Planning the sections"));
+    Q_EMIT progress(0, m_request.sections + 1, i18nc("@info:progress", "Planning the sections"));
     QStringList titles;
     for (const ZimSearch::Article &a : std::as_const(m_read))
         titles << a.found.title;
@@ -713,7 +723,7 @@ void Drafter::writeSection()
         return;
     }
     const Drafts::PlannedSection section = m_plan.at(m_section);
-    Q_EMIT progress(m_section + 1, int(m_plan.size()) + 1, QStringLiteral("Writing “%1”").arg(section.heading));
+    Q_EMIT progress(m_section + 1, int(m_plan.size()) + 1, i18nc("@info:progress %1 is a section heading", "Writing “%1”", section.heading));
     const QString query = Drafts::sectionQuery(m_request, section);
     const QList<Rag::Candidate> own = Rag::pickPassages(query, Rag::chooseArticles(query, m_read));
     if (!m_request.alsoLibrary || m_libraries.isEmpty()) {
@@ -780,7 +790,7 @@ void Drafter::sectionSources(const QList<Rag::Candidate> &ownPool, const QList<R
                                   const Drafts::PlannedSection section = m_plan.at(m_section);
                                   Q_EMIT textAdded((m_section ? QStringLiteral("\n\n## ") : QStringLiteral("## ")) + section.heading + QStringLiteral("\n\n"));
                                   if (m_context.sources.isEmpty()) {
-                                      const QString none = QStringLiteral("*The sources have nothing on this.*");
+                                      const QString none = i18nc("@info keep the asterisks (Markdown italics)", "*The sources have nothing on this.*");
                                       Q_EMIT textAdded(none);
                                       m_written.append({section.heading, none});
                                       ++m_section;
@@ -820,7 +830,9 @@ void Drafter::sectionWritten(const QString &raw)
         Drafts::ReportSource r;
         r.article = {src.libraryId, src.path, src.title};
         if (src.kind == QLatin1String("clip"))
-            r.label = src.libraryId > 0 ? QStringLiteral(" (saved excerpt)") : QStringLiteral("Saved excerpt: “%1”").arg(src.snippet.left(80).simplified());
+            r.label = src.libraryId > 0
+                ? i18nc("@item a reference, %1 is a link to the article a saved excerpt came from", "%1 (saved excerpt)", Projects::articleLink(r.article))
+                : i18nc("@item a reference, %1 is the start of a saved excerpt", "Saved excerpt: “%1”", src.snippet.left(80).simplified());
         int found = 0;
         for (int i = 0; i < m_reportSources.size(); ++i) {
             const Drafts::ReportSource &o = m_reportSources.at(i);

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ollama.h"
 
+#include <KLocalizedString>
+
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QPointer>
@@ -30,7 +32,7 @@ Ollama::ChatLine Ollama::parseChatLine(const QByteArray &line)
     QJsonParseError err;
     const QJsonDocument doc = QJsonDocument::fromJson(line, &err);
     if (!doc.isObject()) {
-        out.error = QStringLiteral("Unreadable reply from Ollama: %1").arg(QString::fromUtf8(line.left(200)));
+        out.error = i18n("Unreadable reply from Ollama: %1", QString::fromUtf8(line.left(200)));
         return out;
     }
     out.json = doc.object();
@@ -46,7 +48,7 @@ std::optional<QList<Vector>> Ollama::parseEmbeddings(const QByteArray &body, QSt
     const QJsonValue list = doc.object().value(QLatin1String("embeddings"));
     if (!list.isArray()) {
         if (error)
-            *error = doc.object().value(QLatin1String("error")).toString(QStringLiteral("Unreadable reply from Ollama"));
+            *error = doc.object().value(QLatin1String("error")).toString(i18n("Unreadable reply from Ollama"));
         return std::nullopt;
     }
     QList<Vector> out;
@@ -66,23 +68,23 @@ QString Ollama::errorMessage(QNetworkReply::NetworkError error, int httpStatus, 
 {
     const QString said = QJsonDocument::fromJson(body).object().value(QLatin1String("error")).toString();
     if (httpStatus == 404 && !model.isEmpty() && (said.contains(QLatin1String("not found")) || said.isEmpty()))
-        return QStringLiteral("The model “%1” is not installed in Ollama. Install it with: ollama pull %1").arg(model);
+        return i18n("The model “%1” is not installed in Ollama. Install it with: ollama pull %1", model);
     if (!said.isEmpty())
-        return QStringLiteral("Ollama: %1").arg(said);
+        return i18nc("@info %1 is an error message from the Ollama server", "Ollama: %1", said);
     switch (error) {
     case QNetworkReply::ConnectionRefusedError:
     case QNetworkReply::HostNotFoundError:
     case QNetworkReply::RemoteHostClosedError:
-        return QStringLiteral("Could not reach Ollama at %1. Is it running? (systemctl status ollama)").arg(baseUrl);
+        return i18n("Could not reach Ollama at %1. Is it running? (systemctl status ollama)", baseUrl);
     case QNetworkReply::OperationCanceledError:
     case QNetworkReply::TimeoutError:
-        return QStringLiteral("Ollama at %1 did not answer in time.").arg(baseUrl);
+        return i18n("Ollama at %1 did not answer in time.", baseUrl);
     default:
         break;
     }
     if (httpStatus >= 400)
-        return QStringLiteral("Ollama returned HTTP %1.").arg(httpStatus);
-    return QStringLiteral("Could not talk to Ollama at %1.").arg(baseUrl);
+        return i18n("Ollama returned HTTP %1.", httpStatus);
+    return i18n("Could not talk to Ollama at %1.", baseUrl);
 }
 
 OllamaClient::OllamaClient(QObject *parent)
@@ -138,7 +140,7 @@ QNetworkReply *OllamaClient::embed(const QString &model, const QStringList &inpu
         QString error;
         const auto vectors = Ollama::parseEmbeddings(body, &error);
         if (!vectors || vectors->size() != n)
-            done({}, vectors ? QStringLiteral("Ollama returned %1 embeddings for %2 texts").arg(vectors->size()).arg(n) : error);
+            done({}, vectors ? i18np("Ollama returned %2 embeddings for 1 text", "Ollama returned %2 embeddings for %1 texts", n, vectors->size()) : error);
         else
             done(*vectors, {});
     });
@@ -160,7 +162,7 @@ QNetworkReply *OllamaClient::chat(const QJsonObject &body, QObject *context, Cha
         *buffer += reply->readAll();
         // a line is one JSON object of a few hundred bytes: a megabyte without a line break is not Ollama talking
         if (buffer->size() > MaxLineBytes && buffer->indexOf('\n') < 0) {
-            *failed = QStringLiteral("The model server sent a malformed reply");
+            *failed = i18n("The model server sent a malformed reply");
             reply->abort();
             return;
         }
@@ -196,9 +198,9 @@ QNetworkReply *OllamaClient::chat(const QJsonObject &body, QObject *context, Cha
         }
         drain(true);
         if (!failed->isEmpty())
-            done({}, QStringLiteral("Ollama: %1").arg(*failed));
+            done({}, i18nc("@info %1 is an error message from the Ollama server", "Ollama: %1", *failed));
         else if (last->isEmpty())
-            done({}, QStringLiteral("Ollama ended the answer without finishing it."));
+            done({}, i18n("Ollama ended the answer without finishing it."));
         else
             done(*last, {});
     });

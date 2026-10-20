@@ -72,7 +72,7 @@ Kirigami.ScrollablePage {
                 textFormat: Text.PlainText
                 visible: !timeline.loading
                 text: timeline.events.length === timeline.total ? i18np("%1 event", "%1 events", timeline.total)
-                                                                : i18n("%1 of %2 events", timeline.events.length, timeline.total)
+                                                                : i18np("%2 of %1 event", "%2 of %1 events", timeline.total, timeline.events.length)
                 opacity: 0.7
             }
         }

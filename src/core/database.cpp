@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "database.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFileInfo>
 #include <QSqlDatabase>
@@ -330,7 +332,7 @@ bool Database::open(const QString &path, QString *error)
 {
     if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
         if (error)
-            *error = QStringLiteral("Cannot create the folder for %1").arg(path);
+            *error = i18n("Cannot create the folder for %1", path);
         return false;
     }
     QSqlDatabase db = QSqlDatabase::contains() ? QSqlDatabase::database(QLatin1String(QSqlDatabase::defaultConnection), false)
@@ -354,12 +356,12 @@ bool Database::open(const QString &path, QString *error)
     const int current = schemaVersion();
     if (current < 0) {
         if (error)
-            *error = QStringLiteral("The database's schema version could not be read");
+            *error = i18n("The database's schema version could not be read");
         return refuse();
     }
     if (current > latestVersion()) {
         if (error)
-            *error = QStringLiteral("The database was made by a newer KAthenaeum (schema %1, this build knows %2)").arg(current).arg(latestVersion());
+            *error = i18n("The database was made by a newer KAthenaeum (schema %1, this build knows %2)", current, latestVersion());
         return refuse();
     }
     for (int v = current; v < latestVersion(); ++v) {

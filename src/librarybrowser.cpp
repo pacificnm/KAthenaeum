@@ -178,7 +178,8 @@ QVariantList LibraryBrowser::citationStyles() const
 {
     QVariantList out;
     for (const auto styles = Citations::styleNames(); const QString &name : styles)
-        out.append(QVariantMap{{QStringLiteral("style"), name}, {QStringLiteral("label"), Citations::label(Citations::style(name))}});
+        out.append(QVariantMap{{QStringLiteral("style"), name}, {QStringLiteral("label"), Citations::label(Citations::style(name))},
+                               {QStringLiteral("shortLabel"), Citations::shortLabel(Citations::style(name))}});
     return out;
 }
 
@@ -197,6 +198,7 @@ QVariantList LibraryBrowser::cite(qint64 libraryId, const QString &path, const Q
         const Citations::Style style = Citations::style(name);
         out.append(QVariantMap{{QStringLiteral("style"), name},
                                {QStringLiteral("label"), Citations::label(style)},
+                               {QStringLiteral("shortLabel"), Citations::shortLabel(style)},
                                {QStringLiteral("text"), Citations::format(style, source, today)},
                                {QStringLiteral("html"), Citations::html(style, source, today)}});
     }

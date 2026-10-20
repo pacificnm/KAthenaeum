@@ -264,6 +264,13 @@ ColumnLayout {
                         font.italic: true
                         opacity: 0.7
                         text: i18n("From “%1”: %2", card.modelData.title ?? "", card.modelData.evidence ?? "")
+                        // the whole passage on a click, or Enter once focused
+                        activeFocusOnTab: truncated || expanded
+                        Keys.onReturnPressed: expanded = !expanded
+                        Keys.onSpacePressed: expanded = !expanded
+                        Accessible.role: Accessible.Button
+                        Accessible.description: expanded ? i18n("Show less of the passage") : i18n("Show all of the passage")
+                        Accessible.onPressAction: expanded = !expanded
                         TapHandler { onTapped: evidence.expanded = !evidence.expanded }
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
                     }

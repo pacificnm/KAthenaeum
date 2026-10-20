@@ -77,7 +77,9 @@ file(CREATE_LINK ${MAPLIBRE_PREFIX}/qml/MapLibre ${CMAKE_BINARY_DIR}/${KATHENAEU
 add_subdirectory(src)
 if(KF6DocTools_FOUND)
     add_subdirectory(doc)
+    kdoctools_install(po)  # translated handbooks, once KDE's translation system adds them
 endif()
+ki18n_install(po)
 if(BUILD_TESTING)
     add_subdirectory(autotests)
 endif()

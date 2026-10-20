@@ -8,7 +8,7 @@ import KAthenaeum
 
 // A citation (an article) or a bibliography (a project's articles) in each style schools ask for, to copy. The chosen
 // style (Settings › Reading) is shown first; another can be made the usual one from here.
-// `citations`: [{style, label, text, html}]
+// `citations`: [{style, label, shortLabel, text, html}]
 Kirigami.Dialog {
     id: dialog
 
@@ -31,7 +31,7 @@ Kirigami.Dialog {
             id: tabs
             Layout.fillWidth: true
             Layout.leftMargin: -Kirigami.Units.largeSpacing
-            tabs: dialog.citations.map(c => ({ text: c.label.replace(/ \(.*\)$/, ""), icon: "" }))
+            tabs: dialog.citations.map(c => ({ text: c.shortLabel, icon: "" }))
         }
 
         QQC2.Label {
@@ -87,7 +87,7 @@ Kirigami.Dialog {
             AppButton {
                 kind: "flat"
                 icon.name: "starred-symbolic"
-                text: i18n("Use %1 by Default", (dialog.current.label ?? "").replace(/ \(.*\)$/, ""))
+                text: i18n("Use %1 by Default", dialog.current.shortLabel ?? "")
                 visible: dialog.current.style !== undefined && dialog.current.style !== LibraryBrowser.citationStyle
                 onClicked: LibraryBrowser.citationStyle = dialog.current.style
             }

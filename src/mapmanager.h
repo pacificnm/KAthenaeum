@@ -6,6 +6,7 @@
 
 #include <QHash>
 #include <QPointer>
+#include <QTimer>
 #include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
@@ -115,6 +116,7 @@ private:
 
     QNetworkAccessManager *m_network;
     MapDownloader *m_downloader;
+    QTimer m_progressTimer;  // coalesces download progress into list updates
     QList<MapRegionInfo> m_catalog;
     QHash<QString, qsizetype> m_catalogIndex;
     bool m_catalogLoading = false;

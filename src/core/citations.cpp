@@ -4,6 +4,8 @@
 
 #include "library.h"
 
+#include <KLocalizedString>
+
 #include <QCollator>
 #include <QHash>
 #include <QSet>
@@ -25,6 +27,8 @@ const QHash<QString, QString> &wikimediaProjects()
     return value;
 }
 
+// Citations follow English academic style guides (MLA 9, APA 7, Chicago 17) word for word: the entries themselves
+// ("Accessed", "Retrieved", "Offline copy via Kiwix.", month names) stay English and are not translated
 const char *const MlaMonths[] = {"Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."};
 const char *const Months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 
@@ -156,26 +160,39 @@ QString Citations::label(Style style)
 {
     switch (style) {
     case Style::Apa:
-        return QStringLiteral("APA (7th edition)");
+        return i18nc("@item citation style", "APA (7th edition)");
     case Style::Chicago:
-        return QStringLiteral("Chicago (17th edition)");
+        return i18nc("@item citation style", "Chicago (17th edition)");
     case Style::Mla:
         break;
     }
-    return QStringLiteral("MLA (9th edition)");
+    return i18nc("@item citation style", "MLA (9th edition)");
+}
+
+QString Citations::shortLabel(Style style)
+{
+    switch (style) {
+    case Style::Apa:
+        return QStringLiteral("APA");
+    case Style::Chicago:
+        return QStringLiteral("Chicago");
+    case Style::Mla:
+        break;
+    }
+    return QStringLiteral("MLA");
 }
 
 QString Citations::listHeading(Style style)
 {
     switch (style) {
     case Style::Apa:
-        return QStringLiteral("References");
+        return i18nc("@title heading of a list of sources (APA style)", "References");
     case Style::Chicago:
-        return QStringLiteral("Bibliography");
+        return i18nc("@title heading of a list of sources (Chicago style)", "Bibliography");
     case Style::Mla:
         break;
     }
-    return QStringLiteral("Works Cited");
+    return i18nc("@title heading of a list of sources (MLA style)", "Works Cited");
 }
 
 Citations::Source Citations::source(const LibraryRecord &library, const QString &path, const QString &title)

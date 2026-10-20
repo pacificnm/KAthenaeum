@@ -186,6 +186,7 @@ QVariantMap ClassroomController::coverage(const QString &subject, const QString 
         simple = simple || Classroom::isSimpleEnglish(l);
     }
     QVariantMap out{{QStringLiteral("ok"), !libraries.isEmpty()}, {QStringLiteral("libraries"), titles}};
+    // suggestions are Kiwix catalog titles, searched for in the catalog: data, not interface text, so never translated
     if (libraries.isEmpty())
         out.insert(QStringLiteral("suggestion"), Classroom::isYoung(level) ? QStringLiteral("Wikipedia in simple English") : Classroom::subject(subject).suggestion);
     else if (Classroom::isYoung(level) && !simple)

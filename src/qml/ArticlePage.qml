@@ -701,7 +701,7 @@ Kirigami.Page {
                         contentItem: Item {}
                         background: Rectangle {
                             radius: width / 2
-                            color: ({ yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", pink: "#f472b6" })[parent.modelData]
+                            color: Notes.swatch(parent.modelData)
                             border.width: noteDialog.color === parent.modelData ? 2 : 0
                             border.color: Kirigami.Theme.textColor
                         }
@@ -857,13 +857,12 @@ Kirigami.Page {
             title: i18n("Highlight")
             icon.name: "draw-highlight"
             Repeater {
-                model: [{ color: "yellow", text: i18n("Yellow") }, { color: "green", text: i18n("Green") },
-                        { color: "blue", text: i18n("Blue") }, { color: "pink", text: i18n("Pink") }]
+                model: Notes.colors.map(c => ({ color: c, text: Notes.colorName(c) }))
                 delegate: QQC2.MenuItem {
                     required property var modelData
                     text: modelData.text
                     icon.name: "draw-highlight"
-                    icon.color: ({ yellow: "#eab308", green: "#22c55e", blue: "#3b82f6", pink: "#ec4899" })[modelData.color]
+                    icon.color: Qt.darker(Notes.swatch(modelData.color), 1.15)
                     onTriggered: page.highlight(selectionMenu.selection, modelData.color)
                 }
             }

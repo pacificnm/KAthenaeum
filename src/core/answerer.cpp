@@ -6,6 +6,8 @@
 #include "ollama.h"
 #include "zimreader.h"
 
+#include <KLocalizedString>
+
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QSet>
@@ -24,17 +26,17 @@ Answerer::~Answerer()
 
 QString Answerer::noSourcesAnswer()
 {
-    return QStringLiteral("I couldn't find anything relevant to that in the library.");
+    return i18n("I couldn't find anything relevant to that in the library.");
 }
 
 QString Answerer::noProjectSourcesAnswer()
 {
-    return QStringLiteral("This project has nothing on that yet. Add articles or excerpts to it, or let it search the whole library too.");
+    return i18n("This project has nothing on that yet. Add articles or excerpts to it, or let it search the whole library too.");
 }
 
 QString Answerer::noTextAnswer()
 {
-    return QStringLiteral("This page has no article text I can answer from.");
+    return i18n("This page has no article text I can answer from.");
 }
 
 void Answerer::start(const AnswerRequest &request)
@@ -66,7 +68,7 @@ void Answerer::start(const AnswerRequest &request)
         const auto content = ZimReader::content(request.article.libraryId, request.article.path);
         if (!content) {
             watcher->deleteLater();
-            finish(QStringLiteral("error"), QStringLiteral("“%1” cannot be read: its library may have been removed.").arg(request.article.title));
+            finish(QStringLiteral("error"), i18n("“%1” cannot be read: its library may have been removed.", request.article.title));
             return;
         }
         watcher->setFuture(QtConcurrent::run([query = m_query, article = request.article, data = content->data, path = content->path] {

@@ -155,25 +155,11 @@ Kirigami.ScrollablePage {
             width: grid.cellWidth
             height: grid.cellHeight
 
-            Kirigami.ShadowedRectangle {
+            CardButton {
                 id: card
                 anchors { fill: parent; margins: Kirigami.Units.largeSpacing / 2 + Kirigami.Units.smallSpacing }
-                radius: Kirigami.Units.cornerRadius * 2
-                color: Kirigami.Theme.backgroundColor
-                border.width: 1
-                border.color: hover.hovered ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.15)
-                shadow.size: hover.hovered ? Kirigami.Units.largeSpacing * 1.5 : Kirigami.Units.smallSpacing
-                shadow.color: Qt.rgba(0, 0, 0, hover.hovered ? 0.18 : 0.08)
-                shadow.yOffset: hover.hovered ? 2 : 1
-                Behavior on shadow.size { NumberAnimation { duration: Kirigami.Units.shortDuration } }
-
-                Kirigami.Theme.colorSet: Kirigami.Theme.View
-                Kirigami.Theme.inherit: false
-
-                HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
-                TapHandler {
-                    onTapped: cell.modelData.hasChildren ? page.enter(cell.modelData) : sheet.show(cell.modelData)
-                }
+                Accessible.name: cell.modelData.name ?? ""
+                onClicked: cell.modelData.hasChildren ? page.enter(cell.modelData) : sheet.show(cell.modelData)
 
                 ColumnLayout {
                     anchors { fill: parent; margins: Kirigami.Units.largeSpacing }

@@ -39,7 +39,8 @@ add_library(kathenaeum_core STATIC
 )
 target_include_directories(kathenaeum_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(kathenaeum_core SYSTEM PRIVATE ${OSMIUM_INCLUDE_DIR} ${PROTOZERO_INCLUDE_DIR})
-target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2 ZLIB::ZLIB Threads::Threads)
+target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE KF6::I18n Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2 ZLIB::ZLIB Threads::Threads)
+target_compile_definitions(kathenaeum_core PRIVATE TRANSLATION_DOMAIN="kathenaeum")
 kde_target_enable_exceptions(kathenaeum_core PRIVATE)  # libzim reports errors by throwing; KDE builds with -fno-exceptions
 
 add_executable(kathenaeum
@@ -117,6 +118,7 @@ qt_add_qml_module(kathenaeum
         qml/Sidebar.qml
         qml/ArticleChip.qml
         qml/AppButton.qml
+        qml/CardButton.qml
         qml/SegmentedTabs.qml
 )
 
