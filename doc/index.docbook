@@ -128,6 +128,35 @@ shows whether &ollama; is running and has them, and lets you choose others.
 </para>
 </sect1>
 
+<sect1 id="for-students">
+<title>Researching for School Work</title>
+<para>&kathenaeum; has a tool for each step of a school assignment:</para>
+<orderedlist>
+<listitem><para>
+<emphasis>Make a project</emphasis> for the assignment (<guilabel>Projects</guilabel>, <guibutton>New Project…</guibutton>),
+with the question you have to answer as its goal.
+</para></listitem>
+<listitem><para>
+<emphasis>Find articles</emphasis> with <link linkend="search">Search</link>, or <link linkend="ask">Ask</link> a question
+and follow its citations. Add the useful ones to the project. For a place, <guibutton>Show on Map</guibutton> shows where
+it is.
+</para></listitem>
+<listitem><para>
+<emphasis>Read and mark</emphasis>: <link linkend="highlights">highlight</link> what matters and write why in a note;
+<link linkend="dictionary">look up</link> words you do not know; ask the article about a passage you do not understand.
+</para></listitem>
+<listitem><para>
+<emphasis>Write</emphasis>: turn your notes into a project document (<guilabel>Notes</guilabel>,
+<guibutton>New Project Document…</guibutton>) and write in your own words, citing the articles as you go. An
+<link linkend="drafts">AI draft</link> can help you start, but check it against its sources.
+</para></listitem>
+<listitem><para>
+<emphasis>Cite and hand in</emphasis>: insert the works cited in your teacher's <link linkend="citing">style</link>
+and export the document.
+</para></listitem>
+</orderedlist>
+</sect1>
+
 <sect1 id="window">
 <title>The Main Window</title>
 <para>
@@ -208,7 +237,7 @@ article, with your note when you point at them.
 <screeninfo>An article</screeninfo>
 <mediaobject>
 <imageobject><imagedata fileref="article.png" format="PNG"/></imageobject>
-<textobject><phrase>The article Crater Lake, with its infobox</phrase></textobject>
+<textobject><phrase>The article Crater Lake, with Ask, Notes, Cite and Show on Map in its header</phrase></textobject>
 </mediaobject>
 </screenshot>
 </sect1>
@@ -621,7 +650,7 @@ exported documents.</para></listitem>
 <row><entry><keycap>F1</keycap></entry><entry>Open this handbook</entry></row>
 <row><entry>&Enter;</entry><entry>Ask the question, or search for the text, that you have typed</entry></row>
 <row><entry><keycap>+</keycap> / <keycap>−</keycap></entry><entry>Zoom the map in or out</entry></row>
-<row><entry>&Esc;</entry><entry>Close the place shown on the map</entry></row>
+<row><entry>&Esc;</entry><entry>Close the place shown on the map, or a word's meaning</entry></row>
 <row><entry>&Ctrl;&Shift;<keycap>P</keycap></entry><entry>Show or hide the preview in a document's window</entry></row>
 </tbody>
 </tgroup>
@@ -643,6 +672,11 @@ to the Internet only:
 </itemizedlist>
 <para>
 Links to web sites in articles open in your browser, only when you click them.
+</para>
+<para>
+Your highlights, notes, projects, chats and settings are kept in one database on your computer
+(<filename>~/.local/share/kathenaeum/kathenaeum.sqlite</filename>). Looking up a word reads a dictionary library you have
+installed; a citation names an article's address on the web, but nothing is fetched from it.
 </para>
 </chapter>
 
@@ -686,6 +720,38 @@ downloaded.
 </para></answer>
 </qandaentry>
 <qandaentry>
+<question><para>Highlighting a passage did nothing.</para></question>
+<answer><para>
+Select a few words at least: a passage of fewer than eight letters could not be found again in the article, and
+&kathenaeum; says so. A passage that runs through a table or a picture caption may not be found either; highlight the
+part in the text.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para><guimenuitem>Define</guimenuitem> says there is no dictionary, or does not find a word.</para></question>
+<answer><para>
+Install Wiktionary from the Library Manager's catalog (<guibutton>Get a Dictionary…</guibutton> takes you there). The
+Simple English edition is small but has fewer words; the full English one has many more. Names of people and places are
+in Wikipedia rather than the dictionary: search for them instead.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>An article about a place has no <guibutton>Show on Map</guibutton>.</para></question>
+<answer><para>
+It appears when your maps show the place: download the world overview, or the region the place is in, in
+<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>. An article that gives no coordinates,
+such as one about a battle or an event, cannot be placed.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>My teacher wants citations done differently.</para></question>
+<answer><para>
+Choose the style in <menuchoice><guimenu>Settings</guimenu><guisubmenu>Reading</guisubmenu></menuchoice>. The citation is
+plain text once copied: edit it as your teacher asks, for example to leave out the date you read it. Some teachers do not
+accept Wikipedia as a source; use its articles to find the books and papers they cite.
+</para></answer>
+</qandaentry>
+<qandaentry>
 <question><para>Clicking a place shows no article.</para></question>
 <answer><para>
 Not every place has a Wikipedia article, and the article must be in one of your libraries: a small topic library will not
@@ -700,7 +766,8 @@ have it. <guibutton>Search the Libraries</guibutton> searches for the place's na
 <title>Credits and License</title>
 <para>&kathenaeum; Copyright 2026 Jaimie Garner.</para>
 <para>
-Articles come from Wikipedia through &kiwix; ZIM files and are under their own licence (Wikipedia: CC BY-SA 4.0). Map data
+Articles come from Wikipedia through &kiwix; ZIM files and are under their own licence (Wikipedia: CC BY-SA 4.0), as do
+definitions from Wiktionary (CC BY-SA 4.0). Map data
 © OpenStreetMap contributors (ODbL), with tiles and style from Protomaps and region outlines and extracts from Geofabrik;
 maps are drawn with MapLibre Native. Answers are written by models running on your computer through &ollama;.
 </para>
