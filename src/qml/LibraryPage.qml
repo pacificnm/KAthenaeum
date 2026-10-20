@@ -197,12 +197,12 @@ Kirigami.ScrollablePage {
                             onClicked: page.openArticle(page.libraryId, modelData.path)
                         }
                     }
-                    QQC2.Button {
+                    AppButton {
+                        kind: "flat"
                         visible: overview.modelData.more
                         text: i18n("Show All")
                         icon.name: "go-next-symbolic"
-                        LayoutMirroring.enabled: true  // the arrow after the words
-                        flat: true
+                        iconAfter: true
                         onClicked: page.openTitles(page.libraryId, overview.modelData.label, overview.modelData.prefix, true)
                     }
                 }

@@ -88,14 +88,16 @@ QQC2.ScrollView {
                     }
                 }
 
-                QQC2.Button {
+                AppButton {
+                    kind: "danger"
                     Layout.alignment: Qt.AlignTop
                     visible: row.model.status === "downloading" || row.model.status === "queued"
                     text: i18n("Cancel")
                     icon.name: "dialog-cancel"
                     onClicked: LibraryManager.cancelDownload(row.model.downloadId)
                 }
-                QQC2.Button {
+                AppButton {
+                    kind: "secondary"
                     Layout.alignment: Qt.AlignTop
                     visible: row.model.status === "failed" || row.model.status === "cancelled"
                     text: i18n("Resume")

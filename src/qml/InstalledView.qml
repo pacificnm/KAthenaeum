@@ -30,7 +30,8 @@ ColumnLayout {
                 elide: Text.ElideMiddle
                 text: i18n("Downloads go to %1 · %2 free", LibraryManager.folder, KCoreAddons.Format.formatByteSize(LibraryManager.freeSpace, 1))
             }
-            QQC2.Button {
+            AppButton {
+                kind: "flat"
                 text: i18n("Change…")
                 icon.name: "folder-open"
                 onClicked: folderDialog.open()
@@ -111,7 +112,8 @@ ColumnLayout {
                         }
                     }
 
-                    QQC2.Button {
+                    AppButton {
+                        kind: "secondary"
                         Layout.alignment: Qt.AlignTop
                         visible: row.model.updateVersion !== ""
                         text: i18n("Update to %1", row.model.updateVersion)

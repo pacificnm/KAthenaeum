@@ -34,7 +34,8 @@ FormCard.FormCardPage {
                 : Models.reachable ? i18np("Running at %2 · %1 model installed", "Running at %2 · %1 models installed", Models.installed.length, Models.url)
                 : Models.error
             icon.name: !Models.checked || Models.checking ? "view-refresh" : Models.reachable ? "dialog-ok" : "dialog-error"
-            trailing: QQC2.Button {
+            trailing: AppButton {
+                kind: "flat"
                 text: i18n("Check Again")
                 icon.name: "view-refresh"
                 enabled: !Models.checking
@@ -115,19 +116,22 @@ FormCard.FormCardPage {
                     descriptionItem.textFormat: Text.PlainText
                     descriptionItem.color: region.modelData.status === "failed" ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
                     trailing: RowLayout {
-                        QQC2.Button {
+                        AppButton {
+                            kind: "danger"
                             visible: region.active
                             text: i18n("Cancel")
                             icon.name: "dialog-cancel"
                             onClicked: MapManager.cancel(region.modelData.id)
                         }
-                        QQC2.Button {
+                        AppButton {
+                            kind: "secondary"
                             visible: region.modelData.status === "failed" || region.modelData.status === "cancelled"
                             text: i18n("Retry")
                             icon.name: "view-refresh"
                             onClicked: MapManager.retry(region.modelData.id)
                         }
-                        QQC2.Button {
+                        AppButton {
+                            kind: "secondary"
                             visible: region.modelData.status === "complete"
                             text: i18n("Update")
                             icon.name: "update-none"

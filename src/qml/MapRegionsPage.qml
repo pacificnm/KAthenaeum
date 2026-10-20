@@ -138,10 +138,10 @@ Kirigami.ScrollablePage {
                             text: i18n("Every country's coasts, borders, cities and main roads, about 45 MB. The regions you add draw their streets and places on top of it.")
                         }
                     }
-                    QQC2.Button {
+                    AppButton {
+                        kind: "primary"
                         text: i18n("Download")
                         icon.name: "folder-download"
-                        highlighted: true
                         onClicked: MapManager.downloadWorld()
                     }
                 }

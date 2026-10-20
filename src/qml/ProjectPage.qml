@@ -84,12 +84,14 @@ Kirigami.Page {
             color: Kirigami.Theme.disabledTextColor
         }
 
-        QQC2.TabBar {
+        SegmentedTabs {
             id: tabs
             Layout.fillWidth: true
-            QQC2.TabButton { text: i18np("Sources (%1)", "Sources (%1)", project.articles.length + project.excerpts.length + project.chats.length) }
-            QQC2.TabButton { text: i18n("Chat") }
-            QQC2.TabButton { text: i18np("Documents (%1)", "Documents (%1)", project.documents.length) }
+            tabs: [
+                { text: i18np("Sources (%1)", "Sources (%1)", project.articles.length + project.excerpts.length + project.chats.length), icon: "bookmarks" },
+                { text: i18n("Chat"), icon: "dialog-messages" },
+                { text: i18np("Documents (%1)", "Documents (%1)", project.documents.length), icon: "document-multiple" }
+            ]
         }
 
         StackLayout {
@@ -135,7 +137,8 @@ Kirigami.Page {
                             level: 3
                             text: i18np("%1 Article", "%1 Articles", project.articles.length)
                         }
-                        QQC2.Button {
+                        AppButton {
+                            kind: "primary"
                             text: i18n("Add Article…")
                             icon.name: "list-add"
                             onClicked: addDialog.open()
@@ -280,13 +283,15 @@ Kirigami.Page {
                             level: 3
                             text: i18n("Documents")
                         }
-                        QQC2.Button {
+                        AppButton {
+                            kind: "secondary"
                             text: i18n("Draft with AI")
                             icon.name: "tools-wizard"
                             enabled: !Drafting.running
                             onClicked: draftMenu.popup()
                         }
-                        QQC2.Button {
+                        AppButton {
+                            kind: "primary"
                             text: i18n("New Document")
                             icon.name: "document-new"
                             onClicked: {
@@ -314,7 +319,8 @@ Kirigami.Page {
                                 text: Drafting.total > 1 ? i18n("%1 (%2 of %3)", Drafting.label, Drafting.step, Drafting.total) : Drafting.label
                                 elide: Text.ElideRight
                             }
-                            QQC2.Button {
+                            AppButton {
+                                kind: "danger"
                                 text: i18n("Stop")
                                 icon.name: "process-stop"
                                 onClicked: Drafting.stop()

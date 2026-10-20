@@ -92,6 +92,8 @@ qt_add_qml_module(kathenaeum
         qml/RegionSilhouette.qml
         qml/Sidebar.qml
         qml/ArticleChip.qml
+        qml/AppButton.qml
+        qml/SegmentedTabs.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE

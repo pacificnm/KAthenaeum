@@ -193,8 +193,10 @@ Kirigami.Page {
                 opacity: 0.7
                 visible: text !== ""
             }
-            QQC2.Button {
+            AppButton {
+                kind: "primary"
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 visible: page.selected.article !== undefined
                 icon.name: "document-open"
                 text: page.selected.article ? i18n("Read “%1”", Util.plain(page.selected.article.title)) : ""
@@ -205,11 +207,12 @@ Kirigami.Page {
                 QQC2.ToolTip.visible: hovered
                 QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
             }
-            QQC2.Button {
+            AppButton {
+                kind: page.selected.article !== undefined ? "flat" : "primary"  // the main thing to do when there is no article
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 icon.name: "search"
                 text: i18n("Search the Libraries for “%1”", Util.plain(page.selected.name ?? ""))
-                flat: page.selected.article !== undefined
                 onClicked: page.openSearch(page.selected.name)
             }
             QQC2.Label {

@@ -335,14 +335,16 @@ ColumnLayout {
                     : view.conversation.projectId > 0 ? i18n("Ask about this project…") : i18n("Ask a question about your libraries…")
                 onAccepted: view.send()
             }
-            QQC2.Button {
+            AppButton {
+                kind: "primary"
                 visible: !view.conversation.busy
                 text: i18n("Ask")
                 icon.name: "document-send"
                 enabled: input.text.trim() !== ""
                 onClicked: view.send()
             }
-            QQC2.Button {
+            AppButton {
+                kind: "danger"
                 visible: view.conversation.busy
                 text: i18n("Stop")
                 icon.name: "process-stop"

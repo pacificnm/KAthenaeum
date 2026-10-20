@@ -36,6 +36,7 @@ Kirigami.ApplicationWindow {
         show(libraryManagerPage);
     }
     function openProject(projectId) {
+        section = "projects";
         pageStack.push(projectPage, { projectId: projectId });
     }
     // a document opens in its own window: Kate's editor and a live preview

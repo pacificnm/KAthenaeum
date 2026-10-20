@@ -170,7 +170,8 @@ ColumnLayout {
                     }
 
                     // what can be done with it depends on what is already here
-                    QQC2.Button {
+                    AppButton {
+                        kind: "secondary"
                         Layout.alignment: Qt.AlignTop
                         visible: row.model.state === "available" || row.model.state === "update"
                         enabled: LibraryManager.aria2Available

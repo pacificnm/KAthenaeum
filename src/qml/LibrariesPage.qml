@@ -100,11 +100,11 @@ Kirigami.ScrollablePage {
             width: grid.width
             height: grid.count > 0 ? Kirigami.Units.gridUnit * 4 : 0
             visible: grid.count > 0
-            QQC2.Button {
+            AppButton {
+                kind: "flat"
                 anchors.centerIn: parent
                 text: i18n("Get More Libraries…")
                 icon.name: "folder-download"
-                flat: true
                 onClicked: page.openLibraryManager()
             }
         }

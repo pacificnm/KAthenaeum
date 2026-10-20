@@ -37,14 +37,15 @@ Kirigami.Page {
     // The catalog comes from kiwix.org: fetch it only once someone opens the manager, not at every start
     Component.onCompleted: LibraryManager.loadCatalog()
 
-    header: QQC2.TabBar {
-        id: tabs
-        QQC2.TabButton {
-            text: LibraryManager.installed.count > 0 ? i18n("Installed (%1)", LibraryManager.installed.count) : i18n("Installed")
-        }
-        QQC2.TabButton { text: i18n("Catalog") }
-        QQC2.TabButton {
-            text: LibraryManager.activeDownloads > 0 ? i18n("Downloads (%1)", LibraryManager.activeDownloads) : i18n("Downloads")
+    header: QQC2.ToolBar {
+        padding: 0
+        contentItem: SegmentedTabs {
+            id: tabs
+            tabs: [
+                { text: LibraryManager.installed.count > 0 ? i18n("Installed (%1)", LibraryManager.installed.count) : i18n("Installed"), icon: "bookmarks" },
+                { text: i18n("Catalog"), icon: "globe" },
+                { text: LibraryManager.activeDownloads > 0 ? i18n("Downloads (%1)", LibraryManager.activeDownloads) : i18n("Downloads"), icon: "folder-download" }
+            ]
         }
     }
 
