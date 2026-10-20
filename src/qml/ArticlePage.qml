@@ -260,13 +260,18 @@ Kirigami.Page {
         }
 
         // Selected text: Copy, or ask about it
+        // Always the app's own menu: Chromium's (Back and Forward that never worked here, Save Page, View Page Source)
+        // came up wherever nothing was selected (the user, 2026-10-20)
         onContextMenuRequested: function(request) {
-            if (request.selectedText === "")
-                return;  // the web view's own menu
             request.accepted = true;
-            selectionMenu.selection = request.selectedText.trim();
-            selectionMenu.at = request.position;
-            selectionMenu.popup();
+            if (request.selectedText.trim() !== "") {
+                selectionMenu.selection = request.selectedText.trim();
+                selectionMenu.at = request.position;
+                selectionMenu.popup();
+            } else {
+                pageMenu.link = request.linkUrl.toString();
+                pageMenu.popup();
+            }
         }
     }
 
@@ -533,6 +538,79 @@ Kirigami.Page {
             }
             onObjectAdded: (index, object) => chatsMenu.insertItem(index, object)
             onObjectRemoved: (index, object) => chatsMenu.removeItem(object)
+        }
+    }
+
+    // a right-click with nothing selected: a link, or the page
+    QQC2.Menu {
+        id: pageMenu
+        property string link
+        QQC2.MenuItem {
+            text: i18n("Open Link")
+            icon.name: "quickopen"
+            visible: pageMenu.link !== ""
+            height: visible ? implicitHeight : 0
+            onTriggered: pageMenu.link.startsWith("zim:") ? view.url = pageMenu.link : view.openOutside(pageMenu.link)
+        }
+        QQC2.MenuSeparator {
+            visible: pageMenu.link !== ""
+            height: visible ? implicitHeight : 0
+        }
+        QQC2.MenuItem {
+            text: i18n("Back")
+            icon.name: "go-previous"
+            enabled: view.canGoBack
+            onTriggered: view.goBack()
+        }
+        QQC2.MenuItem {
+            text: i18n("Forward")
+            icon.name: "go-next"
+            enabled: view.canGoForward
+            onTriggered: view.goForward()
+        }
+        QQC2.MenuSeparator {}
+        QQC2.MenuItem {
+            text: i18n("Ask About This Article")
+            icon.name: "dialog-messages"
+            enabled: page.info.found === true
+            onTriggered: {
+                page.asking = true;
+                chat.focusInput();
+            }
+        }
+        QQC2.MenuItem {
+            text: page.highlights.length > 0 ? i18n("Notes (%1)", page.highlights.length) : i18n("Notes")
+            icon.name: "draw-highlight"
+            enabled: page.info.found === true
+            onTriggered: page.notesOpen = true
+        }
+        QQC2.MenuItem {
+            text: i18n("Cite This Article…")
+            icon.name: "format-text-blockquote"
+            enabled: page.info.found === true
+            onTriggered: {
+                citeDialog.citations = LibraryBrowser.cite(page.info.libraryId, page.info.path, page.info.title);
+                citeDialog.open();
+            }
+        }
+        QQC2.MenuItem {
+            text: i18n("Show on Map")
+            icon.name: "mark-location"
+            visible: page.location.lat !== undefined
+            height: visible ? implicitHeight : 0
+            onTriggered: page.showOnMap(Object.assign({}, page.location, { libraryTitle: page.info.libraryTitle }), page.info.libraryId, page.info.path, page.info.title)
+        }
+        QQC2.MenuItem {
+            text: i18n("Contents")
+            icon.name: "view-list-text"
+            enabled: (page.info.toc ?? []).length > 0
+            onTriggered: tocMenu.popup()
+        }
+        QQC2.MenuSeparator {}
+        QQC2.MenuItem {
+            text: i18n("Select All")
+            icon.name: "edit-select-all"
+            onTriggered: view.triggerWebAction(WebEngineView.SelectAll)
         }
     }
 

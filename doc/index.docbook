@@ -224,7 +224,9 @@ Select text and right-click it for <guimenuitem>Copy</guimenuitem>, <guimenuitem
 <link linkend="dictionary">Looking Up a Word</link>), <guisubmenu>Highlight</guisubmenu> and
 <guimenuitem>Highlight with Note…</guimenuitem> (see <link linkend="highlights">Highlights and Notes</link>),
 <guimenuitem>Save to Project…</guimenuitem> (keep the passage in a <link linkend="projects">research project</link>) and
-<guimenuitem>Ask About This</guimenuitem> (ask the assistant what the article means by it).
+<guimenuitem>Ask About This</guimenuitem> (ask the assistant what the article means by it). Right-click with nothing selected
+for <guimenuitem>Back</guimenuitem>, <guimenuitem>Forward</guimenuitem>, the article's notes, citation, map and contents,
+and <guimenuitem>Open Link</guimenuitem> on a link.
 </para>
 <para>
 The header's buttons: <guibutton>Ask</guibutton> opens a <link linkend="ask-article">chat about the article</link> beside it;
