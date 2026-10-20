@@ -73,6 +73,7 @@ Kirigami.ApplicationWindow {
             Kirigami.Action { text: i18n("Ask"); icon.name: "dialog-messages"; onTriggered: root.show(askPage) },
             Kirigami.Action { text: i18n("Chats"); icon.name: "view-history"; onTriggered: root.show(chatsPage) },
             Kirigami.Action { text: i18n("Projects"); icon.name: "folder-bookmark"; onTriggered: root.show(projectsPage) },
+            Kirigami.Action { text: i18n("Map"); icon.name: "map-flat"; onTriggered: root.show(mapPage) },
             Kirigami.Action { separator: true },
             Kirigami.Action { text: i18n("Library Manager"); icon.name: "folder-download"; onTriggered: root.show(libraryManagerPage) },
             Kirigami.Action { text: i18n("Settings"); icon.name: "settings-configure"; onTriggered: root.show(settingsPage) },
@@ -104,6 +105,13 @@ Kirigami.ApplicationWindow {
         }
         function onFailed(message) {
             root.showPassiveNotification(message, "long");
+        }
+    }
+
+    Connections {
+        target: MapManager
+        function onMessage(text, isError) {
+            root.showPassiveNotification(text, isError ? "long" : "short");
         }
     }
 
@@ -174,6 +182,14 @@ Kirigami.ApplicationWindow {
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onClosed: root.show(projectsPage)
+        }
+    }
+    Component {
+        id: mapPage
+        MapPage {
+            onOpenArticle: (libraryId, path) => root.openArticle(libraryId, path)
+            onOpenSearch: query => root.openSearch(query, -1)
+            onOpenMapSettings: root.show(settingsPage)
         }
     }
     Component { id: libraryManagerPage; LibraryManagerPage {} }

@@ -48,4 +48,12 @@ QtObject {
             parts.push(date);
         return parts.join(" · ");
     }
+
+    // A map's planet build ("20261019") as a date in the user's format
+    function buildDate(build) {
+        if (!/^\d{8}$/.test(build ?? ""))
+            return build ?? "";
+        const d = new Date(Number(build.slice(0, 4)), Number(build.slice(4, 6)) - 1, Number(build.slice(6, 8)));
+        return d.toLocaleDateString(Qt.locale(), Locale.ShortFormat);
+    }
 }

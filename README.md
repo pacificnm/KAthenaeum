@@ -6,7 +6,7 @@ KAthenaeum is the KDE / Qt version of [Athenaeum](https://github.com/pacificnm/A
 
 There is nothing to build before you can use a library: it is searchable and ready to answer questions the moment its download finishes.
 
-> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats), Ask about this article, and research projects (sources, notes, a project chat, documents, AI drafts, highlights). See [CLAUDE.md](CLAUDE.md) for the design.
+> **Status: early development.** Working: the Library Manager (catalog, downloads, installed libraries), reading (library home, A to Z, articles with pictures), search, Ask (answers with citations, follow-up questions, saved chats), Ask about this article, research projects (sources, notes, a project chat, documents, AI drafts, highlights), and offline maps that open Wikipedia articles. See [CLAUDE.md](CLAUDE.md) for the design.
 
 ## Features
 
@@ -18,6 +18,7 @@ There is nothing to build before you can use a library: it is searchable and rea
 - **Research projects**: collect articles, passages you select in them, answers and chats, each with your notes. A project's own chat answers from just that material (or the whole library too, kept apart), with the project's goal in mind. Write Markdown documents in Kate's editor, with a live preview, that cite the project's sources, and export a document or the whole project to `.md`. Let the AI draft a summary of the project's articles, or notes from a chat, as a document to edit.
 - **Ask about this article**: a chat panel beside every article that answers from that article alone, citing its sections (a click scrolls there). Select text and right-click to ask about it. These chats are saved with their article.
 - **Highlights and notes**: passages you save are highlighted in their article, with your notes on hover.
+- **Maps**: download the world overview and the countries, states or regions you want (in Settings), then browse them offline. Click a city, a building, a park or a lake to see what it is and open its Wikipedia article from your libraries; OpenStreetMap's own link to the article is used when it has one, so "Portland" opens "Portland, Oregon". Also lists what the place is in (its park, town, county), and finds places by name.
 - **Library manager**: browse the Kiwix catalog (also offline, from a saved copy), download with progress, cancel and resume, verify every download, spot newer versions, add a ZIM file you already have, see each library's details, choose the download folder, remove safely.
 - **Models**: see whether Ollama is running and has the models, switch the answer or embedding model without restarting, and get told (with the fix) when Ollama is set to unload one model to load the other.
 
@@ -29,7 +30,8 @@ The library manager and model settings are ordinary parts of the application, no
 KDE / Qt UI  -->  ZIM files via libzim (C++)   (article text, images, title and word search)
      |
      +--------->  Ollama on this machine       (embeddings and the answer model)
-     +--------->  SQLite                       (chats, projects, excerpts, notes, settings)
+     +--------->  SQLite                       (chats, projects, excerpts, notes, settings, map places)
+     +--------->  MapLibre                     (maps cut from Protomaps' OpenStreetMap build, one file per region)
 ```
 
 An answer is made in four steps: **find** the best articles through the ZIM's own indexes, **read** their best passages (ranked by meaning with a small embedding model) with a small local answer model, **cite** by matching each answer sentence to the passages by embedding similarity, and **check** for figures or topics the sources do not contain. With the default models on a laptop iGPU, the first words appear after about 5 seconds and a whole answer takes 9 to 19.
@@ -42,16 +44,26 @@ An answer is made in four steps: **find** the best articles through the ZIM's ow
 | Libraries | Qt 6, KDE Frameworks 6, Kirigami, libzim (C++, 9.x), SQLite |
 | [Ollama](https://ollama.com) | Installed on the same machine, with a small answer model and an embedding model |
 | aria2 | `aria2c` on the PATH, for downloading ZIM files |
+| Maps | Downloaded from Protomaps (the map) and Geofabrik (the list of regions, and OpenStreetMap data read once for places with articles); MapLibre Native for Qt, built from source and shipped inside the package |
 | GPU | Not required. Built for laptop iGPUs and small models. |
 
 KAthenaeum will be distributed as a `.deb` package for Debian. Ollama is not packaged by Debian, so install it separately.
 
 ## Building
 
-On Debian 13, install the build dependencies listed in [CLAUDE.md](CLAUDE.md#build-dependencies-debian-13), then:
+On Debian 13, install the build dependencies listed in [CLAUDE.md](CLAUDE.md#build-dependencies-debian-13), and build MapLibre Native for Qt once (it is not packaged by Debian; about 2.5 minutes on 16 cores):
 
 ```bash
-cmake -S . -B build -G Ninja
+git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/maplibre/maplibre-native-qt.git
+cmake -S maplibre-native-qt -B maplibre-native-qt/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_OPENGL=ON \
+      -DMLN_QT_WITH_LOCATION=OFF -DMLN_QT_WITH_WIDGETS=OFF -DCMAKE_INSTALL_PREFIX=$HOME/maplibre-qt
+cmake --build maplibre-native-qt/build && cmake --install maplibre-native-qt/build
+```
+
+then:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$HOME/maplibre-qt
 cmake --build build
 ctest --test-dir build                 # unit tests
 ./build/bin/kathenaeum                 # run without installing
@@ -59,6 +71,8 @@ cmake --build build --target package   # make a .deb in build/
 ```
 
 Some tests read a real library when one is given, real downloads from kiwix.org run only when asked, and so does a check against your local Ollama: `KATHENAEUM_TEST_ZIM=/path/to/wikipedia_en_….zim KATHENAEUM_NETWORK_TESTS=1 KATHENAEUM_OLLAMA_TESTS=1 ctest --test-dir build`.
+
+To see what a region's map takes before adding it to the app: `./build/bin/mapbench https://build.protomaps.com/YYYYMMDD.pmtiles west south east north maxzoom out.pmtiles` (with `DRY=1`, only measure).
 
 To measure Ask on your own libraries and models: `./build/bin/askbench [--answer MODEL] [--embed MODEL] [--article PATH] library.zim… < questions.txt` (one question per line; a line starting with `+` is a follow-up). It prints the time of each step, the sources, and each answer with its citations and flags.
 

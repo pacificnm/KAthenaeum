@@ -2,12 +2,14 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QDir>
+#include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QQmlNetworkAccessManagerFactory>
 #include <QStandardPaths>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QQuickWebEngineProfile>
 #include <QtWebEngineQuick>
 
@@ -21,6 +23,7 @@
 #include "appstate.h"
 #include "core/extract.h"
 #include "librarymanager.h"
+#include "mapmanager.h"
 #include "articlestore.h"
 #include "modelsettings.h"
 #include "projectlist.h"
@@ -43,7 +46,9 @@ public:
 protected:
     QNetworkReply *createRequest(Operation op, const QNetworkRequest &request, QIODevice *data) override
     {
-        if (op == GetOperation && Catalog::isKiwixUrl(request.url()))
+        // data: URLs never leave the computer: installed libraries' icons come from the database that way (refusing them
+        // too left every library without its icon)
+        if (op == GetOperation && (Catalog::isKiwixUrl(request.url()) || request.url().scheme() == QLatin1String("data")))
             return QNetworkAccessManager::createRequest(op, request, data);
         qWarning("Refused a network request from the interface: %s", qUtf8Printable(request.url().toDisplayString(QUrl::RemoveQuery)));
         return QNetworkAccessManager::createRequest(GetOperation, QNetworkRequest(QUrl(QStringLiteral("refused:"))), nullptr);
@@ -73,6 +78,7 @@ int main(int argc, char *argv[])
     initXmlParser();  // once, on the main thread, before any worker parses HTML
     ZimSchemeHandler::registerScheme();  // before any web engine profile exists
     QtWebEngineQuick::initialize();  // must run before the application object exists
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);  // MapLibre draws the map with OpenGL
     QApplication app(argc, argv);    // QApplication, not QGuiApplication: the desktop style needs widgets
 
     // Follow Plasma's look when the user has not chosen a Qt Quick style themselves
@@ -94,6 +100,11 @@ int main(int argc, char *argv[])
     about.addComponent(QStringLiteral("libzim"), i18n("Reads ZIM files"), QString(), QStringLiteral("https://github.com/openzim/libzim"));
     about.addComponent(QStringLiteral("Kiwix"), i18n("The library catalog and its ZIM files"), QString(), QStringLiteral("https://kiwix.org"));
     about.addComponent(QStringLiteral("Ollama"), i18n("Runs the language and embedding models"), QString(), QStringLiteral("https://ollama.com"));
+    about.addComponent(QStringLiteral("MapLibre Native"), i18n("Draws the maps"), QString(), QStringLiteral("https://maplibre.org"));
+    about.addComponent(QStringLiteral("Protomaps"), i18n("The map tiles and their style"), QString(), QStringLiteral("https://protomaps.com"));
+    about.addComponent(QStringLiteral("OpenStreetMap"), i18n("Map data © OpenStreetMap contributors (ODbL)"), QString(),
+                       QStringLiteral("https://www.openstreetmap.org/copyright"));
+    about.addComponent(QStringLiteral("Geofabrik"), i18n("The regions and their OpenStreetMap extracts"), QString(), QStringLiteral("https://download.geofabrik.de"));
     about.addComponent(QStringLiteral("Athenaeum"), i18n("The web application this one is based on"), QString(),
                        QStringLiteral("https://github.com/pacificnm/Athenaeum"));
     about.setHomepage(QStringLiteral("https://github.com/pacificnm/KAthenaeum"));
@@ -124,6 +135,7 @@ int main(int argc, char *argv[])
         ArticleStore::clear();
     });
     libraries->initialize();
+    MapManager::createInstance(&app)->initialize();  // resumes queued map downloads
 
     // Articles come from zim:// only. Nothing the reader shows needs a disk cache or cookies.
     QQuickWebEngineProfile *profile = QQuickWebEngineProfile::defaultProfile();
@@ -135,6 +147,9 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&networkFactory);
     KLocalization::setupLocalizedContext(&engine);
+    // MapLibre's QML plugin: in the app's private folder once installed, else where it was built
+    const QString maplibre = QDir(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).filePath(QStringLiteral(KATHENAEUM_MAPLIBRE_QML));
+    engine.addImportPath(QFile::exists(maplibre + QStringLiteral("/MapLibre/qmldir")) ? maplibre : QStringLiteral(KATHENAEUM_MAPLIBRE_QML_BUILD));
     engine.loadFromModule("KAthenaeum", "Main");
     if (engine.rootObjects().isEmpty())
         return 1;

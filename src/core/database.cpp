@@ -147,6 +147,47 @@ const QList<QStringList> migrations = {
                        " title TEXT NOT NULL DEFAULT '',"
                        " removed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
     },
+    {
+        // Map regions: each one's map file (cut from Protomaps' planet build) and the places in it that Wikipedia may have
+        // articles about (from OpenStreetMap). `region` is Geofabrik's id ("us/oregon"), or "world" for the overview.
+        QStringLiteral("CREATE TABLE map_regions ("
+                       " id INTEGER PRIMARY KEY,"
+                       " region TEXT NOT NULL UNIQUE,"
+                       " name TEXT NOT NULL,"
+                       " parent_name TEXT NOT NULL DEFAULT '',"
+                       " max_zoom INTEGER NOT NULL,"
+                       " shape TEXT NOT NULL DEFAULT '',"  // GeoJSON geometry: what the map is cut to
+                       " pbf TEXT NOT NULL DEFAULT '',"  // its OpenStreetMap extract ('' for the world overview)
+                       " west REAL NOT NULL, south REAL NOT NULL, east REAL NOT NULL, north REAL NOT NULL,"
+                       " status TEXT NOT NULL DEFAULT 'queued',"  // queued | downloading | indexing | complete | failed | cancelled
+                       " error TEXT NOT NULL DEFAULT '',"
+                       " file TEXT NOT NULL DEFAULT '',"
+                       " size INTEGER NOT NULL DEFAULT 0,"
+                       " build TEXT NOT NULL DEFAULT '',"  // the planet build it was cut from ("20261019")
+                       " places INTEGER NOT NULL DEFAULT 0,"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE TABLE map_places ("
+                       " id INTEGER PRIMARY KEY,"
+                       " region_id INTEGER NOT NULL REFERENCES map_regions (id) ON DELETE CASCADE,"
+                       " osm TEXT NOT NULL,"  // n123 | w123 | r123
+                       " name TEXT NOT NULL,"
+                       " name_en TEXT NOT NULL DEFAULT '',"
+                       " kind TEXT NOT NULL DEFAULT '',"
+                       " lat REAL NOT NULL, lon REAL NOT NULL,"
+                       " west REAL NOT NULL, south REAL NOT NULL, east REAL NOT NULL, north REAL NOT NULL,"
+                       " area INTEGER NOT NULL DEFAULT 0,"
+                       " wikipedia TEXT NOT NULL DEFAULT '',"
+                       " wikipedia_en TEXT NOT NULL DEFAULT '',"
+                       " wikidata TEXT NOT NULL DEFAULT '',"
+                       " population INTEGER NOT NULL DEFAULT 0,"
+                       " outline BLOB NOT NULL DEFAULT '')"),  // an area's edges, simplified (MapPlaces::encodeOutline)
+        QStringLiteral("CREATE INDEX map_places_osm ON map_places (osm)"),
+        QStringLiteral("CREATE INDEX map_places_region ON map_places (region_id)"),
+        QStringLiteral("CREATE INDEX map_places_name ON map_places (name COLLATE NOCASE)"),
+        // the places' extents, for "what is here" (an R*Tree has no foreign keys: rows are deleted with their place)
+        QStringLiteral("CREATE VIRTUAL TABLE map_places_box USING rtree (id, west, east, south, north)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.0" date="2026-10-19">
+      <description>
+        <p>Offline maps: download the world overview and the regions you choose in Settings, browse them without a connection, and click a place to open its Wikipedia article from your libraries.</p>
+      </description>
+    </release>
     <release version="0.9.0" date="2026-10-19">
       <description>
         <p>Project documents open in a window of their own with Kate's editor: Markdown highlighting, spell check, search and replace, vi mode, beside a live preview.</p>

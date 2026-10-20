@@ -1,0 +1,9 @@
+{
+  "name": "kathenaeum-map-style",
+  "private": true,
+  "description": "Generates data/map/layers-*.json from Protomaps' basemap style (run: npm ci && node generate.mjs)",
+  "type": "module",
+  "dependencies": {
+    "@protomaps/basemaps": "5.7.2"
+  }
+}

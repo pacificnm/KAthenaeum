@@ -20,3 +20,6 @@ compile_commands.json
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+# The map style generator's packages (tools/map-style)
+node_modules/

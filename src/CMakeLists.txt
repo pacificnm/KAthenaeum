@@ -13,7 +13,14 @@ add_library(kathenaeum_core STATIC
     core/extract.cpp core/extract.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h
+    core/mapextract.cpp core/mapextract.h
+    core/maplookup.cpp core/maplookup.h
+    core/mapplaces.cpp core/mapplaces.h
+    core/mapregions.cpp core/mapregions.h
+    core/maptiling.cpp core/maptiling.h
+    core/mvt.cpp core/mvt.h
     core/ollama.cpp core/ollama.h
+    core/pmtiles.cpp core/pmtiles.h
     core/projects.cpp core/projects.h
     core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
@@ -23,7 +30,8 @@ add_library(kathenaeum_core STATIC
     core/zimsearch.cpp core/zimsearch.h
 )
 target_include_directories(kathenaeum_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2)
+target_include_directories(kathenaeum_core SYSTEM PRIVATE ${OSMIUM_INCLUDE_DIR} ${PROTOZERO_INCLUDE_DIR})
+target_link_libraries(kathenaeum_core PUBLIC Qt6::Core Qt6::Sql Qt6::Network PRIVATE Qt6::Concurrent PkgConfig::ZIM PkgConfig::LIBXML2 ZLIB::ZLIB Threads::Threads)
 kde_target_enable_exceptions(kathenaeum_core PRIVATE)  # libzim reports errors by throwing; KDE builds with -fno-exceptions
 
 add_executable(kathenaeum
@@ -38,6 +46,7 @@ add_executable(kathenaeum
     librarybrowser.cpp librarybrowser.h
     librarymanager.cpp librarymanager.h
     librarymodels.cpp librarymodels.h
+    mapmanager.cpp mapmanager.h
     modelsettings.cpp modelsettings.h
     projectlist.cpp projectlist.h
     projectmodel.cpp projectmodel.h
@@ -45,7 +54,10 @@ add_executable(kathenaeum
     zimschemehandler.cpp zimschemehandler.h
 )
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}")
+target_compile_definitions(kathenaeum PRIVATE APP_ID="${APP_ID}"
+    KATHENAEUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    KATHENAEUM_MAPLIBRE_QML="${KATHENAEUM_PRIVATE_DIR}/qml"
+    KATHENAEUM_MAPLIBRE_QML_BUILD="${MAPLIBRE_PREFIX}/qml")
 
 set_source_files_properties(qml/Util.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
@@ -75,6 +87,8 @@ qt_add_qml_module(kathenaeum
         qml/ProjectEditDialog.qml
         qml/ProjectPage.qml
         qml/SourceRow.qml
+        qml/MapPage.qml
+        qml/MapRegionsPage.qml
 )
 
 target_link_libraries(kathenaeum PRIVATE
