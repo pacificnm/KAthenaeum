@@ -1,0 +1,615 @@
+<?xml version="1.0" ?>
+<!DOCTYPE book PUBLIC "-//KDE//DTD DocBook XML V4.5-Based Variant V1.1//EN" "dtd/kdedbx45.dtd" [
+  <!ENTITY kathenaeum "<application>KAthenaeum</application>">
+  <!ENTITY ollama "<application>Ollama</application>">
+  <!ENTITY kiwix "<application>Kiwix</application>">
+  <!ENTITY % addindex "IGNORE">
+  <!ENTITY % English "INCLUDE">
+]>
+<book id="kathenaeum" lang="&language;">
+
+<bookinfo>
+<title>The &kathenaeum; Handbook</title>
+
+<authorgroup>
+<author>
+<personname><firstname>Jaimie</firstname><surname>Garner</surname></personname>
+</author>
+<!-- TRANS:ROLES_OF_TRANSLATORS -->
+</authorgroup>
+
+<copyright>
+<year>2026</year>
+<holder>Jaimie Garner</holder>
+</copyright>
+<legalnotice>&FDLNotice;</legalnotice>
+
+<date>2026-10-19</date>
+<releaseinfo>0.12.0</releaseinfo>
+
+<abstract>
+<para>
+&kathenaeum; is a private, offline Wikipedia library with an AI research assistant. It reads &kiwix; ZIM files,
+searches them, answers questions from them with a small language model running on your own computer, keeps research
+projects with your notes and documents, and shows offline maps whose places open their Wikipedia articles.
+</para>
+</abstract>
+
+<keywordset>
+<keyword>KDE</keyword>
+<keyword>KAthenaeum</keyword>
+<keyword>Wikipedia</keyword>
+<keyword>Kiwix</keyword>
+<keyword>ZIM</keyword>
+<keyword>offline</keyword>
+<keyword>encyclopedia</keyword>
+<keyword>education</keyword>
+<keyword>research</keyword>
+<keyword>map</keyword>
+</keywordset>
+</bookinfo>
+
+<!-- ================================================================== -->
+<chapter id="introduction">
+<title>Introduction</title>
+
+<para>
+&kathenaeum; turns Wikipedia, downloaded once as a &kiwix; <acronym>ZIM</acronym> file, into a library on your own
+computer. You can read and search it without a connection, and ask it questions in plain language: a small language
+model, running locally through &ollama;, writes the answer from the articles, and &kathenaeum; links every sentence to the
+article it came from.
+</para>
+
+<para>
+Nothing you read, search for or ask leaves your computer. There is no account and no cloud service. The only things
+&kathenaeum; fetches from the Internet are those you ask for: the &kiwix; catalog of libraries and the libraries you
+download, map regions, and a weekly check for newer versions of your libraries, which you can turn off.
+</para>
+
+<para>What you can do with it:</para>
+<itemizedlist>
+<listitem><para><link linkend="reading">Read</link> any Wikipedia library, with its pictures, in your desktop's colours.</para></listitem>
+<listitem><para><link linkend="search">Search</link> every library at once, by title or by the text of every article.</para></listitem>
+<listitem><para><link linkend="ask">Ask</link> questions and get answers with citations, from all your libraries or from one article.</para></listitem>
+<listitem><para>Keep <link linkend="projects">research projects</link>: articles, saved passages, notes, chats, and documents written in &kate;'s editor, with AI drafts.</para></listitem>
+<listitem><para>Browse <link linkend="maps">offline maps</link>, and click a city, a building or a lake to read about it.</para></listitem>
+<listitem><para>Manage your libraries in the <link linkend="library-manager">Library Manager</link>: download, update, add and remove them.</para></listitem>
+</itemizedlist>
+
+<para>
+&kathenaeum; is the desktop version of Athenaeum, a web application for a home server. It is built for laptops: it needs no
+graphics card, and it never builds an index before you can use a library.
+</para>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="getting-started">
+<title>Getting Started</title>
+
+<sect1 id="first-library">
+<title>Your First Library</title>
+<para>
+When you start &kathenaeum; for the first time it has no libraries. Choose <guilabel>Library Manager</guilabel> in the
+sidebar, then the <guilabel>Catalog</guilabel> tab. The catalog lists every library &kiwix; publishes; it starts on
+Wikipedia libraries. Each comes in up to three versions:
+</para>
+<itemizedlist>
+<listitem><para><guilabel>Introductions only</guilabel> (<quote>mini</quote>): the first part of each article. Small, and enough for many questions.</para></listitem>
+<listitem><para><guilabel>Full text, no pictures</guilabel> (<quote>nopic</quote>).</para></listitem>
+<listitem><para><guilabel>Full, with pictures</guilabel> (<quote>maxi</quote>): the largest. The whole English Wikipedia is about 120 GB.</para></listitem>
+</itemizedlist>
+<para>
+Start with a small topic library (Chemistry, Astronomy, a person) to try &kathenaeum; out, then download a larger one.
+Press <guibutton>Download</guibutton>; the <guilabel>Downloads</guilabel> tab shows its progress. When it finishes,
+&kathenaeum; checks that the file is complete and undamaged, and the library appears under <guilabel>Libraries</guilabel>.
+</para>
+<para>
+A ZIM file you already have can be added with <guibutton>Add File…</guibutton> in the Library Manager; it stays where it is.
+</para>
+</sect1>
+
+<sect1 id="ollama">
+<title>Setting Up the AI Assistant</title>
+<para>
+Reading, searching and maps work without anything else. Asking questions needs &ollama;, which runs language models on
+your computer. It is not part of Debian: install it from <ulink url="https://ollama.com">ollama.com</ulink>, then download
+the two models &kathenaeum; uses by default:
+</para>
+<screen><userinput><command>ollama</command> pull qwen3.5:2b</userinput>
+<userinput><command>ollama</command> pull nomic-embed-text</userinput></screen>
+<para>
+<guilabel>qwen3.5:2b</guilabel> writes the answers; <guilabel>nomic-embed-text</guilabel> finds the passages that match a
+question and links the answer's sentences to their sources. Both were chosen by measuring them on a laptop: they run on
+a processor or an integrated graphics chip. <menuchoice><guimenu>Settings</guimenu><guisubmenu>Models</guisubmenu></menuchoice>
+shows whether &ollama; is running and has them, and lets you choose others.
+</para>
+</sect1>
+
+<sect1 id="window">
+<title>The Main Window</title>
+<para>
+The sidebar on the left holds a search box and the places of the application, grouped as <guilabel>Read</guilabel>
+(<guilabel>Libraries</guilabel>, <guilabel>Search</guilabel>, <guilabel>Map</guilabel>) and <guilabel>Research</guilabel>
+(<guilabel>Ask</guilabel>, <guilabel>Chats</guilabel>, <guilabel>Projects</guilabel>), with the
+<guilabel>Library Manager</guilabel>, <guilabel>Settings</guilabel>, this handbook and <guilabel>About</guilabel> at the
+bottom. The place you are in is highlighted; a number beside <guilabel>Library Manager</guilabel> counts downloads in
+progress or library updates available.
+</para>
+<para>
+The header shows the title of the page and, when you have gone deeper (a library, then an article), a back arrow. On a
+narrow window the sidebar is hidden; the button at the left of the header opens it.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="reading">
+<title>Reading</title>
+
+<screenshot>
+<screeninfo>The Libraries page</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="libraries.png" format="PNG"/></imageobject>
+<textobject><phrase>The Libraries page, with a card for each installed library</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<sect1 id="library-home">
+<title>A Library's Home</title>
+<para>
+<guilabel>Libraries</guilabel> shows a card for each installed library. Open one to see its home: its description, a box
+to find an article by title, the articles you read recently, and Wikipedia's own overview articles
+(<quote>Outline of…</quote>, <quote>Index of…</quote>, <quote>Glossary of…</quote>, <quote>Timeline of…</quote>,
+<quote>List of…</quote>). <guibutton>Show All</guibutton> lists every one of a kind.
+</para>
+<para>
+<guibutton>A to Z</guibutton> lists every article by title, a letter at a time; <guibutton>Random Article</guibutton>
+opens one by chance.
+</para>
+<screenshot>
+<screeninfo>A library's home</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="library-home.png" format="PNG"/></imageobject>
+<textobject><phrase>The home of the Wikipedia library: recently read articles and overview articles</phrase></textobject>
+</mediaobject>
+</screenshot>
+</sect1>
+
+<sect1 id="articles">
+<title>Articles</title>
+<para>
+Articles are shown cleanly, with their pictures and infoboxes, in your desktop's colours (light or dark). Links to other
+articles open in the same page; the arrows in the header go back and forward. <guibutton>Contents</guibutton> jumps to a
+section. A link to a web site opens in your web browser, never inside &kathenaeum;.
+</para>
+<para>
+Articles use the whole width of the window. If you prefer a narrower column, which is easier to read on a wide screen,
+turn off <guilabel>Use the Whole Window</guilabel> in the article's menu (<guibutton>⋮</guibutton>), or
+<guilabel>Use the whole window for articles</guilabel> in <menuchoice><guimenu>Settings</guimenu><guisubmenu>Reading</guisubmenu></menuchoice>.
+</para>
+<para>
+Select text and right-click it for <guimenuitem>Copy</guimenuitem>, <guimenuitem>Save to Project…</guimenuitem> (keep the
+passage in a <link linkend="projects">research project</link>) and <guimenuitem>Ask About This</guimenuitem> (ask the
+assistant what the article means by it). <guibutton>Ask</guibutton> opens a <link linkend="ask-article">chat about the
+article</link> beside it; <guibutton>Add to Project…</guibutton> adds it to a research project. Passages you have saved
+are highlighted in the article, with your note when you point at them.
+</para>
+<screenshot>
+<screeninfo>An article</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="article.png" format="PNG"/></imageobject>
+<textobject><phrase>The article Crater Lake, with its infobox</phrase></textobject>
+</mediaobject>
+</screenshot>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="search">
+<title>Searching</title>
+<para>
+Type in the search box at the top of the sidebar and press &Enter; (or press &Ctrl;<keycap>F</keycap> to get there). The
+<guilabel>Search</guilabel> page lists articles from every library: first those whose titles match, then those whose text
+does, each with the passage that matches. The menu beside the search box limits the search to one library.
+</para>
+<para>
+Search finds words, not meanings: <quote>why is the sky blue</quote> finds articles containing those words. To have the
+question answered, <link linkend="ask">ask it</link> instead.
+</para>
+<para>
+A library's home page has its own box, which finds articles by title as you type.
+</para>
+<note><para>
+Some libraries have no full-text index; they can be searched by title only. The Library Manager says so beside them.
+</para></note>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="ask">
+<title>Asking Questions</title>
+
+<sect1 id="answers">
+<title>Answers with Sources</title>
+<para>
+Choose <guilabel>Ask</guilabel>, type a question and press &Enter;. &kathenaeum; finds the articles that bear on it in
+your libraries, reads their best passages, and the model writes an answer from them. The first words appear after a few
+seconds; <guibutton>Stop</guibutton> ends the answer early and keeps what was written.
+</para>
+<screenshot>
+<screeninfo>An answer</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="ask.png" format="PNG"/></imageobject>
+<textobject><phrase>An answer with numbered citations and its sources</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>Under the answer:</para>
+<itemizedlist>
+<listitem><para>
+<guilabel>[1]</guilabel>, <guilabel>[2]</guilabel>… after a sentence name the source it matches. Click one to open that
+article at the section it comes from. These numbers are computed by &kathenaeum;, which compares each sentence with the
+passages the model was given; they are not the model's own claims.
+</para></listitem>
+<listitem><para>
+<guilabel>[?]</guilabel> marks a sentence that no source clearly supports, or a figure that appears in none of them: check
+it. It is a hint, not a fact-checker.
+</para></listitem>
+<listitem><para>
+<guilabel>Sources</guilabel> lists the articles the answer was written from. <guibutton>Save to Project…</guibutton> keeps
+the answer in a research project.
+</para></listitem>
+</itemizedlist>
+<para>
+If the libraries do not hold the answer, the assistant says it could not find it rather than answering from memory.
+</para>
+</sect1>
+
+<sect1 id="follow-ups">
+<title>Follow-up Questions and Chats</title>
+<para>
+Ask a follow-up in the same chat (<quote>and how deep is it?</quote>): the assistant knows what <quote>it</quote> refers to.
+<guibutton>New Chat</guibutton> starts afresh.
+</para>
+<para>
+Every chat is saved with its answers, sources and citations. <guilabel>Chats</guilabel> lists them, newest first: open one
+to read it or continue it, or <guibutton>Rename</guibutton>, <guibutton>Delete</guibutton> or
+<guibutton>Add to Project…</guibutton> it. A chat about an article, or one held in a project, is marked as such.
+</para>
+</sect1>
+
+<sect1 id="ask-article">
+<title>Asking About One Article</title>
+<para>
+<guibutton>Ask</guibutton> in an article's header opens a chat beside it that answers from that article alone, citing its
+sections; a citation scrolls the article to the section. These chats are saved with their article, and the panel lists the
+earlier ones.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="projects">
+<title>Research Projects</title>
+<para>
+A project gathers what you find on one subject. Choose <guilabel>Projects</guilabel>, then
+<guibutton>New Project…</guibutton>, and give it a title and, if you like, a goal: the question you are researching. A
+project has three views: <guilabel>Sources</guilabel>, <guilabel>Chat</guilabel> and <guilabel>Documents</guilabel>.
+</para>
+
+<sect1 id="project-sources">
+<title>Sources and Notes</title>
+<para>Add to a project:</para>
+<itemizedlist>
+<listitem><para>an article: <guibutton>Add to Project…</guibutton> in its header, or <guibutton>Add Article…</guibutton> in the project;</para></listitem>
+<listitem><para>a passage: select it in an article, right-click, <guimenuitem>Save to Project…</guimenuitem>;</para></listitem>
+<listitem><para>an answer: <guibutton>Save to Project…</guibutton> under it;</para></listitem>
+<listitem><para>a whole chat: <guibutton>Add to Project…</guibutton> in <guilabel>Chats</guilabel>.</para></listitem>
+</itemizedlist>
+<para>
+Each source can have a note. Notes appear beside the source, on the passage in its article, and in your documents' preview.
+</para>
+</sect1>
+
+<sect1 id="project-chat">
+<title>The Project's Chat</title>
+<para>
+The <guilabel>Chat</guilabel> view answers from the project's own articles and saved passages, with its goal in mind. Turn on
+<guilabel>Also search the whole library</guilabel> to let it use other articles too; they are listed apart, as outside the
+project.
+</para>
+</sect1>
+
+<sect1 id="documents">
+<title>Documents</title>
+<para>
+<guibutton>New Document</guibutton> creates a Markdown document. It opens in a window of its own with &kate;'s editor
+(highlighting, spell checking, search and replace, and everything you can set in <guibutton>Configure Editor…</guibutton>)
+beside a live preview. The document is saved as you type.
+</para>
+<para>
+<guibutton>Cite</guibutton> inserts a link to one of the project's articles, or quotes a saved passage with its source.
+Links in the preview open the article in the main window. <guibutton>Export…</guibutton> saves the document as a Markdown
+file, with a reference list in place of the links (which mean nothing outside &kathenaeum;);
+<guibutton>Export…</guibutton> in the project's header exports the whole project.
+</para>
+</sect1>
+
+<sect1 id="drafts">
+<title>Drafts Written by the AI</title>
+<para><guibutton>Draft with AI</guibutton> writes a new document for you to edit:</para>
+<variablelist>
+<varlistentry>
+<term><guimenuitem>Write From Your Instructions…</guimenuitem></term>
+<listitem><para>
+Give a title and say what the document should cover and how, in as much detail as you like: <quote>A full report on how
+Crater Lake formed. Start with Mount Mazama and the eruption, then the caldera and how the lake filled. Formal tone, with a
+short conclusion.</quote> Choose a short document (about three sections) or a full report (up to six longer ones), and
+whether it may use the whole library. The model plans the sections from your instructions, then writes each one from the
+sources that fit it. &kathenaeum; adds the source numbers, <guilabel>[?]</guilabel> on what to check, and a reference
+list. A full report takes a few minutes.
+</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guimenuitem>Summary of the Project</guimenuitem></term>
+<listitem><para>A summary of each of the project's articles (up to fifteen) and an overview of what they say about its goal.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guimenuitem>Notes from a chat</guimenuitem></term>
+<listitem><para>The questions explored, the findings and the open questions of one of the project's chats.</para></listitem>
+</varlistentry>
+</variablelist>
+<para>
+<guibutton>Stop</guibutton> ends a draft and keeps nothing. Drafts come from a small model: read them against their
+sources.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="maps">
+<title>Maps</title>
+
+<sect1 id="map-regions">
+<title>Downloading Regions</title>
+<para>
+Maps are downloaded once and then work offline. In
+<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>, choose
+<guibutton>Add a region…</guibutton>. Start with the world overview (about 45 MB: every country's coasts, borders, cities
+and main roads), then add the countries, states or regions you want: each card shows the region's shape, and
+<guibutton>Show Its Parts</guibutton> leads to the regions inside it (North America, then the United States, then
+Oregon).
+</para>
+<screenshot>
+<screeninfo>Choosing a region</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="map-regions.png" format="PNG"/></imageobject>
+<textobject><phrase>The continents, each card showing its shape</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+A region offers two levels of detail, each with its size: <guilabel>Streets and buildings</guilabel>, or
+<guilabel>Roads and towns</guilabel>, about a fifth of the size. To know which places have Wikipedia articles,
+&kathenaeum; also downloads the region's OpenStreetMap data, reads it once and deletes it. Settings shows each region's
+progress, and lets you update a region to the newest map or remove it.
+</para>
+</sect1>
+
+<sect1 id="map-page">
+<title>Exploring the Map</title>
+<para>
+Choose <guilabel>Map</guilabel> in the sidebar. Drag to move, scroll or use the <guibutton>+</guibutton> and
+<guibutton>−</guibutton> buttons to zoom, double-click to zoom in. <guilabel>Find a place…</guilabel> finds places by name
+in the regions you have.
+</para>
+<para>
+Click a place (a city, a building, a park, a lake) to see what it is. <guibutton>Read</guibutton> opens its Wikipedia
+article from your libraries: OpenStreetMap often records which article describes a place, so <quote>Portland</quote>
+opens <quote>Portland, Oregon</quote>. <guilabel>In</guilabel> lists what the place lies within (its park, town, county,
+state), each with its article. When no article is known, <guibutton>Search the Libraries</guibutton> searches for the
+place's name.
+</para>
+<screenshot>
+<screeninfo>A place on the map</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="map.png" format="PNG"/></imageobject>
+<textobject><phrase>Crater Lake clicked on the map, with its article and the areas it lies within</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+The map opens where you left it. Map data © OpenStreetMap contributors, drawn with tiles from Protomaps.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="library-manager">
+<title>The Library Manager</title>
+
+<sect1 id="installed">
+<title>Installed Libraries</title>
+<para>
+The <guilabel>Installed</guilabel> tab lists your libraries. Click one for its details. The bin button removes a library
+from &kathenaeum;, and its file too if you choose; chats, notes and projects keep their text, and they find the library
+again if you add it back.
+</para>
+<para>
+New libraries go to the folder shown at the top of the tab; <guibutton>Change…</guibutton> picks another (files already
+downloaded stay where they are). <guilabel>Rescan Folder</guilabel>, in the menu, picks up ZIM files copied into it.
+</para>
+</sect1>
+
+<sect1 id="catalog">
+<title>The Catalog and Downloads</title>
+<para>
+The <guilabel>Catalog</guilabel> tab lists the &kiwix; libraries, which you can search, filter by kind and size, and sort.
+It is saved, so it can be browsed offline. Downloads continue in the background, can be cancelled and resumed, and are
+checked when they finish: a damaged file is never added.
+</para>
+<screenshot>
+<screeninfo>The catalog</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="catalog.png" format="PNG"/></imageobject>
+<textobject><phrase>The Kiwix catalog in the Library Manager</phrase></textobject>
+</mediaobject>
+</screenshot>
+</sect1>
+
+<sect1 id="updates">
+<title>Library Updates</title>
+<para>
+&kiwix; publishes new versions of its libraries every few months. <guibutton>Check for Updates</guibutton> in the Library
+Manager (or <guibutton>Check Now</guibutton> in
+<menuchoice><guimenu>Settings</guimenu><guisubmenu>Library Updates</guisubmenu></menuchoice>) looks in the catalog and says
+which of your libraries have a newer version. &kathenaeum; also checks once a week by itself, and tells you only when it
+finds one; you can turn this off in Settings.
+</para>
+<para>
+An update shows as <guibutton>Update to …</guibutton> on the library's card and in the Library Manager. It downloads the
+new version beside the old one; once it is ready, remove the old one.
+</para>
+</sect1>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="settings">
+<title>Settings</title>
+<variablelist>
+<varlistentry>
+<term><guilabel>Models</guilabel></term>
+<listitem><para>
+Whether &ollama; is running, its address (normally <userinput>http://localhost:11434</userinput>), and the models for
+answers and for finding passages. If a model is missing, the command to install it is shown. If &ollama; keeps only one
+model loaded, so that every question waits while it swaps them, Settings says so and how to change it.
+</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Library Updates</guilabel></term>
+<listitem><para>The weekly check for newer versions of your libraries, and <guibutton>Check Now</guibutton>.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Reading</guilabel></term>
+<listitem><para>Articles across the whole window, or in a column of comfortable reading width.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Maps</guilabel></term>
+<listitem><para>The regions you have, adding more, and the folder they are kept in.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Storage</guilabel></term>
+<listitem><para>The folder for downloaded libraries, and where &kathenaeum; keeps its database of chats, projects and settings.</para></listitem>
+</varlistentry>
+</variablelist>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="shortcuts">
+<title>Keyboard Shortcuts</title>
+<informaltable>
+<tgroup cols="2">
+<thead><row><entry>Keys</entry><entry>Action</entry></row></thead>
+<tbody>
+<row><entry>&Ctrl;<keycap>F</keycap></entry><entry>Go to the search box in the sidebar</entry></row>
+<row><entry><keycap>F1</keycap></entry><entry>Open this handbook</entry></row>
+<row><entry>&Enter;</entry><entry>Ask the question, or search for the text, that you have typed</entry></row>
+<row><entry><keycap>+</keycap> / <keycap>−</keycap></entry><entry>Zoom the map in or out</entry></row>
+<row><entry>&Esc;</entry><entry>Close the place shown on the map</entry></row>
+<row><entry>&Ctrl;&Shift;<keycap>P</keycap></entry><entry>Show or hide the preview in a document's window</entry></row>
+</tbody>
+</tgroup>
+</informaltable>
+<para>A document's window has all of &kate;'s editing shortcuts.</para>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="privacy">
+<title>Privacy and the Network</title>
+<para>
+&kathenaeum; works offline. What you read, search for, ask and write stays on your computer: questions go to &ollama; on
+this computer, never to a service on the Internet, and articles are shown with nothing loaded from the web. It connects
+to the Internet only:
+</para>
+<itemizedlist>
+<listitem><para>to the &kiwix; catalog and its downloads, when you open the Library Manager, download a library, or check for library updates (by default once a week);</para></listitem>
+<listitem><para>to Protomaps and Geofabrik, when you add or update a map region.</para></listitem>
+</itemizedlist>
+<para>
+Links to web sites in articles open in your browser, only when you click them.
+</para>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="troubleshooting">
+<title>Questions and Answers</title>
+<qandaset id="faq">
+<qandaentry>
+<question><para>Asking a question says &ollama; cannot be reached.</para></question>
+<answer><para>
+Start &ollama; (on most systems, <userinput><command>systemctl</command> start ollama</userinput>), then press
+<guibutton>Check Again</guibutton> in Settings. Reading and searching work without it.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>A model is missing.</para></question>
+<answer><para>
+Settings shows the command to download it, for example <userinput><command>ollama</command> pull qwen3.5:2b</userinput>.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>The answer says it could not find anything, although the library has an article on it.</para></question>
+<answer><para>
+Questions find articles by their words. Name the subject as the article's title does (<quote>What is the boiling point of
+ethanol?</quote>), or open the article and ask about it there with <guibutton>Ask</guibutton>.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>A library is marked as not Wikipedia-style.</para></question>
+<answer><para>
+&kathenaeum; can read and search only libraries made the way &kiwix; makes Wikipedia's. Others (such as Stack Exchange or
+TED) may open, but their articles cannot be searched or used for answers.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>The map is empty.</para></question>
+<answer><para>
+Download the world overview and a region in
+<menuchoice><guimenu>Settings</guimenu><guisubmenu>Maps</guisubmenu></menuchoice>. The map shows only what has been
+downloaded.
+</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>Clicking a place shows no article.</para></question>
+<answer><para>
+Not every place has a Wikipedia article, and the article must be in one of your libraries: a small topic library will not
+have it. <guibutton>Search the Libraries</guibutton> searches for the place's name instead.
+</para></answer>
+</qandaentry>
+</qandaset>
+</chapter>
+
+<!-- ================================================================== -->
+<chapter id="credits">
+<title>Credits and License</title>
+<para>&kathenaeum; Copyright 2026 Jaimie Garner.</para>
+<para>
+Articles come from Wikipedia through &kiwix; ZIM files and are under their own licence (Wikipedia: CC BY-SA 4.0). Map data
+© OpenStreetMap contributors (ODbL), with tiles and style from Protomaps and region outlines and extracts from Geofabrik;
+maps are drawn with MapLibre Native. Answers are written by models running on your computer through &ollama;.
+</para>
+<para>Documentation Copyright 2026 Jaimie Garner.</para>
+<!-- TRANS:CREDIT_FOR_TRANSLATORS -->
+&underFDL;
+&underGPL;
+</chapter>
+
+</book>
+<!--
+Local Variables:
+mode: xml
+sgml-minimize-attributes:nil
+sgml-general-insert-case:lower
+sgml-indent-step:0
+sgml-indent-data:nil
+End:
+
+vim:tabstop=2:shiftwidth=2:expandtab
+kate: space-indent on; indent-width 2; tab-width 2; indent-mode none;
+-->

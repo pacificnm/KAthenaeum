@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-project(kathenaeum VERSION 0.11.0 LANGUAGES CXX)
+project(kathenaeum VERSION 0.12.0 LANGUAGES CXX)
 
 set(QT_MIN_VERSION "6.8.0")
 set(KF_MIN_VERSION "6.13.0")
@@ -28,7 +28,7 @@ qt_policy(SET QTP0004 NEW)  # a qmldir for each QML subfolder
 # Debian ships Qt's private headers in separate -private-dev packages, but Qt's QML targets still list their folders
 add_compile_options(-Wno-missing-include-dirs)
 
-find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes TextEditor)
+find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS Kirigami CoreAddons I18n Config Crash DBusAddons IconThemes TextEditor DocTools)
 find_package(KF6KirigamiAddons 1.7.0 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -53,13 +53,14 @@ endif()
 set(KATHENAEUM_PRIVATE_DIR "${KDE_INSTALL_LIBDIR}/kathenaeum")
 
 add_subdirectory(src)
+add_subdirectory(doc)
 if(BUILD_TESTING)
     add_subdirectory(autotests)
 endif()
 
 install(FILES data/${APP_ID}.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES data/${APP_ID}.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
-install(FILES data/icons/kathenaeum.svg DESTINATION ${KDE_INSTALL_FULL_ICONDIR}/hicolor/scalable/apps)
+install(FILES data/icons/kathenaeum.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 install(DIRECTORY data/map/ DESTINATION ${KDE_INSTALL_DATADIR}/kathenaeum/map)
 # MapLibre: its QML plugin, and its two libraries under their sonames
 install(DIRECTORY ${MAPLIBRE_PREFIX}/qml/MapLibre DESTINATION ${KATHENAEUM_PRIVATE_DIR}/qml)
@@ -80,6 +81,7 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "khelpcenter")  # shows the handbook (Help, F1)
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${CPACK_PACKAGING_INSTALL_PREFIX}/${KATHENAEUM_PRIVATE_DIR}/lib")
 # Loaded at run time, so dpkg-shlibdeps cannot see them. Ollama is not in Debian: the app explains how to get it.
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "aria2, libqt6sql6-sqlite, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-shapes, qml6-module-qtquick-dialogs, qml6-module-qtwebengine, qml6-module-org-kde-kirigami, qml6-module-org-kde-kirigamiaddons-formcard, qml6-module-org-kde-coreaddons, qml6-module-org-kde-desktop")

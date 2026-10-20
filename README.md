@@ -24,6 +24,10 @@ There is nothing to build before you can use a library: it is searchable and rea
 
 The library manager and model settings are ordinary parts of the application, not a separate admin interface, and there is no login: it is your desktop.
 
+## Help
+
+The KAthenaeum Handbook (`doc/`) opens in KDE's Help Center, from "Handbook" in the sidebar or F1, and is listed there under Application Manuals › Education.
+
 ## How it works
 
 ```

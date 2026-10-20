@@ -86,6 +86,7 @@ Kirigami.ApplicationWindow {
         modal: !root.wideScreen
         drawerOpen: root.wideScreen
         onNavigate: name => root.show(root.componentOf(name))
+        onHelp: root.openHandbook()
         onSearch: text => text !== "" ? root.show(searchPage, { initialQuery: text }) : root.show(searchPage)
     }
     onWideScreenChanged: sidebar.drawerOpen = wideScreen
@@ -93,6 +94,14 @@ Kirigami.ApplicationWindow {
     Shortcut {
         sequences: [StandardKey.Find]
         onActivated: sidebar.focusSearch()
+    }
+    // the handbook, in KDE's Help Center
+    function openHandbook() {
+        Qt.openUrlExternally("help:/kathenaeum/index.html");
+    }
+    Shortcut {
+        sequences: [StandardKey.HelpContents]
+        onActivated: root.openHandbook()
     }
 
     pageStack.initialPage: librariesPage

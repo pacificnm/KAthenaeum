@@ -108,7 +108,7 @@ sudo apt install extra-cmake-modules ninja-build \
   qt6-base-dev qt6-declarative-dev qt6-webengine-dev qt6-svg-dev qt6-tools-dev \
   libkirigami-dev kirigami-addons-dev libkf6coreaddons-dev libkf6i18n-dev libkf6config-dev \
   libkf6iconthemes-dev libkf6crash-dev libkf6dbusaddons-dev libkf6qqc2desktopstyle-dev qml6-module-org-kde-desktop \
-  libkf6texteditor-dev \
+  libkf6texteditor-dev libkf6doctools-dev \
   libzim-dev libxml2-dev aria2 sqlite3 \
   libosmium2-dev zlib1g-dev
 ```
@@ -238,6 +238,14 @@ Already present on this machine: cmake, g++ 14, pkg-config, `libsqlite3-dev`, `l
 - **MapLibre Qt gotcha:** after an animated `easeTo()` the item's `coordinate` and `zoomLevel` keep the values from before the animation (they are read back from the camera when the call is made), so every click was placed ~100 px off. The page sets `coordinate` and `zoomLevel` directly.
 - **The map opens where it was left** (`MapManager::saveView`, setting `map.view`, saved half a second after it stops moving and when the page closes): opening Map from the sidebar makes a new page, and it opened zoomed out on the last region every time, so going to an article and back through the sidebar lost the place (the user, 2026-10-19). Back from an article keeps the same page and its camera.
 - **Not yet:** resuming an interrupted region (it starts again), a "show on map" from an article, markers for a project's places.
+
+## Handbook (`doc/`)
+
+- **The KAthenaeum Handbook**, KDE DocBook (`doc/index.docbook`, built with KDocTools `kdoctools_create_handbook`, installed to `share/doc/HTML/en/kathenaeum` with the screenshots `doc/*.png`). Check it with `meinproc6 --check doc/index.docbook`. It opens in KDE's Help Center from "Handbook" in the sidebar and F1 (`help:/kathenaeum/index.html`); the package recommends `khelpcenter`.
+- **Where the Help Center lists it:** KHelpCenter builds "Application Manuals" from the desktop menu, and lists an application that has `X-DocPath=kathenaeum/index.html` in its `.desktop` file. `Categories=…Education;Reference;` puts it under **Education › Miscellaneous** (the Plasma menu's Education submenus are Languages, Mathematics, Science, Tools and Miscellaneous; checked in KHelpCenter 25.04, 2026-10-19).
+- **Screenshots** were taken from the app in a headless KWin (`shots.sh` in the session scratchpad: `kwin_wayland --virtual` and `spectacle -b -n -f`), cropped to the window and scaled to 900 pixels wide. Retake them when the interface changes.
+- Chapters are separate pages (`help:/kathenaeum/ask.html`); sections are not.
+- **Gotcha:** a scratch prefix in `CMAKE_PREFIX_PATH` that held a partial copy of KF6DocTools (extracted from a -dev package) made the configure fail; build against the installed packages.
 
 ## Open decisions (ask before assuming)
 

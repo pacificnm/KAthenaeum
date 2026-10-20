@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.12.0" date="2026-10-19">
+      <description>
+        <p>A handbook in KDE's Help Center. A more current look: a sidebar with search, page titles in the header, cards, compact buttons and segmented tabs. Map regions chosen by their shapes, the map reopening where it was left, articles across the whole window, and a check for newer versions of your libraries.</p>
+      </description>
+    </release>
     <release version="0.11.0" date="2026-10-19">
       <description>
         <p>Research projects: have the AI write a report to your own instructions, planned in sections, each written from the sources that fit it, with citations and a reference list added by KAthenaeum.</p>

@@ -17,6 +17,7 @@ Kirigami.OverlayDrawer {
 
     signal navigate(string section)
     signal search(string text)
+    signal help()
 
     function focusSearch() {
         if (modal)
@@ -149,6 +150,35 @@ Kirigami.OverlayDrawer {
             Kirigami.Separator { Layout.fillWidth: true }
             Place { section: "manager"; text: i18n("Library Manager"); icon.name: "folder-download"; count: drawer.activeDownloads > 0 ? drawer.activeDownloads : drawer.updates; Layout.topMargin: Kirigami.Units.smallSpacing }
             Place { section: "settings"; text: i18n("Settings"); icon.name: "settings-configure" }
+            // the handbook, in KDE's Help Center
+            QQC2.ItemDelegate {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.smallSpacing
+                Layout.rightMargin: Kirigami.Units.smallSpacing
+                topPadding: Kirigami.Units.mediumSpacing
+                bottomPadding: Kirigami.Units.mediumSpacing
+                leftPadding: Kirigami.Units.largeSpacing
+                text: i18n("Handbook")
+                icon.name: "help-contents"
+                onClicked: drawer.help()
+                background: Rectangle {
+                    radius: Kirigami.Units.cornerRadius
+                    color: parent.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
+                }
+                contentItem: RowLayout {
+                    spacing: Kirigami.Units.largeSpacing
+                    Kirigami.Icon {
+                        source: "help-contents"
+                        Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                        Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+                    }
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        textFormat: Text.PlainText
+                        text: i18n("Handbook")
+                    }
+                }
+            }
             Place { section: "about"; text: i18n("About KAthenaeum"); icon.name: "help-about"; Layout.bottomMargin: Kirigami.Units.smallSpacing }
         }
         Kirigami.Separator {
