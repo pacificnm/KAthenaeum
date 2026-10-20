@@ -1,0 +1,321 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "classroomcontroller.h"
+
+#include "core/classroom.h"
+#include "core/library.h"
+#include "core/teacher.h"
+#include "modelsettings.h"
+
+#include <KLocalizedString>
+
+namespace
+{
+Teacher::Models models()
+{
+    ModelSettings *m = ModelSettings::instance();
+    return {m->answerModel(), m->embeddingModel()};
+}
+}
+
+ClassroomController::ClassroomController(QObject *parent)
+    : QObject(parent)
+    , m_teacher(new Teacher(ModelSettings::instance()->client(), this))
+{
+    Classroom::reconcile();  // a plan the last run left unfinished
+    connect(m_teacher, &Teacher::progress, this, [this](int step, int total, const QString &label) {
+        m_step = step;
+        m_total = total;
+        m_label = label;
+        Q_EMIT stateChanged();
+    });
+    connect(m_teacher, &Teacher::textAdded, this, [this](const QString &text) {
+        m_streamed += text;
+        Q_EMIT stateChanged();
+    });
+    connect(m_teacher, &Teacher::finished, this, [this](const QString &status, const QString &error) {
+        const QString job = m_teacher->job();
+        const qint64 subject = m_teacher->subject();
+        m_label.clear();
+        m_streamed.clear();
+        Q_EMIT stateChanged();
+        Q_EMIT coursesChanged();
+        if (job == QLatin1String("plan")) {
+            const auto c = Classroom::course(subject);
+            if (status == QLatin1String("done") && c)
+                Q_EMIT courseReady(subject, c->title);
+            else if (status == QLatin1String("error"))
+                Q_EMIT failed(i18n("The course could not be planned: %1", error));
+        } else if (status == QLatin1String("done")) {
+            Q_EMIT introReady(subject);
+        } else if (status == QLatin1String("error")) {
+            Q_EMIT failed(i18n("The introduction could not be written: %1", error));
+        }
+    });
+}
+
+// ---- the learner ----
+
+QVariantMap ClassroomController::profile() const
+{
+    const Classroom::Profile p = Classroom::profile();
+    return {{QStringLiteral("name"), p.name},
+            {QStringLiteral("grade"), p.grade.isEmpty() ? QStringLiteral("none") : p.grade},
+            {QStringLiteral("gradeLabel"), Classroom::gradeLabel(p.grade)},
+            {QStringLiteral("interests"), p.interests},
+            {QStringLiteral("goals"), p.goals}};
+}
+
+bool ClassroomController::hasProfile() const
+{
+    return Classroom::profile().exists();
+}
+
+bool ClassroomController::saveProfile(const QVariantMap &profile)
+{
+    const bool ok = Classroom::saveProfile({profile.value(QStringLiteral("name")).toString(), profile.value(QStringLiteral("grade")).toString(),
+                                            profile.value(QStringLiteral("interests")).toString(), profile.value(QStringLiteral("goals")).toString()});
+    Q_EMIT profileChanged();
+    return ok;
+}
+
+QString ClassroomController::defaultLevel() const
+{
+    return Classroom::nextLevel(Classroom::profile().grade);
+}
+
+QString ClassroomController::levelLabel(const QString &level) const
+{
+    return Classroom::levelLabel(level);
+}
+
+// ---- subjects and levels ----
+
+QVariantList ClassroomController::subjects() const
+{
+    QVariantList out;
+    for (const Classroom::Subject &s : Classroom::subjects())
+        out.append(QVariantMap{{QStringLiteral("key"), s.key}, {QStringLiteral("name"), s.name}, {QStringLiteral("icon"), s.icon}, {QStringLiteral("blurb"), s.blurb}});
+    return out;
+}
+
+QVariantMap ClassroomController::subject(const QString &key) const
+{
+    const Classroom::Subject s = Classroom::subject(key);
+    return {{QStringLiteral("key"), s.key}, {QStringLiteral("name"), s.name}, {QStringLiteral("icon"), s.icon}, {QStringLiteral("blurb"), s.blurb}};
+}
+
+QVariantList ClassroomController::levels() const
+{
+    QVariantList out;
+    for (const QString &k : Classroom::levels())
+        out.append(QVariantMap{{QStringLiteral("key"), k}, {QStringLiteral("label"), Classroom::levelLabel(k)}});
+    return out;
+}
+
+QVariantList ClassroomController::grades() const
+{
+    QVariantList out;
+    for (const QString &k : Classroom::gradesCompleted())
+        out.append(QVariantMap{{QStringLiteral("key"), k}, {QStringLiteral("label"), Classroom::gradeLabel(k)}});
+    return out;
+}
+
+QVariantMap ClassroomController::coverage(const QString &subject, const QString &level) const
+{
+    const QList<LibraryRecord> installed = Library::all();
+    const QList<LibraryRecord> libraries = Classroom::librariesFor(subject, installed);
+    QStringList titles;
+    bool simple = false;
+    for (const LibraryRecord &l : libraries) {
+        titles << l.title;
+        simple = simple || Classroom::isSimpleEnglish(l);
+    }
+    QVariantMap out{{QStringLiteral("ok"), !libraries.isEmpty()}, {QStringLiteral("libraries"), titles}};
+    if (libraries.isEmpty())
+        out.insert(QStringLiteral("suggestion"), Classroom::isYoung(level) ? QStringLiteral("Wikipedia in simple English") : Classroom::subject(subject).suggestion);
+    else if (Classroom::isYoung(level) && !simple)
+        out.insert(QStringLiteral("simpleSuggestion"), QStringLiteral("Wikipedia in simple English"));
+    return out;
+}
+
+// ---- courses ----
+
+QVariantList ClassroomController::courses() const
+{
+    QVariantList out;
+    for (const Classroom::Course &c : Classroom::courses()) {
+        const Classroom::Subject s = Classroom::subject(c.subject);
+        out.append(QVariantMap{{QStringLiteral("id"), c.id},
+                               {QStringLiteral("title"), c.title},
+                               {QStringLiteral("subject"), s.key},
+                               {QStringLiteral("subjectName"), s.name},
+                               {QStringLiteral("icon"), s.icon},
+                               {QStringLiteral("level"), c.level},
+                               {QStringLiteral("levelLabel"), Classroom::levelLabel(c.level)},
+                               {QStringLiteral("status"), c.status},
+                               {QStringLiteral("error"), c.error},
+                               {QStringLiteral("lessons"), c.lessons},
+                               {QStringLiteral("completed"), c.completed}});
+    }
+    return out;
+}
+
+bool ClassroomController::plan(qint64 courseId)
+{
+    const auto c = Classroom::course(courseId);
+    if (!c)
+        return false;
+    if (m_teacher->running()) {
+        Q_EMIT failed(i18n("The teacher is busy. Wait for it to finish, or stop it, then try again."));
+        return false;
+    }
+    QList<qint64> libraries, simple;
+    for (const LibraryRecord &l : Classroom::librariesFor(c->subject, Library::all())) {
+        libraries << l.id;
+        if (Classroom::isYoung(c->level) && Classroom::isSimpleEnglish(l))
+            simple << l.id;
+    }
+    m_streamed.clear();
+    m_teacher->planCourse(courseId, libraries, simple, models());
+    Q_EMIT coursesChanged();
+    Q_EMIT stateChanged();
+    return true;
+}
+
+qint64 ClassroomController::createCourse(const QString &subject, const QString &title, const QString &level, const QString &focus, const QString &length)
+{
+    const qint64 id = Classroom::createCourse(subject, title, level, focus, length);
+    if (id <= 0)
+        return 0;
+    Q_EMIT coursesChanged();
+    plan(id);
+    return id;
+}
+
+bool ClassroomController::planAgain(qint64 courseId)
+{
+    return plan(courseId);
+}
+
+bool ClassroomController::removeCourse(qint64 courseId)
+{
+    if (m_teacher->running() && m_teacher->job() == QLatin1String("plan") && m_teacher->subject() == courseId)
+        m_teacher->stop();
+    const bool ok = Classroom::removeCourse(courseId);
+    Q_EMIT coursesChanged();
+    return ok;
+}
+
+QVariantMap ClassroomController::course(qint64 courseId) const
+{
+    const auto c = Classroom::course(courseId);
+    if (!c)
+        return {};
+    const Classroom::Subject s = Classroom::subject(c->subject);
+    QVariantList units;
+    for (const Classroom::Unit &u : Classroom::syllabus(courseId)) {
+        QVariantList lessons;
+        for (const Classroom::Lesson &l : u.lessons)
+            lessons.append(QVariantMap{{QStringLiteral("id"), l.id},
+                                       {QStringLiteral("title"), l.title},
+                                       {QStringLiteral("objective"), l.objective},
+                                       {QStringLiteral("completed"), l.completed()},
+                                       {QStringLiteral("hasIntro"), !l.intro.isEmpty()},
+                                       {QStringLiteral("readings"), int(l.readings.size())}});
+        units.append(QVariantMap{{QStringLiteral("id"), u.id}, {QStringLiteral("title"), u.title}, {QStringLiteral("lessons"), lessons}});
+    }
+    return {{QStringLiteral("id"), c->id},
+            {QStringLiteral("title"), c->title},
+            {QStringLiteral("subject"), s.key},
+            {QStringLiteral("subjectName"), s.name},
+            {QStringLiteral("icon"), s.icon},
+            {QStringLiteral("level"), c->level},
+            {QStringLiteral("levelLabel"), Classroom::levelLabel(c->level)},
+            {QStringLiteral("focus"), c->focus},
+            {QStringLiteral("length"), c->length},
+            {QStringLiteral("status"), c->status},
+            {QStringLiteral("error"), c->error},
+            {QStringLiteral("lessons"), c->lessons},
+            {QStringLiteral("completed"), c->completed},
+            {QStringLiteral("units"), units}};
+}
+
+QVariantMap ClassroomController::lesson(qint64 lessonId) const
+{
+    const auto l = Classroom::lesson(lessonId);
+    if (!l)
+        return {};
+    const auto c = Classroom::course(l->courseId);
+    // where it is in the course: its number, and the lessons before and after it
+    QList<qint64> order;
+    QString unitTitle;
+    for (const Classroom::Unit &u : Classroom::syllabus(l->courseId))
+        for (const Classroom::Lesson &other : u.lessons) {
+            order << other.id;
+            if (other.id == lessonId)
+                unitTitle = u.title;
+        }
+    const qsizetype at = order.indexOf(lessonId);
+    QVariantList readings;
+    for (int i = 0; i < l->readings.size(); ++i) {
+        const Classroom::Reading &r = l->readings.at(i);
+        const auto library = Library::byId(r.article.libraryId);
+        readings.append(QVariantMap{{QStringLiteral("n"), i + 1},
+                                    {QStringLiteral("libraryId"), r.article.libraryId},
+                                    {QStringLiteral("path"), r.article.path},
+                                    {QStringLiteral("title"), r.article.title},
+                                    {QStringLiteral("library"), library ? library->title : QString()},
+                                    {QStringLiteral("available"), library && library->fileExists()}});
+    }
+    return {{QStringLiteral("id"), l->id},
+            {QStringLiteral("courseId"), l->courseId},
+            {QStringLiteral("courseTitle"), c ? c->title : QString()},
+            {QStringLiteral("level"), c ? c->level : QString()},
+            {QStringLiteral("unitTitle"), unitTitle},
+            {QStringLiteral("title"), l->title},
+            {QStringLiteral("objective"), l->objective},
+            {QStringLiteral("intro"), l->intro},
+            {QStringLiteral("completed"), l->completed()},
+            {QStringLiteral("number"), int(at + 1)},
+            {QStringLiteral("count"), int(order.size())},
+            {QStringLiteral("previousId"), at > 0 ? order.at(at - 1) : 0},
+            {QStringLiteral("nextId"), at >= 0 && at + 1 < order.size() ? order.at(at + 1) : 0},
+            {QStringLiteral("readings"), readings}};
+}
+
+bool ClassroomController::writeIntro(qint64 lessonId)
+{
+    if (m_teacher->running())
+        return false;
+    m_streamed.clear();
+    m_teacher->writeIntro(lessonId, models());
+    Q_EMIT stateChanged();
+    return true;
+}
+
+bool ClassroomController::setCompleted(qint64 lessonId, bool completed)
+{
+    const bool ok = Classroom::setCompleted(lessonId, completed);
+    Q_EMIT coursesChanged();
+    return ok;
+}
+
+void ClassroomController::stop()
+{
+    m_teacher->stop();
+}
+
+bool ClassroomController::busy() const
+{
+    return m_teacher->running();
+}
+
+QString ClassroomController::job() const
+{
+    return m_teacher->running() ? m_teacher->job() : QString();
+}
+
+qint64 ClassroomController::jobSubject() const
+{
+    return m_teacher->running() ? m_teacher->subject() : 0;
+}

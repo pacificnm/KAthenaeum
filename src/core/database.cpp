@@ -207,6 +207,46 @@ const QList<QStringList> migrations = {
         QStringLiteral("CREATE INDEX map_places_wikipedia ON map_places (wikipedia)"),
         QStringLiteral("CREATE INDEX map_places_wikipedia_en ON map_places (wikipedia_en)"),
     },
+    {
+        // The classroom: the learner (one per computer), courses, their units and lessons. A lesson's readings are
+        // articles of the installed libraries (JSON [{libraryId, path, title, score}]); its intro is the teacher's
+        // Markdown, written when it is first opened. grade and level are keys (Classroom::levels, gradesCompleted).
+        QStringLiteral("CREATE TABLE learner ("
+                       " id INTEGER PRIMARY KEY CHECK (id = 1),"
+                       " name TEXT NOT NULL DEFAULT '',"
+                       " grade TEXT NOT NULL DEFAULT 'none',"
+                       " interests TEXT NOT NULL DEFAULT '',"
+                       " goals TEXT NOT NULL DEFAULT '',"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE TABLE courses ("
+                       " id INTEGER PRIMARY KEY,"
+                       " subject TEXT NOT NULL,"
+                       " title TEXT NOT NULL,"
+                       " level TEXT NOT NULL,"
+                       " focus TEXT NOT NULL DEFAULT '',"
+                       " length TEXT NOT NULL DEFAULT 'standard',"  // short | standard | long
+                       " status TEXT NOT NULL DEFAULT 'new',"  // new | planning | ready | failed
+                       " error TEXT NOT NULL DEFAULT '',"
+                       " created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),"
+                       " updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')))"),
+        QStringLiteral("CREATE TABLE course_units ("
+                       " id INTEGER PRIMARY KEY,"
+                       " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
+                       " position INTEGER NOT NULL,"
+                       " title TEXT NOT NULL DEFAULT '')"),
+        QStringLiteral("CREATE INDEX course_units_course ON course_units (course_id, position)"),
+        QStringLiteral("CREATE TABLE course_lessons ("
+                       " id INTEGER PRIMARY KEY,"
+                       " course_id INTEGER NOT NULL REFERENCES courses (id) ON DELETE CASCADE,"
+                       " unit_id INTEGER NOT NULL REFERENCES course_units (id) ON DELETE CASCADE,"
+                       " position INTEGER NOT NULL,"
+                       " title TEXT NOT NULL,"
+                       " objective TEXT NOT NULL DEFAULT '',"
+                       " readings TEXT NOT NULL DEFAULT '[]',"
+                       " intro TEXT NOT NULL DEFAULT '',"
+                       " completed_at TEXT)"),
+        QStringLiteral("CREATE INDEX course_lessons_course ON course_lessons (course_id, unit_id, position)"),
+    },
 };
 
 bool exec(QSqlDatabase &db, const QString &sql, QString *error)

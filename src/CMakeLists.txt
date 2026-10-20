@@ -7,6 +7,7 @@ add_library(kathenaeum_core STATIC
     core/catalog.cpp core/catalog.h
     core/chats.cpp core/chats.h
     core/citations.cpp core/citations.h
+    core/classroom.cpp core/classroom.h
     core/database.cpp core/database.h
     core/dictionary.cpp core/dictionary.h
     core/downloads.cpp core/downloads.h
@@ -27,6 +28,7 @@ add_library(kathenaeum_core STATIC
     core/projects.cpp core/projects.h
     core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
+    core/teacher.cpp core/teacher.h
     core/zimarchive.cpp core/zimarchive.h
     core/zimarchives_p.h
     core/zimreader.cpp core/zimreader.h
