@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
@@ -93,6 +94,13 @@ foreach(lib QMapLibre QMapLibreQuickPrivate)
     file(CREATE_LINK ${real} ${CMAKE_BINARY_DIR}/${KATHENAEUM_PRIVATE_DIR}/lib/lib${lib}.so.4 SYMBOLIC)
 endforeach()
 
+# Licences: the app's and its bundled assets' (data/copyright says which applies to what), and MapLibre's
+set(KATHENAEUM_DOC_DIR "${KDE_INSTALL_DATAROOTDIR}/doc/kathenaeum")
+install(FILES data/copyright DESTINATION ${KATHENAEUM_DOC_DIR})
+install(DIRECTORY LICENSES/ DESTINATION ${KATHENAEUM_DOC_DIR}/licenses)
+# MapLibre Native's licence and its own third-party notices (data/thirdparty/maplibre, copied from its source)
+install(DIRECTORY data/thirdparty/maplibre DESTINATION ${KATHENAEUM_DOC_DIR})
+
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
 # Packaging: `cmake --build build --target package` makes a .deb
@@ -104,7 +112,7 @@ set(CPACK_PACKAGE_CONTACT "Jaimie Garner <pacificnm@gmail.com>")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_STRIP_FILES ON)
-set(CPACK_SOURCE_IGNORE_FILES "/\\.git/" "/build[^/]*/" "\\.deb$" "\\.zim$" "/node_modules/" "/CLAUDE\\.md$" "/FEATURES\\.md$")
+set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/" "/build[^/]*/" "\\\\.deb$" "\\\\.zim$" "/node_modules/" "/CLAUDE\\\\.md$" "/FEATURES\\\\.md$")
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "khelpcenter")  # shows the handbook (Help, F1)

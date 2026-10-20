@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
+SPDX-License-Identifier: CC0-1.0
+-->
+
 # KAthenaeum
 
 **A private, offline Wikipedia library with an AI research assistant, as a native KDE application for laptops.**

@@ -6,6 +6,10 @@
   <!ENTITY % addindex "IGNORE">
   <!ENTITY % English "INCLUDE">
 ]>
+<!--
+SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
 <book id="kathenaeum" lang="&language;">
 
 <bookinfo>
@@ -22,7 +26,7 @@
 <year>2026</year>
 <holder>Jaimie Garner</holder>
 </copyright>
-<legalnotice>&FDLNotice;</legalnotice>
+<legalnotice>&CCBYSA4Notice;</legalnotice>
 
 <date>2026-10-20</date>
 <releaseinfo>0.17.0</releaseinfo>
@@ -970,7 +974,7 @@ maps are drawn with MapLibre Native. Answers are written by models running on yo
 </para>
 <para>Documentation Copyright 2026 Jaimie Garner.</para>
 <!-- TRANS:CREDIT_FOR_TRANSLATORS -->
-&underFDL;
+&underCCBYSA4;
 &underGPL;
 </chapter>
 

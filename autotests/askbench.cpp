@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Measures Ask end to end on real libraries and the local Ollama (not a test; nothing is checked):
 //   askbench [--answer MODEL] [--embed MODEL] [--url URL] [--article PATH] file.zim... < questions.txt

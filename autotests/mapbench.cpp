@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Not a test: cuts a region out of a PMTiles archive on the web and reports what it took.
 //   mapbench <archive url> <west> <south> <east> <north> <max zoom> <out.pmtiles>

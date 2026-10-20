@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+
 # Build output
 /build/
 /build-*/
@@ -27,3 +30,7 @@ node_modules/
 # meinproc6 --check writes the handbook as HTML where it is run; the build makes the real one
 /*.html
 /doc/*.html
+
+# Local notes, kept out of the repository
+/CLAUDE.md
+/FEATURES.md

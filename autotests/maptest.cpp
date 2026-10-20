@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Maps: the PMTiles format, cutting a region out of an archive, vector tiles, what a click finds, and OpenStreetMap places
 #include "core/database.h"

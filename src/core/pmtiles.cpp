@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "pmtiles.h"
 

@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Writes the map's layers, light and dark, from Protomaps' basemap style (BSD-3-Clause). The app puts them together with
 // the downloaded regions' sources at run time (MapManager). Run: npm ci && node generate.mjs
