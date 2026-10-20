@@ -21,15 +21,6 @@
 
 namespace
 {
-QDateTime timestamp(const QVariant &v)
-{
-    if (v.isNull() || v.toString().isEmpty())
-        return {};
-    QDateTime t = QDateTime::fromString(v.toString(), Qt::ISODateWithMs);
-    t.setTimeZone(QTimeZone::UTC);
-    return t;
-}
-
 void touch(qint64 courseId)
 {
     QSqlQuery q;
@@ -77,7 +68,7 @@ Classroom::Lesson lessonFrom(const QSqlQuery &q)
     l.objective = q.value(5).toString();
     l.readings = readingsFrom(q.value(6).toByteArray());
     l.intro = q.value(7).toString();
-    l.completedAt = timestamp(q.value(8));
+    l.completedAt = Database::timestamp(q.value(8));
     return l;
 }
 
@@ -97,7 +88,7 @@ Classroom::Course courseFrom(const QSqlQuery &q)
     c.length = q.value(5).toString();
     c.status = q.value(6).toString();
     c.error = q.value(7).toString();
-    c.updatedAt = timestamp(q.value(8));
+    c.updatedAt = Database::timestamp(q.value(8));
     c.projectId = q.value(9).toLongLong();
     c.lessons = q.value(10).toInt();
     c.completed = q.value(11).toInt();
@@ -557,7 +548,7 @@ bool Classroom::setProject(qint64 courseId, qint64 projectId)
 {
     QSqlQuery q;
     q.prepare(QStringLiteral("UPDATE courses SET project_id = ? WHERE id = ?"));
-    q.addBindValue(projectId > 0 ? QVariant(projectId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(Database::nullableId(projectId));
     q.addBindValue(courseId);
     return q.exec() && q.numRowsAffected() == 1;
 }
@@ -621,7 +612,7 @@ bool Classroom::syncLesson(qint64 lessonId)
         const qint64 created = Projects::createDocument(c->projectId, label, lessonDocument(*l));
         QSqlQuery set;
         set.prepare(QStringLiteral("UPDATE course_lessons SET document_id = ? WHERE id = ?"));
-        set.addBindValue(created > 0 ? QVariant(created) : QVariant(QMetaType::fromType<qint64>()));
+        set.addBindValue(Database::nullableId(created));
         set.addBindValue(lessonId);
         set.exec();
     }
@@ -899,7 +890,11 @@ std::optional<Classroom::Attempt> attemptWhere(qint64 quizId, const char *order)
     q.addBindValue(quizId);
     if (!q.exec() || !q.next())
         return std::nullopt;
-    return Classroom::Attempt{q.value(0).toLongLong(), intsFrom(q.value(1).toByteArray()), q.value(2).toInt(), q.value(3).toInt(), timestamp(q.value(4))};
+    return Classroom::Attempt{q.value(0).toLongLong(),
+                              intsFrom(q.value(1).toByteArray()),
+                              q.value(2).toInt(),
+                              q.value(3).toInt(),
+                              Database::timestamp(q.value(4))};
 }
 }
 
@@ -913,8 +908,8 @@ qint64 Classroom::saveQuiz(const Quiz &quiz)
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO quizzes (course_id, lesson_id, unit_id, kind) VALUES (?, ?, ?, ?)"));
     q.addBindValue(quiz.courseId);
-    q.addBindValue(quiz.lessonId > 0 ? QVariant(quiz.lessonId) : QVariant(QMetaType::fromType<qint64>()));
-    q.addBindValue(quiz.unitId > 0 ? QVariant(quiz.unitId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(Database::nullableId(quiz.lessonId));
+    q.addBindValue(Database::nullableId(quiz.unitId));
     q.addBindValue(quiz.kind);
     bool ok = q.exec();
     const qint64 id = q.lastInsertId().toLongLong();
@@ -931,10 +926,10 @@ qint64 Classroom::saveQuiz(const Quiz &quiz)
         insert.addBindValue(question.answer);
         insert.addBindValue(Database::text(question.explanation));
         insert.addBindValue(Database::text(question.evidence));
-        insert.addBindValue(question.source.libraryId > 0 ? QVariant(question.source.libraryId) : QVariant(QMetaType::fromType<qint64>()));
+        insert.addBindValue(Database::nullableId(question.source.libraryId));
         insert.addBindValue(Database::text(question.source.path));
         insert.addBindValue(Database::text(question.source.title));
-        insert.addBindValue(question.lessonId > 0 ? QVariant(question.lessonId) : QVariant(QMetaType::fromType<qint64>()));
+        insert.addBindValue(Database::nullableId(question.lessonId));
         ok = insert.exec();
     }
     if (!ok || !db.commit()) {

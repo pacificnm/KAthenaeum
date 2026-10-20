@@ -5,6 +5,7 @@
 #include "embedding.h"
 #include "zimsearch.h"
 
+#include <QJsonObject>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -134,4 +135,8 @@ QList<Citation> attribute(const QString &answer, const QList<std::pair<int, int>
 
 // The answer as Markdown with citation links after each sentence: [n](cite:n), and [?](check:i) for a flagged one
 QString annotate(const QString &answer, const QList<Citation> &citations);
+
+// The /api/chat request for one prompt and no conversation, as drafts and the teacher send it; `noThinking` adds
+// `think: false`, which models that think need (or they spend the answer's budget thinking)
+QJsonObject completionRequest(const QString &model, const QString &prompt, int numPredict, bool noThinking);
 }

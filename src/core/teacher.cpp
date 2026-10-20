@@ -66,15 +66,7 @@ Teacher::~Teacher()
 
 void Teacher::complete(const QString &prompt, int numPredict, std::function<void(const QString &, const QString &)> done, bool stream)
 {
-    QJsonObject body{
-        {QStringLiteral("model"), m_models.answer},
-        {QStringLiteral("messages"), QJsonArray{QJsonObject{{QStringLiteral("role"), QStringLiteral("user")}, {QStringLiteral("content"), prompt}}}},
-        {QStringLiteral("options"),
-         QJsonObject{{QStringLiteral("temperature"), Rag::Temperature},
-                     {QStringLiteral("num_ctx"), Rag::NumCtx},
-                     {QStringLiteral("num_predict"), numPredict}}}};
-    if (m_think)
-        body.insert(QStringLiteral("think"), false);
+    const QJsonObject body = Rag::completionRequest(m_models.answer, prompt, numPredict, m_think);
     auto text = std::make_shared<QString>();
     const quint64 generation = m_generation;
     m_reply = m_client->chat(

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "dictionary.h"
+#include "xmlutil_p.h"
 
 #include "extract.h"
 #include "library.h"
@@ -59,19 +60,9 @@ QString nameOf(xmlNodePtr n)
     return QString::fromUtf8(reinterpret_cast<const char *>(n->name)).toLower();
 }
 
-QString attr(xmlNodePtr n, const char *name)
-{
-    xmlChar *v = xmlGetProp(n, reinterpret_cast<const xmlChar *>(name));
-    if (!v)
-        return {};
-    QString s = QString::fromUtf8(reinterpret_cast<const char *>(v));
-    xmlFree(v);
-    return s;
-}
-
 bool hasClass(xmlNodePtr n, const char *part)
 {
-    return attr(n, "class").contains(QLatin1String(part));
+    return XmlUtil::attr(n, "class").contains(QLatin1String(part));
 }
 
 // The text of a node, leaving out what is not the definition itself: nested senses, examples, synonyms, quotations
@@ -156,7 +147,7 @@ void collect(xmlNodePtr node, QList<Event> &out)
             out.append({Event::Heading, c, n.at(1).digitValue(), headingText(c)});
         } else if (n == QLatin1String("ol")) {
             out.append({Event::List, c, 0, {}}); // its own items are the senses; nested lists are sub-senses
-        } else if (n == QLatin1String("span") && attr(c, "class").split(QLatin1Char(' ')).contains(QLatin1String("IPA"))) {
+        } else if (n == QLatin1String("span") && XmlUtil::attr(c, "class").split(QLatin1Char(' ')).contains(QLatin1String("IPA"))) {
             out.append({Event::Ipa, c, 0, headingText(c)});
         } else if (n != QLatin1String("table") && n != QLatin1String("style") && n != QLatin1String("script")) {
             collect(c, out);

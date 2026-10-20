@@ -10,18 +10,11 @@
 
 namespace
 {
-QDateTime timestamp(const QVariant &v)
-{
-    QDateTime t = QDateTime::fromString(v.toString(), Qt::ISODateWithMs);
-    t.setTimeZone(QTimeZone::UTC);
-    return t;
-}
-
 ChatRecord chat(const QSqlQuery &q)
 {
     return {q.value(0).toLongLong(),
             q.value(1).toString(),
-            timestamp(q.value(2)),
+            Database::timestamp(q.value(2)),
             q.value(3).toInt(),
             q.value(4).toLongLong(),
             q.value(5).toString(),
@@ -40,11 +33,11 @@ qint64 Chats::create(const QString &title, qint64 articleLibraryId, const QStrin
     QSqlQuery q;
     q.prepare(QStringLiteral("INSERT INTO chats (title, library_id, article_path, article_title, project_id, lesson_id) VALUES (?, ?, ?, ?, ?, ?)"));
     q.addBindValue(Database::text(title.simplified().left(200)));
-    q.addBindValue(articleLibraryId > 0 ? QVariant(articleLibraryId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(Database::nullableId(articleLibraryId));
     q.addBindValue(Database::text(articleLibraryId > 0 ? articlePath : QString()));
     q.addBindValue(Database::text(articleLibraryId > 0 ? articleTitle : QString()));
-    q.addBindValue(projectId > 0 ? QVariant(projectId) : QVariant(QMetaType::fromType<qint64>()));
-    q.addBindValue(lessonId > 0 ? QVariant(lessonId) : QVariant(QMetaType::fromType<qint64>()));
+    q.addBindValue(Database::nullableId(projectId));
+    q.addBindValue(Database::nullableId(lessonId));
     return q.exec() ? q.lastInsertId().toLongLong() : 0;
 }
 
@@ -161,7 +154,7 @@ QList<MessageRecord> Chats::messages(qint64 chatId)
         m.sources = q.value(5).toString().toUtf8();
         m.citations = q.value(6).toString().toUtf8();
         m.meta = q.value(7).toString().toUtf8();
-        m.createdAt = timestamp(q.value(8));
+        m.createdAt = Database::timestamp(q.value(8));
         out.append(m);
     }
     return out;

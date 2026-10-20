@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <QDateTime>
 #include <QString>
+#include <QVariant>
 
 // The app's SQLite database: chats, projects, excerpts, settings, installed libraries.
 // One file in the user's data directory, opened once at startup as Qt's default connection.
@@ -29,4 +31,13 @@ inline QString text(const QString &s)
 {
     return s.isNull() ? QString(QLatin1String("")) : s;
 }
+
+// An id to bind to a nullable foreign key: SQL NULL for none (0 or less)
+inline QVariant nullableId(qint64 id)
+{
+    return id > 0 ? QVariant(id) : QVariant(QMetaType::fromType<qint64>());
+}
+
+// A time as stored (ISO 8601 text, UTC), or an invalid QDateTime for NULL or empty
+QDateTime timestamp(const QVariant &stored);
 }

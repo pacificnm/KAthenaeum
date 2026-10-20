@@ -15,6 +15,7 @@ add_library(kathenaeum_core STATIC
     core/drafts.cpp core/drafts.h
     core/embedding.cpp core/embedding.h
     core/extract.cpp core/extract.h
+    core/xmlutil_p.h
     core/highlights.cpp core/highlights.h
     core/history.cpp core/history.h
     core/library.cpp core/library.h

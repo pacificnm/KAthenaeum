@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "articlerenderer.h"
+#include "xmlutil_p.h"
 
 #include "extract.h"
 
@@ -93,16 +94,6 @@ std::unique_ptr<XPathResult> xpath(htmlDocPtr doc, xmlNodePtr context, const cha
     return r;
 }
 
-QString attr(xmlNodePtr n, const char *name)
-{
-    xmlChar *v = xmlGetProp(n, reinterpret_cast<const xmlChar *>(name));
-    if (!v)
-        return {};
-    QString s = QString::fromUtf8(reinterpret_cast<const char *>(v));
-    xmlFree(v);
-    return s;
-}
-
 bool hasAttr(xmlNodePtr n, const char *name)
 {
     return xmlHasProp(n, reinterpret_cast<const xmlChar *>(name)) != nullptr;
@@ -121,18 +112,8 @@ void removeAttr(xmlNodePtr n, const char *name)
 
 void addClass(xmlNodePtr n, const char *cls)
 {
-    const QString current = attr(n, "class");
+    const QString current = XmlUtil::attr(n, "class");
     setAttr(n, "class", current.isEmpty() ? QString::fromLatin1(cls) : current + QLatin1Char(' ') + QLatin1String(cls));
-}
-
-QString textOf(xmlNodePtr n)
-{
-    xmlChar *t = xmlNodeGetContent(n);
-    if (!t)
-        return {};
-    QString s = QString::fromUtf8(reinterpret_cast<const char *>(t)).simplified();
-    xmlFree(t);
-    return s;
 }
 
 bool isInside(xmlNodePtr n, xmlNodePtr ancestor)
@@ -319,9 +300,9 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
     {
         auto h1 = xpath(d.doc, nullptr, "//h1");
         auto t = xpath(d.doc, nullptr, "//title");
-        out.title = !h1->nodes().isEmpty() ? textOf(h1->nodes().first()) : QString();
+        out.title = !h1->nodes().isEmpty() ? XmlUtil::text(h1->nodes().first()) : QString();
         if (out.title.isEmpty() && !t->nodes().isEmpty())
-            out.title = textOf(t->nodes().first());
+            out.title = XmlUtil::text(t->nodes().first());
         if (out.title.isEmpty())
             out.title = path;
     }
@@ -343,7 +324,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
 
     // the subject's coordinates, before anything is dropped: Wikipedia keeps the decimal ones in a hidden span
     for (const auto nodes = xpath(d.doc, root, ".//span[@class='geo']")->nodes(); xmlNodePtr g : nodes)
-        if (const auto ll = parseGeo(textOf(g))) {
+        if (const auto ll = parseGeo(XmlUtil::text(g))) {
             out.hasCoordinates = true;
             out.lat = ll->first;
             out.lon = ll->second;
@@ -384,7 +365,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
             const QByteArray lower = n.toLower();
             if (!keepAttributes().contains(lower) || lower.startsWith("on"))
                 remove << n;
-            else if (lower == "style" && badStyle().match(attr(el, "style")).hasMatch())
+            else if (lower == "style" && badStyle().match(XmlUtil::attr(el, "style")).hasMatch())
                 remove << n;
         }
         for (const QByteArray &n : std::as_const(remove))
@@ -396,7 +377,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
     if (!images->ok() || !links->ok())
         return fail(QStringLiteral("the page is too large or too complex to make safe"));
     for (const auto nodes = images->nodes(); xmlNodePtr img : nodes) {
-        const QString src = attr(img, "src");
+        const QString src = XmlUtil::attr(img, "src");
         // Offline ZIMs without pictures embed an alt-text placeholder as a data: URI; it adds nothing
         const QString media = src.isEmpty() || src.startsWith(QLatin1String("data:")) || external().match(src).hasMatch() ? QString() : resolve(path, src);
         if (media.isEmpty() || !hasEntry(media)) {
@@ -410,7 +391,7 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
     for (const auto nodes = links->nodes(); xmlNodePtr a : nodes) {
         if (!hasAttr(a, "href"))
             continue;
-        const QString href = attr(a, "href").trimmed();
+        const QString href = XmlUtil::attr(a, "href").trimmed();
         if (href.startsWith(QLatin1Char('#')))
             continue;
         if (scripting().match(href).hasMatch()) {
@@ -443,10 +424,10 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
     });
 
     for (const auto nodes = xpath(d.doc, root, ".//h2|.//h3")->nodes(); xmlNodePtr h : nodes) {
-        QString id = attr(h, "id");
+        QString id = XmlUtil::attr(h, "id");
         if (id.isEmpty() && h->parent && h->parent->type == XML_ELEMENT_NODE)
-            id = attr(h->parent, "id");
-        const QString text = textOf(h);
+            id = XmlUtil::attr(h->parent, "id");
+        const QString text = XmlUtil::text(h);
         if (!id.isEmpty() && !text.isEmpty())
             out.toc.append({id, text, name(h) == QLatin1String("h2") ? 2 : 3});
     }

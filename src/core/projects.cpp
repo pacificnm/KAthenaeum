@@ -19,18 +19,6 @@
 
 namespace
 {
-QDateTime timestamp(const QVariant &v)
-{
-    QDateTime t = QDateTime::fromString(v.toString(), Qt::ISODateWithMs);
-    t.setTimeZone(QTimeZone::UTC);
-    return t;
-}
-
-QVariant nullable(qint64 id)
-{
-    return id > 0 ? QVariant(id) : QVariant(QMetaType::fromType<qint64>());
-}
-
 void touch(qint64 projectId)
 {
     QSqlQuery q;
@@ -80,7 +68,7 @@ ProjectRecord project(const QSqlQuery &q)
     return {q.value(0).toLongLong(),
             q.value(1).toString(),
             q.value(2).toString(),
-            timestamp(q.value(3)),
+            Database::timestamp(q.value(3)),
             q.value(4).toInt(),
             q.value(5).toInt(),
             q.value(6).toInt(),
@@ -199,7 +187,7 @@ qint64 Projects::addClip(qint64 projectId, const QString &text, const QList<Arti
         QStringLiteral("INSERT INTO project_items (project_id, kind, library_id, path, title, section, text, refs, note) "
                        "VALUES (?, 'clip', ?, ?, ?, ?, ?, ?, ?)"));
     q.addBindValue(projectId);
-    q.addBindValue(nullable(first.libraryId));
+    q.addBindValue(Database::nullableId(first.libraryId));
     q.addBindValue(Database::text(first.path));
     q.addBindValue(Database::text(first.title));
     q.addBindValue(Database::text(section));
@@ -306,7 +294,7 @@ QList<ProjectItem> Projects::items(qint64 projectId, const QString &kind)
         i.embedModel = q.value(11).toString();
         i.chatId = q.value(12).toLongLong();
         i.chatTitle = q.value(13).toString();
-        i.createdAt = timestamp(q.value(14));
+        i.createdAt = Database::timestamp(q.value(14));
         i.lesson = q.value(15).toString();
         out << i;
     }
@@ -377,7 +365,7 @@ std::optional<DocumentRecord> Projects::document(qint64 id)
     q.addBindValue(id);
     if (!q.exec() || !q.next())
         return std::nullopt;
-    return DocumentRecord{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), timestamp(q.value(4))};
+    return DocumentRecord{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), Database::timestamp(q.value(4))};
 }
 
 bool Projects::saveDocument(qint64 id, const QString &title, const QString &content)
@@ -414,7 +402,11 @@ QList<DocumentRecord> Projects::documents(qint64 projectId)
     q.addBindValue(projectId);
     if (q.exec())
         while (q.next())
-            out << DocumentRecord{q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(), q.value(3).toString(), timestamp(q.value(4))};
+            out << DocumentRecord{q.value(0).toLongLong(),
+                                  q.value(1).toLongLong(),
+                                  q.value(2).toString(),
+                                  q.value(3).toString(),
+                                  Database::timestamp(q.value(4))};
     return out;
 }
 

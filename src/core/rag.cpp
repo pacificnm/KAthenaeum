@@ -5,6 +5,7 @@
 #include <KLocalizedString>
 
 #include <QHash>
+#include <QJsonArray>
 #include <QRegularExpression>
 
 #include <algorithm>
@@ -497,4 +498,16 @@ QString Rag::annotate(const QString &answer, const QList<Citation> &citations)
         out.insert(c.end, chips);
     }
     return out;
+}
+
+QJsonObject Rag::completionRequest(const QString &model, const QString &prompt, int numPredict, bool noThinking)
+{
+    QJsonObject body{
+        {QStringLiteral("model"), model},
+        {QStringLiteral("messages"), QJsonArray{QJsonObject{{QStringLiteral("role"), QStringLiteral("user")}, {QStringLiteral("content"), prompt}}}},
+        {QStringLiteral("options"),
+         QJsonObject{{QStringLiteral("temperature"), Temperature}, {QStringLiteral("num_ctx"), NumCtx}, {QStringLiteral("num_predict"), numPredict}}}};
+    if (noThinking)
+        body.insert(QStringLiteral("think"), false);
+    return body;
 }

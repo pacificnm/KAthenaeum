@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Jaimie Garner <pacificnm@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "extract.h"
+#include "xmlutil_p.h"
 
 #include <KLocalizedString>
 
@@ -104,16 +105,6 @@ bool test(htmlDocPtr doc, xmlNodePtr node, const char *expr)
     return result;
 }
 
-QString clean(xmlNodePtr n)
-{
-    xmlChar *t = xmlNodeGetContent(n);
-    if (!t)
-        return {};
-    QString s = QString::fromUtf8(reinterpret_cast<const char *>(t)).simplified();
-    xmlFree(t);
-    return s;
-}
-
 QString tag(xmlNodePtr n)
 {
     return QString::fromUtf8(reinterpret_cast<const char *>(n->name));
@@ -133,25 +124,18 @@ bool isInside(xmlNodePtr n, const QSet<xmlNodePtr> &set)
 // ethanol?" was refused with the Ethanol article in the prompt. Its label/value rows become one "Key facts" passage.
 const char *InfoboxRowsXPath = "(//div[contains(@class,'mw-parser-output')]//table[contains(@class,'infobox')])[1]//tr";
 
-QString attr(xmlNodePtr n, const char *name)
-{
-    xmlChar *v = xmlGetProp(n, reinterpret_cast<const xmlChar *>(name));
-    const QString s = v ? QString::fromUtf8(reinterpret_cast<const char *>(v)) : QString();
-    xmlFree(v);
-    return s;
-}
-
 bool hidden(xmlNodePtr n)
 {
     const QString name = tag(n);
     if (name == QLatin1String("style") || name == QLatin1String("script"))
         return true;
-    if (name == QLatin1String("sup") && (attr(n, "class").contains(QLatin1String("reference")) || attr(n, "class").contains(QLatin1String("noprint"))))
+    if (name == QLatin1String("sup")
+        && (XmlUtil::attr(n, "class").contains(QLatin1String("reference")) || XmlUtil::attr(n, "class").contains(QLatin1String("noprint"))))
         return true; // footnote markers ([a], [1]), not exponents
-    if (attr(n, "style").remove(QLatin1Char(' ')).contains(QLatin1String("display:none")))
+    if (XmlUtil::attr(n, "style").remove(QLatin1Char(' ')).contains(QLatin1String("display:none")))
         return true;
     // a link out of the encyclopedia: database identifiers (CAS Number, PubChem) and websites
-    return name == QLatin1String("a") && attr(n, "rel").contains(QLatin1String("mw:ExtLink"));
+    return name == QLatin1String("a") && XmlUtil::attr(n, "rel").contains(QLatin1String("mw:ExtLink"));
 }
 
 void cellText(xmlNodePtr n, QString &out)
@@ -298,7 +282,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
         return out;
 
     if (const auto titles = nodes(d.doc, "//title"); !titles.isEmpty())
-        out.title = clean(titles.first());
+        out.title = XmlUtil::text(titles.first());
 
     // a line break is a word break: "one<br>two" must not become "onetwo"
     for (const auto breaks = nodes(d.doc, "//br"); xmlNodePtr br : breaks)
@@ -335,7 +319,7 @@ ExtractedArticle Extract::extract(const QByteArray &raw)
     int skipLevel = 0; // heading level of the skipped section we are inside, 0 if none
     QList<Passage> blocks;
     for (const auto elements = nodes(d.doc, BlocksXPath); xmlNodePtr el : elements) {
-        QString text = clean(el);
+        QString text = XmlUtil::text(el);
         const QString t = tag(el);
         if (t == QLatin1String("h2") || t == QLatin1String("h3") || t == QLatin1String("h4")) {
             const int level = QStringView(t).mid(1).toInt();

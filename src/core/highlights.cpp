@@ -13,13 +13,6 @@ namespace
 {
 constexpr QLatin1StringView Columns("id, library_id, path, title, text, color, note, created_at, updated_at");
 
-QDateTime timestamp(const QVariant &v)
-{
-    QDateTime t = QDateTime::fromString(v.toString(), Qt::ISODateWithMs);
-    t.setTimeZone(QTimeZone::UTC);
-    return t;
-}
-
 HighlightRecord fromRow(const QSqlQuery &q)
 {
     return {q.value(0).toLongLong(),
@@ -29,8 +22,8 @@ HighlightRecord fromRow(const QSqlQuery &q)
             q.value(4).toString(),
             q.value(5).toString(),
             q.value(6).toString(),
-            timestamp(q.value(7)),
-            timestamp(q.value(8))};
+            Database::timestamp(q.value(7)),
+            Database::timestamp(q.value(8))};
 }
 
 QString validColor(const QString &color)

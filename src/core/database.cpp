@@ -11,6 +11,7 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QStringList>
+#include <QTimeZone>
 
 namespace
 {
@@ -389,4 +390,13 @@ void Database::close()
         return;
     QSqlDatabase::database(QLatin1String(QSqlDatabase::defaultConnection), false).close();
     QSqlDatabase::removeDatabase(QLatin1String(QSqlDatabase::defaultConnection));
+}
+
+QDateTime Database::timestamp(const QVariant &stored)
+{
+    if (stored.isNull() || stored.toString().isEmpty())
+        return {};
+    QDateTime t = QDateTime::fromString(stored.toString(), Qt::ISODateWithMs);
+    t.setTimeZone(QTimeZone::UTC);
+    return t;
 }
