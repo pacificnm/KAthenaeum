@@ -841,6 +841,8 @@ exported documents.</para></listitem>
 <tbody>
 <row><entry>&Ctrl;<keycap>F</keycap></entry><entry>Go to the search box in the sidebar</entry></row>
 <row><entry><keycap>F1</keycap></entry><entry>Open this handbook</entry></row>
+<row><entry>&Tab; / &Shift;&Tab;</entry><entry>Move between buttons, fields and cards (libraries, courses, subjects, map regions)</entry></row>
+<row><entry>&Enter; or &Space;</entry><entry>Press the button or open the card that has the focus</entry></row>
 <row><entry>&Enter;</entry><entry>Ask the question, or search for the text, that you have typed</entry></row>
 <row><entry><keycap>+</keycap> / <keycap>−</keycap></entry><entry>Zoom the map in or out</entry></row>
 <row><entry>&Esc;</entry><entry>Close the place shown on the map, or a word's meaning</entry></row>
@@ -973,6 +975,10 @@ definitions from Wiktionary (CC BY-SA 4.0). Map data
 maps are drawn with MapLibre Native. Answers are written by models running on your computer through &ollama;.
 </para>
 <para>Documentation Copyright 2026 Jaimie Garner.</para>
+<para>
+Please report problems and suggestions at
+<ulink url="https://github.com/pacificnm/KAthenaeum/issues">github.com/pacificnm/KAthenaeum/issues</ulink>.
+</para>
 <!-- TRANS:CREDIT_FOR_TRANSLATORS -->
 &underCCBYSA4;
 &underGPL;
