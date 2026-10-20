@@ -34,6 +34,7 @@ Kirigami.Page {
     signal showOnMap(var location, var libraryId, string path, string title)
     signal openLibraryManager()
     signal openProject(var projectId)
+    signal openTimeline(var libraryId, string path, string title)
 
     title: info.title !== undefined ? Util.pageTitle(info.found === false && page.conversation.articleTitle !== "" ? page.conversation.articleTitle : info.title) : i18n("Loading…")
     padding: 0
@@ -207,6 +208,14 @@ Kirigami.Page {
             icon.name: "view-list-text"
             enabled: (page.info.toc ?? []).length > 0
             onTriggered: tocMenu.popup()
+        },
+        Kirigami.Action {
+            text: i18n("Timeline")
+            icon.name: "view-calendar-timeline"
+            enabled: page.info.found === true
+            displayHint: Kirigami.DisplayHint.AlwaysHide
+            tooltip: i18n("The article's dated events, in order")
+            onTriggered: page.openTimeline(page.info.libraryId, page.info.path, page.info.title)
         },
         Kirigami.Action {
             text: i18n("Use the Whole Window")

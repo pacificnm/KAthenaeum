@@ -29,6 +29,7 @@ add_library(kathenaeum_core STATIC
     core/rag.cpp core/rag.h
     core/settings.cpp core/settings.h
     core/teacher.cpp core/teacher.h
+    core/timeline.cpp core/timeline.h
     core/zimarchive.cpp core/zimarchive.h
     core/zimarchives_p.h
     core/zimreader.cpp core/zimreader.h
@@ -58,6 +59,7 @@ add_executable(kathenaeum
     projectlist.cpp projectlist.h
     projectmodel.cpp projectmodel.h
     searchcontroller.cpp searchcontroller.h
+    timelinemodel.cpp timelinemodel.h
     zimschemehandler.cpp zimschemehandler.h
 )
 target_include_directories(kathenaeum PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -81,6 +83,7 @@ qt_add_qml_module(kathenaeum
         qml/NewCourseDialog.qml
         qml/ProfileDialog.qml
         qml/QuizView.qml
+        qml/TimelinePage.qml
         qml/UnitTestPage.qml
         qml/DefinitionPopup.qml
         qml/HighlightCard.qml

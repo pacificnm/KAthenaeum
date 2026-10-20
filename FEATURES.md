@@ -39,7 +39,7 @@ The sizes assume one developer who already knows the codebase. Each one includes
 | 5 | Tutor mode for Ask | S–M | High | 0.14 |
 | 6 | Dictionary lookup | M | Medium | **Done in 0.13** |
 | 7 | Show on map from articles | S–M | Medium | **Done in 0.13** |
-| 8 | Timelines | L | Medium | 0.15 |
+| 8 | Timelines | L | Medium | **Done in 0.17** |
 | 9 | Reading level | S | Medium | 0.14 |
 | 10 | Student starter pack | S | Medium | 0.13 |
 | 11 | Classroom bundles and shared libraries | XL | High for schools | 1.0 |
@@ -224,7 +224,7 @@ The sizes assume one developer who already knows the codebase. Each one includes
 
 ---
 
-## 8. Timelines
+## 8. Timelines (done in 0.17)
 
 **Lift: L**
 

@@ -17,6 +17,11 @@
   <url type="homepage">https://github.com/pacificnm/KAthenaeum</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.17.0" date="2026-10-20">
+      <description>
+        <p>Timelines: every dated sentence of an article, or of a research project's articles, in date order under its period, from "14 October 1066" to "7,700 years ago". Each event is the article's own sentence and opens it; a timeline can be kept in a project or exported.</p>
+      </description>
+    </release>
     <release version="0.16.0" date="2026-10-20">
       <description>
         <p>Classroom: lesson quizzes and unit tests written from the readings, each answer checked against the passage it comes from, graded with the right answer and the passage; scores on the course page and a list of what to review. Ask Your Teacher: a chat on every lesson that guides with hints and questions rather than handing over answers.</p>

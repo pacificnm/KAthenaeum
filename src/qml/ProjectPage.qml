@@ -20,6 +20,7 @@ Kirigami.Page {
     signal openChat(var chatId, var articleLibraryId, string articlePath)
     signal openDocument(var documentId)
     signal openCourse(var courseId)
+    signal openTimeline(var projectId)
     signal closed()
 
     // the classroom course this project is kept for, if any
@@ -37,6 +38,13 @@ Kirigami.Page {
                 editDialog.goal = project.description;
                 editDialog.open();
             }
+        },
+        Kirigami.Action {
+            text: i18n("Timeline")
+            icon.name: "view-calendar-timeline"
+            enabled: project.articles.length > 0
+            tooltip: i18n("The dated events of the project's articles, in order")
+            onTriggered: page.openTimeline(project.projectId)
         },
         Kirigami.Action {
             text: i18n("Bibliography")

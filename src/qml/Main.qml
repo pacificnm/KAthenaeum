@@ -108,6 +108,10 @@ Kirigami.ApplicationWindow {
     function openArticle(libraryId, path, fragment) {
         pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), fragment: fragment ?? "" });
     }
+    // a timeline: of one article, or of a project's articles
+    function openTimeline(properties) {
+        pageStack.push(timelinePage, properties);
+    }
     // a lesson's reading: the article with the lesson beside it
     function openReading(libraryId, path, lessonId) {
         pageStack.push(articlePage, { url: LibraryBrowser.articleUrl(libraryId, path), lessonId: lessonId });
@@ -240,6 +244,13 @@ Kirigami.ApplicationWindow {
             onShowOnMap: (location, libraryId, path, title) => root.showOnMap(location, libraryId, path, title)
             onOpenLibraryManager: root.findDictionaries()
             onOpenProject: projectId => root.openProject(projectId)
+            onOpenTimeline: (libraryId, path, title) => root.openTimeline({ libraryId: libraryId, path: path, articleTitle: title })
+        }
+    }
+    Component {
+        id: timelinePage
+        TimelinePage {
+            onOpenArticle: (libraryId, path, fragment) => root.openArticle(libraryId, path, fragment)
         }
     }
     Component {
@@ -268,6 +279,7 @@ Kirigami.ApplicationWindow {
             onOpenChat: (chatId, articleLibraryId, articlePath) => root.openChat(chatId, articleLibraryId, articlePath, 0, true)
             onOpenDocument: documentId => root.openDocument(documentId)
             onOpenCourse: courseId => root.openCourse(courseId)
+            onOpenTimeline: projectId => root.openTimeline({ projectId: projectId })
             onClosed: root.show(projectsPage)
         }
     }

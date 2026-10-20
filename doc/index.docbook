@@ -25,7 +25,7 @@
 <legalnotice>&FDLNotice;</legalnotice>
 
 <date>2026-10-20</date>
-<releaseinfo>0.16.0</releaseinfo>
+<releaseinfo>0.17.0</releaseinfo>
 
 <abstract>
 <para>
@@ -303,6 +303,31 @@ A research project's <guibutton>Bibliography</guibutton> lists all its articles,
 styles. In a document, <menuchoice><guimenu>Cite</guimenu><guimenuitem>Insert Works Cited</guimenuitem></menuchoice>
 (<guimenuitem>References</guimenuitem> in APA, <guimenuitem>Bibliography</guimenuitem> in Chicago) inserts the list of the
 articles it links to, and <guibutton>Export…</guibutton> adds that list by itself when the document has none.
+</para>
+</sect1>
+
+<sect1 id="timelines">
+<title>Timelines</title>
+<para>
+<guimenuitem>Timeline</guimenuitem> in an article's menu (<guibutton>⋮</guibutton>) lists every sentence of the article
+that gives a date, in date order, on a line, under the period it belongs to (the 1800s, the 4th century BC, millions of
+years ago). <guibutton>Timeline</guibutton> on a research project does the same for all of its articles together, with a
+choice of article to show. Each event is the article's own sentence, so it says exactly what the article says; click it to
+read it in its article. Dates are read in every form articles use them: <quote>14 October 1066</quote>, <quote>March
+1890</quote>, <quote>31 BC</quote>, <quote>the 1840s</quote>, <quote>the 4th century</quote>, <quote>7,700 years
+ago</quote>. A date written in italics is approximate.
+</para>
+<screenshot>
+<screeninfo>A timeline</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="timeline.png" format="PNG"/></imageobject>
+<textobject><phrase>The timeline of the Battle of Hastings, from 1002 to William's coronation on 25 December 1066</phrase></textobject>
+</mediaobject>
+</screenshot>
+<para>
+<guibutton>Find events…</guibutton> narrows it to events with a word. <guibutton>Add to Project…</guibutton> keeps the
+events shown as a document of a research project, and <guibutton>Export…</guibutton> saves them as a Markdown file with
+the articles cited.
 </para>
 </sect1>
 

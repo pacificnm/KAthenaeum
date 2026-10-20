@@ -16,6 +16,7 @@ ecm_add_tests(
     ollamatest.cpp
     projectstest.cpp
     ragtest.cpp
+    timelinetest.cpp
     zimarchivetest.cpp
     zimreadertest.cpp
     LINK_LIBRARIES kathenaeum_core Qt6::Test
