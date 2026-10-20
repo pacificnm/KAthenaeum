@@ -105,8 +105,24 @@ Kirigami.Page {
             icon.name: "view-list-text"
             enabled: (page.info.toc ?? []).length > 0
             onTriggered: tocMenu.popup()
+        },
+        Kirigami.Action {
+            text: i18n("Use the Whole Window")
+            icon.name: "zoom-fit-width"
+            checkable: true
+            checked: LibraryBrowser.fullWidth
+            displayHint: Kirigami.DisplayHint.AlwaysHide
+            tooltip: i18n("Articles across the whole window, or in a column of comfortable reading width")
+            onTriggered: LibraryBrowser.fullWidth = checked
         }
     ]
+
+    Connections {
+        target: LibraryBrowser
+        function onFullWidthChanged() {
+            view.reload();
+        }
+    }
 
     readonly property bool narrow: width < Kirigami.Units.gridUnit * 40
 

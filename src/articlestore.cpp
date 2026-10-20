@@ -5,6 +5,7 @@
 
 #include "core/library.h"
 #include "core/projects.h"
+#include "core/settings.h"
 
 #include <QCache>
 #include <QColor>
@@ -38,7 +39,6 @@ QString css(const QPalette &p)
     QString rules = QStringLiteral(R"(
 html { background: var(--bg); color: var(--text); }
 body { margin: 0; padding: 24px 32px 64px; font: 17px/1.72 "Noto Serif", "Source Serif Pro", Georgia, serif; overflow-wrap: anywhere; }
-main { max-width: 860px; margin: 0 auto; }
 h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .article p { margin: 0.9em 0; }
 .article h2, .article h3, .article h4 { font-weight: 600; line-height: 1.25; margin: 1.6em 0 0.5em; }
@@ -74,6 +74,10 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 .article table.wikitable th { background: var(--surface-2); }
 @media (max-width: 640px) { body { padding: 16px; } .article table.infobox, .article table.ib-chembox { float: none; width: 100%; margin: 1em 0; } }
 )");
+    // the whole window, or a column of comfortable reading width (Settings; full by default: on a big screen the 860-pixel
+    // column left most of it empty, the user, 2026-10-19)
+    rules += AppSettings::articleFullWidth() ? QStringLiteral("main { max-width: none; margin: 0; }\n")
+                                             : QStringLiteral("main { max-width: 860px; margin: 0 auto; }\n");
     // Wikipedia hard-codes light backgrounds inline; keep their text readable. !important: the infobox rules are more
     // specific, and an infobox section header ("Names") stayed white on pale yellow (the review, 2026-10-19).
     if (dark)

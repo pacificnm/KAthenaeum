@@ -89,6 +89,16 @@ FormCard.FormCardPage {
         }
     }
 
+    FormCard.FormHeader { title: i18n("Reading") }
+    FormCard.FormCard {
+        FormCard.FormSwitchDelegate {
+            text: i18n("Use the whole window for articles")
+            description: i18n("Off: articles are set in a column of comfortable reading width, centred in the window.")
+            checked: LibraryBrowser.fullWidth
+            onToggled: LibraryBrowser.fullWidth = checked
+        }
+    }
+
     FormCard.FormHeader { title: i18n("Maps") }
     FormCard.FormCard {
         FormCard.FormButtonDelegate {

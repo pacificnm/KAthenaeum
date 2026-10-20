@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "librarybrowser.h"
 
+#include "core/settings.h"
+
 #include "articlestore.h"
 #include "core/history.h"
 #include "core/library.h"
@@ -134,4 +136,17 @@ QVariantMap LibraryBrowser::articleInfo(const QUrl &url) const
     out.insert(QStringLiteral("excerpts"), article->rendered.highlighted);
     History::record(libraryId, article->path, article->rendered.title);
     return out;
+}
+
+bool LibraryBrowser::fullWidth() const
+{
+    return AppSettings::articleFullWidth();
+}
+
+void LibraryBrowser::setFullWidth(bool full)
+{
+    if (full == fullWidth())
+        return;
+    AppSettings::setArticleFullWidth(full);
+    Q_EMIT fullWidthChanged();
 }

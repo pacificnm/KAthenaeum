@@ -51,3 +51,13 @@ QString AppSettings::embeddingModel()
 {
     return value(QStringLiteral("models.embedding"), QStringLiteral("nomic-embed-text"));
 }
+
+bool AppSettings::articleFullWidth()
+{
+    return value(QStringLiteral("reading.width"), QStringLiteral("full")) == QLatin1String("full");
+}
+
+bool AppSettings::setArticleFullWidth(bool full)
+{
+    return setValue(QStringLiteral("reading.width"), full ? QStringLiteral("full") : QStringLiteral("column"));
+}

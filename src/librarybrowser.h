@@ -16,6 +16,7 @@ class LibraryBrowser : public QObject
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+    Q_PROPERTY(bool fullWidth READ fullWidth WRITE setFullWidth NOTIFY fullWidthChanged)
 
 public:
     static LibraryBrowser *create(QQmlEngine *, QJSEngine *);
@@ -32,6 +33,13 @@ public:
     // {found, libraryId, path, title, libraryTitle, toc: [{id, text, level}]}; records the visit in "Recently read"
     Q_INVOKABLE QVariantMap articleInfo(const QUrl &url) const;
     Q_INVOKABLE bool isArticleUrl(const QUrl &url) const;
+
+    // articles across the whole window, or in a reading column (open articles reload)
+    bool fullWidth() const;
+    void setFullWidth(bool full);
+
+Q_SIGNALS:
+    void fullWidthChanged();
 
 private:
     explicit LibraryBrowser(QObject *parent = nullptr);
