@@ -348,6 +348,11 @@ bool Classroom::isSimpleEnglish(const LibraryRecord &library)
     return library.name.startsWith(QLatin1String("wikipedia_en-simple"));
 }
 
+bool Classroom::isTextbook(const LibraryRecord &library)
+{
+    return library.name.startsWith(QLatin1String("wikibooks_")) || library.name.startsWith(QLatin1String("wikiversity_"));
+}
+
 QList<LibraryRecord> Classroom::librariesFor(const QString &subjectKey, const QList<LibraryRecord> &installed)
 {
     const QStringList own = subject(subjectKey).libraries;
@@ -357,6 +362,9 @@ QList<LibraryRecord> Classroom::librariesFor(const QString &subjectKey, const QL
             out << l;
     for (const LibraryRecord &l : installed)
         if (l.fileExists() && isGeneral(l))
+            out << l;
+    for (const LibraryRecord &l : installed) // and the open textbooks, whatever the subject: chapters written to teach it
+        if (l.fileExists() && isTextbook(l))
             out << l;
     return out;
 }

@@ -5,6 +5,7 @@
 #include "drafts.h"
 #include "embedding.h"
 #include "extract.h"
+#include "library.h"
 #include "ollama.h"
 #include "zimreader.h"
 
@@ -14,9 +15,69 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QNetworkReply>
+#include <QRegularExpression>
 #include <QtConcurrentRun>
 
 #include <algorithm>
+
+bool Teaching::isNavigation(const QString &passage)
+{
+    // "Contents | Preface | Diagrams | Resources", "Waves : 1 - 2 - 3 - 4 - 5": links between a book's pages
+    const QString t = passage.simplified();
+    return t.count(QLatin1Char('|')) >= 3 || t.count(QStringLiteral(" - ")) >= 4 || t.count(QStringLiteral(" — ")) >= 3;
+}
+
+bool Teaching::isBookMatter(const QString &title)
+{
+    static const QRegularExpression matter(QStringLiteral("/(print(able)? version|table of contents|contents|cover|authors?|contributors|"
+                                                          "licen[cs]e|gnu free documentation license|about( this book)?|index|bibliography)$"),
+                                           QRegularExpression::CaseInsensitiveOption);
+    return matter.match(title.trimmed()).hasMatch();
+}
+
+int Teaching::bookLevel(const QString &title)
+{
+    const QString book = title.section(QLatin1Char('/'), 0, 0);
+    static const QList<std::pair<int, QRegularExpression>> bands = {
+        {0,
+         QRegularExpression(QStringLiteral("\\b(primary|elementary|grade school|kindergarten|first grade|children)\\b"),
+                            QRegularExpression::CaseInsensitiveOption)},
+        {1, QRegularExpression(QStringLiteral("\\b(middle school|junior high|key stage 3|ks3)\\b"), QRegularExpression::CaseInsensitiveOption)},
+        {2,
+         QRegularExpression(QStringLiteral("\\b(high school|secondary|gcse|igcse|a-level|a level|ap|ib|sat|act)\\b"),
+                            QRegularExpression::CaseInsensitiveOption)},
+        {3,
+         QRegularExpression(QStringLiteral("\\b(university|college|undergraduate|graduate|gre|gmat|advanced)\\b"), QRegularExpression::CaseInsensitiveOption)},
+    };
+    for (const auto &[band, pattern] : bands)
+        if (pattern.match(book).hasMatch())
+            return band;
+    return -1;
+}
+
+int Teaching::levelBand(const QString &level)
+{
+    bool ok = false;
+    const int grade = level.toInt(&ok);
+    if (level == QLatin1String("k") || (ok && grade <= 5))
+        return 0;
+    if (ok && grade <= 8)
+        return 1;
+    if (ok)
+        return 2;
+    return 3;
+}
+
+QString Teaching::chapterText(const ZimSearch::Article &article)
+{
+    if (isBookMatter(article.found.title))
+        return {};
+    QString text;
+    for (const Passage &p : article.passages)
+        if (!isNavigation(p.text))
+            text += p.text + QLatin1Char('\n');
+    return text.size() >= MinChapterChars ? text : QString();
+}
 
 QList<Classroom::Reading> Teaching::chooseReadings(const QList<Choice> &candidates, const QSet<QString> &usedBefore, int n)
 {
@@ -114,6 +175,10 @@ void Teacher::planCourse(qint64 courseId, const QList<qint64> &libraries, const 
     m_subjectId = courseId;
     m_libraries = libraries;
     m_simpleFirst = simpleFirst;
+    m_textbooks.clear();
+    for (const qint64 id : libraries)
+        if (const auto lib = Library::byId(id); lib && Classroom::isTextbook(*lib))
+            m_textbooks << id;
     m_units.clear();
     m_order.clear();
     m_used.clear();
@@ -180,15 +245,16 @@ void Teacher::findReadings()
             return;
         readingsFound(watcher->result());
     });
-    watcher->setFuture(QtConcurrent::run([queries, libraries = m_libraries, simple = m_simpleFirst] {
+    watcher->setFuture(QtConcurrent::run([queries, libraries = m_libraries, simple = m_simpleFirst, textbooks = m_textbooks] {
         QList<qint64> rest = libraries;
-        rest.removeIf([&simple](qint64 id) {
-            return simple.contains(id);
+        rest.removeIf([&simple, &textbooks](qint64 id) {
+            return simple.contains(id) || textbooks.contains(id);
         });
-        // the simple libraries' articles first, so a young learner's version of an article is the one kept
+        // the simple libraries' articles first, so a young learner's version of an article is the one kept; the textbooks
+        // apart, each group with its own candidates
         QList<ZimSearch::Article> out;
         QSet<QString> titles;
-        for (const QList<qint64> &libs : {simple, rest}) {
+        for (const QList<qint64> &libs : {simple, textbooks, rest}) {
             if (libs.isEmpty())
                 continue;
             for (const QString &query : queries)
@@ -219,8 +285,13 @@ void Teacher::readingsFound(const QList<ZimSearch::Article> &articles)
     for (const ZimSearch::Article &a : articles) {
         if (a.passages.isEmpty())
             continue;
+        // a textbook page is compared by its chapter text (its first passage is often the book's contents bar), and left
+        // out when it has none
+        const QString opening = m_textbooks.contains(a.found.libraryId) ? Teaching::chapterText(a) : a.passages.first().text;
+        if (opening.isEmpty())
+            continue;
         choices << Teaching::Choice{a.found, -1};
-        input << Embedding::formatDocument(m_models.embedding, QString(a.found.title + QStringLiteral(". ") + a.passages.first().text).left(1500));
+        input << Embedding::formatDocument(m_models.embedding, QString(a.found.title + QStringLiteral(". ") + opening).left(1500));
     }
     if (choices.isEmpty()) {
         store({});
@@ -240,6 +311,12 @@ void Teacher::readingsFound(const QList<ZimSearch::Article> &articles)
                                           choices[i].similarity = Embedding::cosine(vectors.at(0), vectors.at(i + 1));
                                           if (m_simpleFirst.contains(choices.at(i).found.libraryId))
                                               choices[i].similarity += 0.03; // a young learner's version, when it is about as close
+                                          if (m_textbooks.contains(choices.at(i).found.libraryId)) {
+                                              const int book = Teaching::bookLevel(choices.at(i).found.title);
+                                              if (book >= 0)
+                                                  choices[i].similarity +=
+                                                      book == Teaching::levelBand(m_course.level) ? Teaching::LevelFit : -Teaching::LevelFit;
+                                          }
                                           // "Roman Republic (1849–1850)" beside "Roman Republic": a title in brackets is another thing of the same
                                           // name, unless the lesson asked for one
                                           if (choices.at(i).found.title.contains(QLatin1Char('(')) && !lessonText.contains(QLatin1Char('(')))

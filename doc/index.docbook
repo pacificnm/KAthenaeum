@@ -400,6 +400,12 @@ and the whole Wikipedia; if none of them is installed, <guibutton>Get It…</gui
 Manager. For kindergarten to grade 5, <quote>Wikipedia in simple English</quote> is read first when it is installed.
 </para>
 <para>
+Every subject also reads the open textbooks you have: <quote>Wikibooks</quote> and <quote>Wikiversity</quote>, from
+the Library Manager's catalog. Their chapters are written to teach (<quote>Primary Mathematics/Fractions</quote>,
+<quote>High School Biology/Mendelian Inheritance</quote>), and a book written for your level is preferred to one for
+another. A book's contents pages and printable versions are never used as readings.
+</para>
+<para>
 <guibutton>Plan the Course</guibutton> starts the teacher. It writes the syllabus, then looks for each lesson's readings:
 the articles that are truly about the lesson, not just ones sharing its words. A lesson nothing in your libraries is about
 is left out rather than made up. A short course takes about a minute. You can leave the page meanwhile; you are told

@@ -33,6 +33,23 @@ struct Choice {
     ZimSearch::Found found;
     double similarity = -1; // -1: no embedding (ranked by search alone)
 };
+// Textbook pages (Wikibooks, Wikiversity) that are not chapters: a book's contents bar, its printable version (the whole
+// book in one page), its cover, licence or contributors
+bool isNavigation(const QString &passage);
+bool isBookMatter(const QString &title);
+// Who a textbook is written for, from its book's name ("Primary Mathematics/Fractions", "A Guide to the GRE/Fractions"):
+// 0 primary (kindergarten to grade 5), 1 middle school, 2 high school, 3 college and adult, or -1 when it does not say
+int bookLevel(const QString &title);
+// The same bands for a course's level ("k", "1" to "12", "college", "adult")
+int levelBand(const QString &level);
+// Similarities of chapters within a few hundredths of each other are not a ranking of fit: a book for the learner's
+// level gains this much, one for another level loses it ("A Guide to the GRE" came first for grade 5 fractions)
+constexpr double LevelFit = 0.03;
+// A textbook chapter needs this much text besides its navigation to be a reading (a contents page has a few hundred)
+constexpr qsizetype MinChapterChars = 500;
+// A textbook page's text for choosing it: its passages without the navigation, or nothing when it is not a chapter
+QString chapterText(const ZimSearch::Article &article);
+
 // The lesson's readings from the articles found for it: the closest above ReadingMin (or, with no similarities, the
 // search's own order), at most `n`, preferring articles no earlier lesson uses
 QList<Classroom::Reading> chooseReadings(const QList<Choice> &candidates, const QSet<QString> &usedBefore, int n = ReadingsPerLesson);
@@ -115,6 +132,7 @@ private:
     // a plan
     QList<qint64> m_libraries;
     QList<qint64> m_simpleFirst;
+    QList<qint64> m_textbooks; // searched as a group of their own: Wikipedia would leave them no room
     QList<Classroom::Unit> m_units;
     QList<std::pair<int, int>> m_order; // (unit, lesson) in the order their readings are found
     int m_next = 0;

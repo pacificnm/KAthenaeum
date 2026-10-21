@@ -59,6 +59,8 @@ QList<LibraryRecord> librariesFor(const QString &subjectKey, const QList<Library
 // The general Wikipedias, which serve every subject
 bool isGeneral(const LibraryRecord &library);
 bool isSimpleEnglish(const LibraryRecord &library);
+// Wikibooks and Wikiversity: open textbooks and courses, read by the teacher for every subject
+bool isTextbook(const LibraryRecord &library);
 
 // ---- courses ----
 struct Reading {

@@ -162,6 +162,63 @@ private Q_SLOTS:
         QVERIFY(Classroom::librariesFor(QStringLiteral("math"), {library(1, QStringLiteral("wikipedia_en_ray-charles"))}).isEmpty());
         QVERIFY(Classroom::isSimpleEnglish(library(5, QStringLiteral("wikipedia_en-simple_all"))));
         QVERIFY(Classroom::isGeneral(library(5, QStringLiteral("wikipedia_en-simple_all"))));
+
+        // the open textbooks come last, for every subject, and are enough by themselves
+        const QList<LibraryRecord> withBooks =
+            installed + QList<LibraryRecord>{library(6, QStringLiteral("wikibooks_en_all")), library(7, QStringLiteral("wikiversity_en_all"))};
+        QCOMPARE(ids(Classroom::librariesFor(QStringLiteral("math"), withBooks)), (QList<qint64>{3, 2, 6, 7}));
+        QCOMPARE(ids(Classroom::librariesFor(QStringLiteral("english"), {library(6, QStringLiteral("wikibooks_en_all"))})), (QList<qint64>{6}));
+        QVERIFY(Classroom::isTextbook(library(6, QStringLiteral("wikibooks_en_all"))));
+        QVERIFY(!Classroom::isTextbook(library(2, QStringLiteral("wikipedia_en_all"))));
+    }
+
+    void textbookPagesThatAreNotChapters()
+    {
+        // as Wikibooks pages read (found searching the full English Wikibooks)
+        QVERIFY(Teaching::isNavigation(QStringLiteral("Contents | Preface | Diagrams | Resources | Contributors | Edit Navigation Bar Photosynthesis")));
+        QVERIFY(Teaching::isNavigation(QStringLiteral("Waves : 1 Dimensional Waves 1 - 2 - 3 - 4 - 5 - 6 - 7")));
+        QVERIFY(!Teaching::isNavigation(
+            QStringLiteral("A fraction consists of one quantity divided by another quantity. The fraction \"three divided by four\" is written 3/4.")));
+        QVERIFY(Teaching::isBookMatter(QStringLiteral("Introduction to Python Programming/Printable version")));
+        QVERIFY(Teaching::isBookMatter(QStringLiteral("Calculus/Print Version")));
+        QVERIFY(Teaching::isBookMatter(QStringLiteral("Cell Biology/Contents")));
+        QVERIFY(!Teaching::isBookMatter(QStringLiteral("Primary Mathematics/Fractions")));
+        QVERIFY(!Teaching::isBookMatter(QStringLiteral("Cell Biology/Cell division/Mitosis")));
+
+        auto article = [](const QString &title, const QStringList &texts) {
+            ZimSearch::Article a;
+            a.found.title = title;
+            for (const QString &t : texts)
+                a.passages.append(Passage{QString(), t});
+            return a;
+        };
+        const QString prose = QStringLiteral("Mitosis is the normal type of cell division. ").repeated(20);
+        // a chapter: its prose, without the contents bar above it
+        const QString chapter = Teaching::chapterText(article(QStringLiteral("Cell Biology/Cell division/Mitosis"),
+                                                              {QStringLiteral("Cell Biology | Introduction | Types of cells | Parts of the cell"), prose}));
+        QVERIFY(chapter.startsWith(QStringLiteral("Mitosis is")));
+        // a contents page, a stub and the whole book in one page are not
+        QVERIFY(Teaching::chapterText(
+                    article(QStringLiteral("Cell Biology/Cell division"), {QStringLiteral("Cell Biology | Introduction | Types of cells | Cell division")}))
+                    .isEmpty());
+        QVERIFY(
+            Teaching::chapterText(article(QStringLiteral("High School Life Science/Cell Division"), {QStringLiteral("more information about it")})).isEmpty());
+        QVERIFY(Teaching::chapterText(article(QStringLiteral("Cell Biology/Printable version"), {prose})).isEmpty());
+        // who a book is for, from its name (as the full English Wikibooks names them)
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("Primary Mathematics/Fractions")), 0);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("Grade School Curriculum/Mathematics/5")), 0);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("High School Earth Science/Theory of Plate Tectonics")), 2);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("GCSE Science/Photosynthesis")), 2);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("AP Biology/Photosynthesis")), 2);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("A Guide to the GRE/Fractions")), 3);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("Cell Biology/Cell division/Mitosis")), -1);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("Arithmetic/Adding Fractions")), -1);
+        QCOMPARE(Teaching::bookLevel(QStringLiteral("Mapping/Grade Separation")), -1); // a word inside the chapter's name does not count
+        QCOMPARE(Teaching::levelBand(QStringLiteral("k")), 0);
+        QCOMPARE(Teaching::levelBand(QStringLiteral("5")), 0);
+        QCOMPARE(Teaching::levelBand(QStringLiteral("7")), 1);
+        QCOMPARE(Teaching::levelBand(QStringLiteral("11")), 2);
+        QCOMPARE(Teaching::levelBand(QStringLiteral("adult")), 3);
     }
 
     void theProfileAndCoursesAreKept()

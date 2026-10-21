@@ -58,6 +58,11 @@ SPDX-License-Identifier: CC0-1.0
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.19.0" date="2026-10-20">
+      <description>
+        <p>The Classroom's teacher reads open textbooks too: installed Wikibooks and Wikiversity chapters become lesson readings for every subject, a book written for the learner's level preferred to one for another, and a book's contents pages and printable versions left out.</p>
+      </description>
+    </release>
     <release version="0.18.0" date="2026-10-20">
       <description>
         <p>The map is now drawn by Marble, KDE's map library, from KDE's map server: no region downloads needed. Areas you view are kept as you go, and Keep This Area Offline keeps a whole town or city. Clicking a place still opens its Wikipedia article. A new setting turns the internet off entirely; the catalog, downloads and the map then work from what is on the computer.</p>
