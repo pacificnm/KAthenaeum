@@ -164,7 +164,7 @@ private Q_SLOTS:
     void overlapMatchesPluralsAndIgnoresUnrelatedText()
     {
         QStringList stems;
-        for (const auto qStringLiteral = ZimSearch::terms(QStringLiteral("kidneys diabetes")); const QString &t : qStringLiteral)
+        for (const auto queryTerms = ZimSearch::terms(QStringLiteral("kidneys diabetes")); const QString &t : queryTerms)
             stems << ZimSearch::stem(t);
         QCOMPARE(ZimSearch::overlap(stems, QStringLiteral("The kidney filters blood. Diabetic patients...")), 1.0);
         QCOMPARE(ZimSearch::overlap(stems, QStringLiteral("Volcanoes erupt.")), 0.0);
@@ -183,7 +183,7 @@ private Q_SLOTS:
     void wordRunsOfAQuestionAreTriedAsTitles()
     {
         QHash<QString, double> grams;
-        for (const auto qStringLiteral = ZimSearch::ngramTitles(QStringLiteral("what is the boiling point of ethanol")); const auto &[g, w] : qStringLiteral)
+        for (const auto titleGrams = ZimSearch::ngramTitles(QStringLiteral("what is the boiling point of ethanol")); const auto &[g, w] : titleGrams)
             grams.insert(g, w);
         QCOMPARE(grams.value(QStringLiteral("boiling point")), 1.0);
         QCOMPARE(grams.value(QStringLiteral("ethanol")), 0.8);
@@ -288,7 +288,7 @@ private Q_SLOTS:
         QCOMPARE(c->fragment, QStringLiteral("Eruptions"));
         QVERIFY(c->data.contains("molten rock"));
         // A to Z lists the article under its own title, not the forwarding page
-        for (const auto qStringLiteral = ZimReader::titles(m_id, QStringLiteral("E"), 0, 100).entries; const ZimEntry &e : qStringLiteral)
+        for (const auto entries = ZimReader::titles(m_id, QStringLiteral("E"), 0, 100).entries; const ZimEntry &e : entries)
             QVERIFY(e.path != QLatin1String("Eruption_(volcano)"));
         // and search lists the article, not the forwarding page
         const auto found = ZimSearch::findArticles(QStringLiteral("Eruption (volcano)"), {m_id}, 10);

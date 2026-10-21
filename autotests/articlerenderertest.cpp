@@ -88,6 +88,41 @@ private Q_SLOTS:
         QVERIFY(!html.contains(QLatin1String("href=\"Nope\"")));
     }
 
+    void aBooksTrailIsKeptAboveItsChapter()
+    {
+        // as the full English Wikibooks has it: the way back to the book sits above the content
+        auto render = [](const QString &subpages, const QSet<QString> &paths) {
+            const QByteArray raw = QStringLiteral(
+                                       "<html><head><title>T</title></head><body><h1>Cell Biology/Cell division/Mitosis</h1>"
+                                       "<div id='contentSub'><div class='subpages'>&lt; %1</div></div>"
+                                       "<div class='mw-parser-output'><p>Mitosis is the normal type of cell division.</p></div></body></html>")
+                                       .arg(subpages)
+                                       .toUtf8();
+            const auto out =
+                ArticleRenderer::render(raw, QStringLiteral("Cell_Biology/Cell_division/Mitosis"), QStringLiteral("zim://lib7/"), [&](const QString &p) {
+                    return paths.contains(p);
+                });
+            return out ? out->html : QStringLiteral("<<refused>>");
+        };
+        const QString html = render(QStringLiteral("<a href='../../Cell_Biology' title='Cell Biology'>Cell Biology</a> | "
+                                                   "<a href='../../Cell_Biology/Cell_division'>Cell division</a>"),
+                                    {QStringLiteral("Cell_Biology"), QStringLiteral("Cell_Biology/Cell_division")});
+        QVERIFY2(html.startsWith(QStringLiteral("<p class=\"book-trail\">")), qPrintable(html));
+        QVERIFY(html.contains(QStringLiteral("href=\"zim://lib7/Cell_Biology\">Cell Biology</a>")));
+        QVERIFY(html.contains(QStringLiteral("href=\"zim://lib7/Cell_Biology/Cell_division\">Cell division</a>")));
+        QVERIFY(html.indexOf(QStringLiteral("book-trail")) < html.indexOf(QStringLiteral("Mitosis is")));
+        QVERIFY(!html.contains(QStringLiteral("title=\"Cell Biology\""))); // only the target and the text are copied
+
+        // a book not in the library is plain text, and a trail's link is as checked as any other
+        const QString missing = render(QStringLiteral("<a href='../../Cell_Biology'>Cell Biology</a>"), {});
+        QVERIFY(missing.contains(QStringLiteral("<span class=\"wl-missing\">Cell Biology</span>")));
+        const QString hostile = render(QStringLiteral("<a href='javascript:alert(1)'>x</a> <a href='https://example.com/'>web</a>"), {});
+        QVERIFY(!hostile.contains(QStringLiteral("javascript")));
+        QVERIFY(hostile.contains(QStringLiteral("wl-ext")));
+        // a page without a trail gets none
+        QVERIFY(!run(QStringLiteral("<p>Water is wet.</p>")).contains(QStringLiteral("book-trail")));
+    }
+
     void linksWithAColonAreArticlesNotSchemes()
     {
         const QString html = run(QStringLiteral("<a href=\"Chemistry:_A_European_Journal\">j</a>"));

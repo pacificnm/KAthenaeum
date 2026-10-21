@@ -67,6 +67,7 @@ h1 { margin: 0 0 12px; font-weight: 600; font-size: 2.3rem; line-height: 1.15; p
 .article a:visited { color: var(--link-visited); }
 .article a.wl-ext::after { content: '\2197'; font-size: 0.7em; margin-left: 2px; opacity: 0.6; }
 .article .wl-missing { color: inherit; }
+.article .book-trail { font-size: 0.9em; opacity: 0.8; margin: 0 0 1em 0; }
 .article mark.excerpt-hl { background: var(--accent-soft); color: inherit; border-bottom: 2px solid var(--link); border-radius: 2px; cursor: help; }
 .article mark.hl { color: inherit; border-radius: 2px; padding: 0 1px; scroll-margin-top: 30vh; }
 .article mark.hl[title] { cursor: help; border-bottom: 2px dotted currentColor; }

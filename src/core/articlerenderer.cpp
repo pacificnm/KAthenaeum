@@ -176,7 +176,7 @@ QString ArticleRenderer::resolve(const QString &basePath, const QString &href)
         if (slash > 0)
             parts = basePath.left(slash).split(QLatin1Char('/'), Qt::SkipEmptyParts);
     }
-    for (const auto qLatin1Char = target.split(QLatin1Char('/'), Qt::SkipEmptyParts); const QString &segment : qLatin1Char) {
+    for (const auto segments = target.split(QLatin1Char('/'), Qt::SkipEmptyParts); const QString &segment : segments) {
         if (segment == QLatin1String("."))
             continue;
         if (segment == QLatin1String("..") && !parts.isEmpty() && parts.last() != QLatin1String(".."))
@@ -271,6 +271,39 @@ bool highlight(xmlNodePtr root, const Highlight &h)
 }
 }
 
+namespace
+{
+// A Wikibooks or Wikiversity page's way back to its book ("< Primary Mathematics", or "< Cell Biology > Cell division"):
+// MediaWiki puts it above the content, where it is not rendered, so it is copied to the top of the content as a trail.
+// Only the links' targets and text are copied; they are rewritten and checked with the article's own links.
+void addBookTrail(htmlDocPtr doc, xmlNodePtr root)
+{
+    const auto found = xpath(doc, nullptr, "//div[contains(concat(' ', normalize-space(@class), ' '), ' subpages ')]//a[@href]");
+    if (!found->ok())
+        return;
+    QList<xmlNodePtr> links;
+    for (const auto nodes = found->nodes(); xmlNodePtr a : nodes)
+        if (!isInside(a, root)) // already in the content when the whole body is rendered
+            links << a;
+    if (links.isEmpty())
+        return;
+    xmlNodePtr trail = xmlNewDocNode(doc, nullptr, reinterpret_cast<const xmlChar *>("p"), nullptr);
+    xmlNewProp(trail, reinterpret_cast<const xmlChar *>("class"), reinterpret_cast<const xmlChar *>("book-trail"));
+    for (qsizetype i = 0; i < links.size(); ++i) {
+        const QByteArray separator = (i == 0 ? QStringLiteral("\u2039 ") : QStringLiteral(" \u203a ")).toUtf8(); // ‹ book › chapter
+        xmlAddChild(trail, xmlNewDocText(doc, reinterpret_cast<const xmlChar *>(separator.constData())));
+        xmlNodePtr a = xmlNewDocNode(doc, nullptr, reinterpret_cast<const xmlChar *>("a"), nullptr);
+        xmlNewProp(a, reinterpret_cast<const xmlChar *>("href"), reinterpret_cast<const xmlChar *>(XmlUtil::attr(links.at(i), "href").toUtf8().constData()));
+        xmlAddChild(a, xmlNewDocText(doc, reinterpret_cast<const xmlChar *>(XmlUtil::text(links.at(i)).toUtf8().constData())));
+        xmlAddChild(trail, a);
+    }
+    if (root->children)
+        xmlAddPrevSibling(root->children, trail);
+    else
+        xmlAddChild(root, trail);
+}
+}
+
 std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
                                                        const QString &path,
                                                        const QString &urlPrefix,
@@ -356,6 +389,8 @@ std::optional<RenderedArticle> ArticleRenderer::render(const QByteArray &raw,
         for (xmlNodePtr n : std::as_const(outermost))
             dropTree(n);
     }
+
+    addBookTrail(d.doc, root);
 
     // the allowlist first; the attributes added below (rel, target, rewritten href and src) must survive
     forEachElement(root, [](xmlNodePtr el) {

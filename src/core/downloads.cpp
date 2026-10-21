@@ -88,7 +88,7 @@ std::optional<Aria2Progress> Aria2::parseLine(QStringView line)
     p.done = parseSize(m.capturedView(1));
     p.total = parseSize(m.capturedView(2));
     p.percent = m.capturedView(3).toInt();
-    for (const auto qLatin1Char = m.capturedView(4).split(QLatin1Char(' '), Qt::SkipEmptyParts); const auto field : qLatin1Char) {
+    for (const auto fields = m.capturedView(4).split(QLatin1Char(' '), Qt::SkipEmptyParts); const auto field : fields) {
         if (field.startsWith(QLatin1String("DL:")))
             p.speed = std::max<qint64>(0, parseSize(field.mid(3)));
         else if (field.startsWith(QLatin1String("ETA:")))

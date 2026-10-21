@@ -254,7 +254,7 @@ private Q_SLOTS:
         for (const auto rest = a.passages.mid(1); const Passage &p : rest) {
             QCOMPARE(p.section, QStringLiteral("Key facts"));
             QVERIFY(p.text.size() <= Extract::MaxChars);
-            for (const auto qLatin1Char = p.text.split(QLatin1Char('\n')); const QString &line : qLatin1Char)
+            for (const auto passageLines = p.text.split(QLatin1Char('\n')); const QString &line : passageLines)
                 QVERIFY2(line.startsWith(QLatin1String("Property ")), qPrintable(line));
         }
     }

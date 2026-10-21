@@ -152,7 +152,7 @@ bool ProjectModel::removeDocument(qint64 documentId)
 
 QString ProjectModel::articleLink(qint64 itemId) const
 {
-    for (const auto qStringLiteral = Projects::items(m_id, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
+    for (const auto articles = Projects::items(m_id, QStringLiteral("article")); const ProjectItem &i : articles)
         if (i.id == itemId)
             return Projects::articleLink(i.article);
     return {};
@@ -160,7 +160,7 @@ QString ProjectModel::articleLink(qint64 itemId) const
 
 QString ProjectModel::quote(qint64 itemId) const
 {
-    for (const auto qStringLiteral = Projects::items(m_id, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral)
+    for (const auto clips = Projects::items(m_id, QStringLiteral("clip")); const ProjectItem &i : clips)
         if (i.id == itemId)
             return Projects::quote(i);
     return {};

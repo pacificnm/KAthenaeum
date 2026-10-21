@@ -671,7 +671,7 @@ qint64 Classroom::keepHighlight(qint64 lessonId, const QString &text, const Arti
         return 0;
     // the same passage highlighted again (another colour, a note added) is one excerpt
     const QString squeezed = text.simplified().toLower();
-    for (const auto qStringLiteral = Projects::items(c->projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral)
+    for (const auto clips = Projects::items(c->projectId, QStringLiteral("clip")); const ProjectItem &i : clips)
         if (i.text.simplified().toLower() == squeezed) {
             if (!note.trimmed().isEmpty() && i.note.isEmpty())
                 Projects::setNote(c->projectId, i.id, note);
@@ -776,7 +776,7 @@ QList<Classroom::Unit> Classroom::parseSyllabus(const QString &text, const QStri
     static const QRegularExpression lessonWord(QStringLiteral("^lesson\\s*\\d*\\s*[:.\\x{2014}\\x{2013}-]\\s*"), QRegularExpression::CaseInsensitiveOption);
     QList<Unit> units;
     QSet<QString> seen; // a lesson the model repeats
-    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); const QString &raw : qLatin1Char) {
+    for (const auto textLines = text.split(QLatin1Char('\n')); const QString &raw : textLines) {
         const QString line = unmarked(raw);
         if (line.isEmpty())
             continue;
@@ -1080,7 +1080,7 @@ std::optional<Classroom::Question> Classroom::parseQuestion(const QString &text)
     Question out;
     QString options[4];
     QString answerLetter;
-    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); QString line : qLatin1Char) {
+    for (const auto textLines = text.split(QLatin1Char('\n')); QString line : textLines) {
         line = line.trimmed();
         line.remove(QStringLiteral("**"));
         line = line.trimmed();

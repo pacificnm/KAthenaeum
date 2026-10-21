@@ -193,7 +193,7 @@ QList<Drafts::PlannedSection> Drafts::parsePlan(const QString &text, int maxSect
     static const QRegularExpression split(QStringLiteral("\\s*(:|\\s[\\x{2014}\\x{2013}-]\\s)\\s*"));
     QList<PlannedSection> out;
     QSet<QString> seen;
-    for (const auto qLatin1Char = text.split(QLatin1Char('\n')); QString line : qLatin1Char) {
+    for (const auto textLines = text.split(QLatin1Char('\n')); QString line : textLines) {
         line = line.trimmed();
         for (int i = 0; i < 3; ++i) // "1. **Heading**" has two marks
             line.remove(marks);
@@ -340,7 +340,7 @@ QString Drafts::reportMarkdown(const ReportRequest &request,
                 today.toString(Qt::ISODate))
        << QString();
     QStringList quoted;
-    for (const auto qLatin1Char = request.instructions.trimmed().split(QLatin1Char('\n')); const QString &l : qLatin1Char)
+    for (const auto instructionLines = request.instructions.trimmed().split(QLatin1Char('\n')); const QString &l : instructionLines)
         quoted << QStringLiteral("> ") + l;
     md << QStringLiteral("> ") + i18nc("@title keep the asterisks (Markdown bold)", "**Instructions:**") << QStringLiteral(">") << quoted << QString();
     for (const auto &[heading, body] : sections)
@@ -647,7 +647,7 @@ void Drafter::writeReport(qint64 projectId, const Drafts::ReportRequest &request
     std::reverse(m_articles.begin(), m_articles.end());
     m_articles = m_articles.mid(0, Drafts::MaxReportArticles);
     const QString model = Embedding::normalizeName(models.embedding);
-    for (const auto qStringLiteral = Projects::items(projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral) {
+    for (const auto clips = Projects::items(projectId, QStringLiteral("clip")); const ProjectItem &i : clips) {
         Rag::Clip c;
         c.id = i.id;
         c.title = i.refs.value(0).title;

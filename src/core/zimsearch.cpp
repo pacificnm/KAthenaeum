@@ -31,7 +31,7 @@ const QSet<QString> &stopWords()
             "who whom why will with won't would wouldn't you your yours yourself tell explain describe give mean means please work works working "
             "happen happens get gets many much long called known");
         QSet<QString> out;
-        for (const auto qLatin1Char = list.split(QLatin1Char(' '), Qt::SkipEmptyParts); QString w : qLatin1Char)
+        for (const auto listWords = list.split(QLatin1Char(' '), Qt::SkipEmptyParts); QString w : listWords)
             out.insert(w.remove(QLatin1Char('\''))); // matched after apostrophes are removed: don't -> dont
         return out;
     }();
@@ -333,7 +333,7 @@ double aboutness(const QStringList &stems, const QString &title, const QString &
     if (stems.isEmpty())
         return 1.0;
     QSet<QString> have;
-    for (const auto qLatin1Char = words(title + QLatin1Char(' ') + intro); const QString &w : qLatin1Char)
+    for (const auto titleWords = words(title + QLatin1Char(' ') + intro); const QString &w : titleWords)
         have.insert(ZimSearch::stem(w));
     int n = 0;
     for (const QString &s : stems) {

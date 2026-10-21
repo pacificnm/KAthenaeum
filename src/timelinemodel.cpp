@@ -37,7 +37,7 @@ void TimelineModel::loadProject(qint64 projectId)
 {
     const auto p = Projects::byId(projectId);
     QList<ArticleRef> articles;
-    for (const auto qStringLiteral = Projects::items(projectId, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
+    for (const auto sources = Projects::items(projectId, QStringLiteral("article")); const ProjectItem &i : sources)
         articles << i.article;
     std::reverse(articles.begin(), articles.end()); // as they were added
     load(p ? p->title : QString(), articles);

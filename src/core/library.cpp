@@ -174,7 +174,7 @@ Library::ScanResult Library::scan(const QString &folder)
             result.missing << r.filename();
     }
     const QDir dir(folder);
-    for (const auto qStringLiteral = dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files); const QFileInfo &file : qStringLiteral) {
+    for (const auto zimFiles = dir.entryInfoList({QStringLiteral("*.zim")}, QDir::Files); const QFileInfo &file : zimFiles) {
         if (QFileInfo::exists(file.filePath() + QStringLiteral(".aria2")))
             continue; // aria2 writes to the final name while downloading
         if (known.contains(file.canonicalFilePath()))

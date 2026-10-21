@@ -184,7 +184,7 @@ QString Highlights::markdown(const QList<HighlightRecord> &highlights)
             const QString title = h.title.isEmpty() ? QString(h.path).replace(QLatin1Char('_'), QLatin1Char(' ')) : h.title;
             out << QStringLiteral("## ") + Projects::articleLink({h.libraryId, h.path, title}) << QString();
         }
-        for (const auto qLatin1Char = h.text.trimmed().split(QLatin1Char('\n')); const QString &line : qLatin1Char)
+        for (const auto noteLines = h.text.trimmed().split(QLatin1Char('\n')); const QString &line : noteLines)
             out << QStringLiteral("> ") + line;
         out << QString();
         if (!h.note.isEmpty())

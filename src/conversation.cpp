@@ -504,11 +504,11 @@ void Conversation::ask(const QString &question)
         project.title = p->title;
         project.goal = p->description;
         project.alsoLibrary = m_alsoLibrary;
-        for (const auto qStringLiteral = Projects::items(m_projectId, QStringLiteral("article")); const ProjectItem &i : qStringLiteral)
+        for (const auto articles = Projects::items(m_projectId, QStringLiteral("article")); const ProjectItem &i : articles)
             if (libraries.contains(i.article.libraryId))
                 project.articles << ArticleScope{i.article.libraryId, i.article.path, i.article.title};
         const QString model = Embedding::normalizeName(models->embeddingModel());
-        for (const auto qStringLiteral = Projects::items(m_projectId, QStringLiteral("clip")); const ProjectItem &i : qStringLiteral) {
+        for (const auto clips = Projects::items(m_projectId, QStringLiteral("clip")); const ProjectItem &i : clips) {
             Rag::Clip c;
             c.id = i.id;
             c.title = i.refs.value(0).title;
